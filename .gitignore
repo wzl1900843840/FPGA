@@ -1,0 +1,14 @@
+# Generated implementation runs: retain build settings and final artifacts
+/src/td_project/*_Runs/**/*
+!/src/td_project/*_Runs/**/
+!/src/td_project/*_Runs/**/settings.cfg
+!/src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/**
+/src/td_project/build_complete/
+/src/td_project/log/
+/tests/results/*
+!/tests/results/hardware_pass_20260928/
+/media/*.img
+/演示视频/
+__pycache__/
+*.pyc
+*.vvp

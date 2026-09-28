@@ -1,0 +1,362 @@
+[
+  {
+    "file": "afifo_32_16_256.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\afifo_32_16_256.v",
+    "sha256": "0d87651f9c9fd542a7ee43a89ce6502784c0c41ca828de259dcc0a8b6159d2cb"
+  },
+  {
+    "file": "audio_source_mux.v",
+    "source": "第十一讲：WAV音频播放\\第10课_WAV音频播放\\audio_source_mux.v",
+    "sha256": "4e755bdeb8f2e13157636f94bc3bcdf8b19b876489720783de751ca7bd69e04a"
+  },
+  {
+    "file": "bilinear_8q8.v",
+    "source": "第十三讲：图片缩放与缩略图\\第12课_图片缩放与缩略图\\bilinear_8q8.v",
+    "sha256": "89230ad6e5531b6d9bd3a563d20dc69425d32eb2407f7dd80e8a78ed5b87dd9e"
+  },
+  {
+    "file": "bmp24_decoder.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\bmp24_decoder.v",
+    "sha256": "06b246de39d973f411b7c10e82a1897ad7fa44773446e5de84eb41260fcf5bff"
+  },
+  {
+    "file": "brightness_contrast_adjust.v",
+    "source": "第十四讲：亮度对比度调节\\第13课_亮度对比度调节\\brightness_contrast_adjust.v",
+    "sha256": "77b4bc58ff3039ad1c625cc04e80a6369944859b3b7a438e3751779c701339a2"
+  },
+  {
+    "file": "config_flash_journal.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\config_flash_journal.v",
+    "sha256": "255b668c3c1e3feb255b9be047f61e2e3d96184c7c83909cf3e9cb828ebcf2ea"
+  },
+  {
+    "file": "config_journal.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\config_journal.v",
+    "sha256": "3cdfdac1b35d726e3ba8be524daaf2035a1ad698936ceba3f4f0bd86ee45213e"
+  },
+  {
+    "file": "dual_key_chord_router.v",
+    "source": "第三讲：按键切换与自动轮播\\第2课_按键与轮播\\dual_key_chord_router.v",
+    "sha256": "5929e4faca074f164c06d216684aa65cf09359e97100bac935dc09483615377a"
+  },
+  {
+    "file": "dual_key_long_hold_guard.v",
+    "source": "第三讲：按键切换与自动轮播\\第2课_按键与轮播\\dual_key_long_hold_guard.v",
+    "sha256": "a5ff1257019a32ae7a9c6f1032f16cedb9cc6c4066b04813c014724c833739b9"
+  },
+  {
+    "file": "fast_boot_gate.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\fast_boot_gate.v",
+    "sha256": "e049bfff4837de88907f6f2e697dc09346874b1e308faad4ddb0bb5d01e4d7b0"
+  },
+  {
+    "file": "fat32_file_streamer.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\fat32_file_streamer.v",
+    "sha256": "4c6a91390d85caf2924eee29267e1bf6181c702e115c565105208e2213466595"
+  },
+  {
+    "file": "fat32_volume_scanner.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\fat32_volume_scanner.v",
+    "sha256": "a538b7acde4ba756e36672934bf74680c3d3ebeddae84dc448fd7fa6f06395ff"
+  },
+  {
+    "file": "fifo_prefetch_2.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\fifo_prefetch_2.v",
+    "sha256": "c5c088f4e195f1c193ef84f0ecb70e0dc83adf88736b31fcb58ffba036d3a76d"
+  },
+  {
+    "file": "frame_blend.v",
+    "source": "第十讲：图片转场特效\\第十课_图片转场特效\\frame_blend.v",
+    "sha256": "dd5a9ca0ca2faadda78ed1c30da8ac4b26064980de7914840b325a6ab78438b2"
+  },
+  {
+    "file": "global_def_125.v",
+    "source": "第六讲：Flash固化与上电自启\\第5课_Flash固化与复位\\global_def_125.v",
+    "sha256": "04f854d7fe2f7816705b988ec59822fc258e4ed3a13529e36d0b9e6233a2682f"
+  },
+  {
+    "file": "hdmi_audio_acr_packetizer.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_audio_acr_packetizer.v",
+    "sha256": "ad881027db5aafcb6418ccefc306ea180750523bea95436278c395798326712b"
+  },
+  {
+    "file": "hdmi_audio_infoframe_packetizer.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_audio_infoframe_packetizer.v",
+    "sha256": "ac4af542aa190d43323ddd45fd6eecef712c573a4a57abe6e91ebe5dddc5ae61"
+  },
+  {
+    "file": "hdmi_audio_packet_scheduler.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_audio_packet_scheduler.v",
+    "sha256": "216d8ee51aac51c1eb2ac071c36ed153beea928cc0273d38ef59f19bf822de8f"
+  },
+  {
+    "file": "hdmi_audio_sample_packetizer.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_audio_sample_packetizer.v",
+    "sha256": "85177298bb0463d2ecfbae2ea5a36792d0538a6a8720d890f78ba5b6597238fe"
+  },
+  {
+    "file": "hdmi_audio_symbol_core.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_audio_symbol_core.v",
+    "sha256": "ef05ef0aa8770255d7c60a7459d63e44fe5caf9fa3cdfa6cfa2f7e4ea5762a20"
+  },
+  {
+    "file": "hdmi_bch8.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_bch8.v",
+    "sha256": "b8b73dba7fddce6eeb49f1c6745af8853a265b4cfc44a0ca4425b10f201cd2d9"
+  },
+  {
+    "file": "hdmi_data_island_mapper.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_data_island_mapper.v",
+    "sha256": "711eca917fbcb9aa69153b0678411a155b70d05ecffb353f9a2eefa4e93ea542"
+  },
+  {
+    "file": "hdmi_data_island_scheduler.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_data_island_scheduler.v",
+    "sha256": "3cbc82d784ee52c9a1ddf7420a7a1403429f47d99b8b4f11fe28a06911e9d1ef"
+  },
+  {
+    "file": "hdmi_terc4_encoder.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_terc4_encoder.v",
+    "sha256": "03879709456f4857d861833fd2290b4469a03e0fecb2d3f830ff939912ee8daa"
+  },
+  {
+    "file": "hdmi_tmds_channel_encoder.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\hdmi_tmds_channel_encoder.v",
+    "sha256": "a2a8d1422f82f3cf826dcdfc6ed824745617ea358e220021ea48f9cda5d7ac3d"
+  },
+  {
+    "file": "m06_pcm_contract_adapter.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\m06_pcm_contract_adapter.v",
+    "sha256": "33e0a6ea7f76480935c27b94ee39ff7918697ede4555083327e96ba9834430c4"
+  },
+  {
+    "file": "media_frame_loader.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\media_frame_loader.v",
+    "sha256": "d11b442a765081f999092992e223558c64a6756e51d2291009fc3e4aac60515e"
+  },
+  {
+    "file": "media_frame_reader.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\media_frame_reader.v",
+    "sha256": "336d00a6a570b48636767f71564cf09a0a439d0572e58857ea6105ac01bd25f7"
+  },
+  {
+    "file": "media_hdmi_audio_bridge.v",
+    "source": "第十一讲：WAV音频播放\\第10课_WAV音频播放\\media_hdmi_audio_bridge.v",
+    "sha256": "e41086b1d12ab4556c2152aa2f60596921d90e9fb7223e467fa433a09c2c974f"
+  },
+  {
+    "file": "media_ingest_frontend.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\media_ingest_frontend.v",
+    "sha256": "3e11e7d41e442000596b0e8eb24c694d94d119cd9bec35f581604078bd3e6d1b"
+  },
+  {
+    "file": "media_ingest_pipeline.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\media_ingest_pipeline.v",
+    "sha256": "1acfa3520ae878f60df7adc798b8c0f2a831506853443d34759c2ca785a41e61"
+  },
+  {
+    "file": "media_player_control.v",
+    "source": "第十五讲：缩略图交互选择\\第14课_缩略图交互选择\\media_player_control.v",
+    "sha256": "ed13672b02506b2d6e815ac7c25f820c997d135e543e72d02dfdb091fde1a736"
+  },
+  {
+    "file": "media_policy.v",
+    "source": "第十五讲：缩略图交互选择\\第14课_缩略图交互选择\\media_policy.v",
+    "sha256": "e4c123c1073531780c36adc3774c20c68a5ed234ff325702726418c9d516a2f5"
+  },
+  {
+    "file": "media_recovery_fsm.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\media_recovery_fsm.v",
+    "sha256": "b959ae8cec711eb0f5b80fa05b2ff54263380a1b8bd87509b32f723a3f3f9207"
+  },
+  {
+    "file": "media_sdram_write_cdc.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\media_sdram_write_cdc.v",
+    "sha256": "65a25f2c4519609841aa09445d63344352019fd600790a3759047ef47ef8c44b"
+  },
+  {
+    "file": "media_storage_ingest_top.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\media_storage_ingest_top.v",
+    "sha256": "26c0585f4ab637ab43a98bbaa5cdfa8bb2c6f0ab2f4f05e9e2865e5f84175d5c"
+  },
+  {
+    "file": "media_video_pipeline.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\media_video_pipeline.v",
+    "sha256": "443635696ca2c1485bd5addb3a311e37587e8c73ffc7a6c87ba609ef2c59c4e3"
+  },
+  {
+    "file": "osd_overlay_24.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\osd_overlay_24.v",
+    "sha256": "6cb07216b732a2634cfe87a50f600e9bb8748d1289a8e5be0abd2086eddccbfe"
+  },
+  {
+    "file": "param_menu_controller.v",
+    "source": "第十四讲：亮度对比度调节\\第13课_亮度对比度调节\\param_menu_controller.v",
+    "sha256": "68844b5e5824ad8591566c707171f1310f8ff4eabc24aa19d3bdbbeb7fbc521e"
+  },
+  {
+    "file": "pcm_content_mux.v",
+    "source": "第十一讲：WAV音频播放\\第10课_WAV音频播放\\pcm_content_mux.v",
+    "sha256": "0935d932acf9a4c5971f994a7a07e6eb1451fe96aff53c79bcef4ec4816de37d"
+  },
+  {
+    "file": "pcm_media_tone.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\pcm_media_tone.v",
+    "sha256": "e709e9331f323a8738feb84970b498c609a746256b1e3b78d7c02326e547b0e0"
+  },
+  {
+    "file": "pcm_test_tone.v",
+    "source": "第四讲：HDMI音频输出基础\\第3课_HDMI音频基础\\pcm_test_tone.v",
+    "sha256": "eaf6fe15573bd49062bdc9390e99f08214af26940d23cca9323499c63002a6ff"
+  },
+  {
+    "file": "player_config_persistence.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\player_config_persistence.v",
+    "sha256": "f6fcdb6b1c1c0d43d36fefba3c24246a030b98aa6690dbfcdb7cd35130f69690"
+  },
+  {
+    "file": "promax_audio_waveform.v",
+    "source": "第十二讲：音频波形可视化\\第11课_音频波形可视化\\promax_audio_waveform.v",
+    "sha256": "9c0a9b0043808e33e22f0ee1f97ff1b9bc2582edc14698c71ee6d3e56ed0f7d7"
+  },
+  {
+    "file": "promax_text_overlay.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\promax_text_overlay.v",
+    "sha256": "b563c45bf09f001fc8822f31c86959b52b1949f78a4f56e1768dd3ac4d12b3b3"
+  },
+  {
+    "file": "reset_sync.v",
+    "source": "第六讲：Flash固化与上电自启\\第5课_Flash固化与复位\\reset_sync.v",
+    "sha256": "422024379917ce7895550df38c07600a32ecf11c4bb643e91abd235ddd42fd9d"
+  },
+  {
+    "file": "rgb_video_adapter.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\rgb_video_adapter.v",
+    "sha256": "edcca4a11291e590e48ab292567dba3eb40b185f021e00112b8155db9bd19e68"
+  },
+  {
+    "file": "sd_media_service.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_media_service.v",
+    "sha256": "4aff86edf8c00e020db06d11435beb151534a49abe621c452d37964afb4fabab"
+  },
+  {
+    "file": "sd_sector_replay_buffer.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_sector_replay_buffer.v",
+    "sha256": "0944caa2706c614f1ef0d9e83da52174fc34df516ed77a242f6ca17264e7e3a9"
+  },
+  {
+    "file": "sd_spi_byte_engine.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_spi_byte_engine.v",
+    "sha256": "0ff2a1f17f3b3955ee1e45ce5d28d16dea57f17ea19a2b7335d6e12067c5d417"
+  },
+  {
+    "file": "sd_spi_command.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_spi_command.v",
+    "sha256": "0c82828a34b6d3130fbdfc16bc27fc910b6c8bdc48888df71b5a58f66c76d2a4"
+  },
+  {
+    "file": "sd_spi_init.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_spi_init.v",
+    "sha256": "b4f9b8e1b2523c86c5cf1c9ee0977f11babc60886012f34fb217158690f4cfc2"
+  },
+  {
+    "file": "sd_spi_sector_reader.v",
+    "source": "第七讲：FAT32文件系统升级\\第6课_FAT32文件系统\\sd_spi_sector_reader.v",
+    "sha256": "fd59a14bf6a2a66d3e7ffd2a442bc456ce3b47e1632f8401d1883f5c6fab6133"
+  },
+  {
+    "file": "seg7_panel.v",
+    "source": "第三讲：按键切换与自动轮播\\第2课_按键与轮播\\seg7_panel.v",
+    "sha256": "7a884b7a2b755528e9571cf8cb13d0e28df217419b0b34aa66278b7bb881dc50"
+  },
+  {
+    "file": "spi_byte_engine.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\spi_byte_engine.v",
+    "sha256": "7f4eb1fa86e01610451ec140ab5aaaa24052977b5df972c2f08b68dc8404e7ea"
+  },
+  {
+    "file": "status_osd_overlay.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\status_osd_overlay.v",
+    "sha256": "7f63fe8e7326b948f3cd028f627ec57815d7d563848160ceee54875aeaa220f4"
+  },
+  {
+    "file": "subtitle_frame_commit.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\subtitle_frame_commit.v",
+    "sha256": "4049c911722c6838d65796c3e359333e9bc9be81fab9782fa27cb44c0c39565f"
+  },
+  {
+    "file": "subtitle_uart_controller.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\subtitle_uart_controller.v",
+    "sha256": "ffa3291bfec618d00dcf83f0d6e00d95a56425b01a415431d89df698f5fdb49a"
+  },
+  {
+    "file": "sync_2ff.v",
+    "source": "第六讲：Flash固化与上电自启\\第5课_Flash固化与复位\\sync_2ff.v",
+    "sha256": "691a3ea359a4ac443ab87d3202a1f3398f16e46b83066efd485f25f912f47fe9"
+  },
+  {
+    "file": "sync_fade_gain.v",
+    "source": "第十一讲：WAV音频播放\\第10课_WAV音频播放\\sync_fade_gain.v",
+    "sha256": "400429304f46d3ce16fc99fc48eb53e6f174cc58010fa82ea0dbc17650562067"
+  },
+  {
+    "file": "sys_pll_promax_40.v",
+    "source": "第六讲：Flash固化与上电自启\\第5课_Flash固化与复位\\sys_pll_promax_40.v",
+    "sha256": "66b07acad5f77c901de7e7ef5997da1e08600f7085f60050fcd00923f53e8d13"
+  },
+  {
+    "file": "thumbnail_controller.v",
+    "source": "第十五讲：缩略图交互选择\\第14课_缩略图交互选择\\thumbnail_controller.v",
+    "sha256": "12af6bf5b01276e9abf231c3888ee3f306334b07b6e67a54ee95c19029c0fc3a"
+  },
+  {
+    "file": "thumbnail_layout.v",
+    "source": "第十五讲：缩略图交互选择\\第14课_缩略图交互选择\\thumbnail_layout.v",
+    "sha256": "b06c547502ff8f47e3d70992544b9097345888d5540050d2a5aec0feba0763dd"
+  },
+  {
+    "file": "timestamp_osd.v",
+    "source": "第九讲：OSD字幕叠加\\第9课_OSD字幕叠加\\timestamp_osd.v",
+    "sha256": "95db44c2e0c27c7b44fefc28130ac53afbe81ee735dbece14e5f489faeb0f0c5"
+  },
+  {
+    "file": "uart_rx_byte.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\uart_rx_byte.v",
+    "sha256": "0f8099c8052a9152d80464a5c73fac39cc22857bf9f4c562d23e7c9fdc423af7"
+  },
+  {
+    "file": "uart_status_reporter.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\uart_status_reporter.v",
+    "sha256": "cd21292d820b3cd94dc52199f735d98d84a090821871c368a469b5bc0a2d9650"
+  },
+  {
+    "file": "uart_tx_byte.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\uart_tx_byte.v",
+    "sha256": "d95e41077380e99f32d4c2697805772f3505e2f7b88a70e64ac9475c2f55bca0"
+  },
+  {
+    "file": "video_fade_transition.v",
+    "source": "第十讲：图片转场特效\\第十课_图片转场特效\\video_fade_transition.v",
+    "sha256": "2408e5cabe59232a0e9516f0463048d7c7f5d90e99f338c39f3eb9b7a3a04139"
+  },
+  {
+    "file": "video_timing_ctrl.v",
+    "source": "第八讲：四bank帧缓存架构\\第8课_四bank帧缓存\\video_timing_ctrl.v",
+    "sha256": "102ebea7ad166cb4f13e54ea704cbc9b9b6ec93c81838a5a964061483b12d71d"
+  },
+  {
+    "file": "w25q64_preflight_reader.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\w25q64_preflight_reader.v",
+    "sha256": "42268808045584d4e3fc7572fbc3b5881431da161dfb0a2b30e70d2bba1fa9d5"
+  },
+  {
+    "file": "w25q64_record_store.v",
+    "source": "第五讲：系统稳定性\\第4课_系统稳定性\\w25q64_record_store.v",
+    "sha256": "93f95bd98962e360b72dddc0acef5999fb1eef8bc23ba16b20433e78c0a3f69a"
+  },
+  {
+    "file": "wav_stream_player.v",
+    "source": "第十一讲：WAV音频播放\\第10课_WAV音频播放\\wav_stream_player.v",
+    "sha256": "1947200d4aad410bd8e23d9b598e57edbcc7d55e17789f856268f7c6bf7aefa2"
+  }
+]

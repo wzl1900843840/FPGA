@@ -1,0 +1,53 @@
+{
+  "drive": "F",
+  "physical_disk": 2,
+  "read_only": true,
+  "partition_lba": 8192,
+  "snapshot_scope": "volume_metadata_only",
+  "snapshot_partition_lba": 0,
+  "snapshot_sector0_first_byte": "0xeb",
+  "spc": 64,
+  "fat_lba": 1480,
+  "data_lba": 16384,
+  "entries": [
+    {
+      "short_name": "SYSTEM~1   ",
+      "attribute": 22,
+      "cluster": 3,
+      "bytes": 0
+    },
+    {
+      "short_name": "PIC1    BMP",
+      "attribute": 32,
+      "cluster": 122,
+      "bytes": 921654
+    },
+    {
+      "short_name": "PIC2    BMP",
+      "attribute": 32,
+      "cluster": 151,
+      "bytes": 921654
+    },
+    {
+      "short_name": "PIC3    BMP",
+      "attribute": 32,
+      "cluster": 180,
+      "bytes": 921654
+    },
+    {
+      "short_name": "PIC4    BMP",
+      "attribute": 32,
+      "cluster": 209,
+      "bytes": 921654
+    }
+  ],
+  "sector_lbas": [
+    0,
+    16384,
+    16385,
+    16386,
+    16387,
+    16388,
+    16389
+  ]
+}

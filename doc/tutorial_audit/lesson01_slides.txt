@@ -1,0 +1,24 @@
+FPGA创新设计竞赛赛题解析 安路赛道——选题一 2026.09.05
+硬件参数配置 视频处理接口 双HDMI接口，可作为视频信号输出 12位VGA接口 用户外扩GPIO 2组40PinDC3接口(多达72组扩展IO)供用户外扩 可扩展LCD、ADC、DAC、摄像头模块、电机、HDMI输入模块、交通灯、点阵、键盘、语音处理等。 时钟源 50M有源时钟 配件 USB数据线、杜邦线若干个 HX4S20C开发板 竞赛技术平台
+根据上述硬件资源，提供如下技术支持： 1）开发板的使用手册； 2）开发板的原理图； 3）开发板的基础实验，包括接口例程； 4）提供相关调试软件； 5）提供参赛样例，并配有样例解析。 HX4S20C开发板 技术支持 例程路径 lab_ex_2026_nosoft 例程描述 lab_ex_4 读取TF卡中BMP图片，写入SDRAM后通过HDMI切换显示。 lab_ex_5 在例程4的视频显示基础上，加入HDMI音频测试音输出。
+赛题解析 Part 03
+选题一的主线很明确：TF卡读取素材，解析BMP像素，写入SDRAM帧缓存，再通过HDMI稳定输出画面和声音。 学习顺序建议先跑通lab_ex_4的图像链路，再运行lab_ex_5的音频链路。只有基础链路稳定后，再选择字幕、转场、缩放、参数调节或音频可视化等扩展。 板卡提供2组2x20 DC3接口和72组扩展IO，便于加入外设；但扩展越多，时钟、带宽、缓存和系统稳定性的验证压力也越大。 选题优势 赛题解析
+官方提供lab_ex_4与lab_ex_5两个递进例程，覆盖TF卡读图、帧缓存、HDMI显示、图片切换和音频测试等关键链路。 初学者应先完成可重复演示的基础系统，再选择1-2项扩展深入实现。 最终表现取决于功能完整性、稳定性、工程规范和创新质量，例程只能托底，不能代替理解与验证。 选题优势 赛题解析
+©2026 Anlogic Infotech, all rights reserved FPGA 通过 SPI 接口读取 TF 卡中的 BMP 图片，解析后经 FIFO 写入 SDRAM 帧缓存，再由 HDMI 显示模块按视频时序读取并输出至显示器，实现图片读取、缓存、切换与 HDMI 显示。 基础要求1、2一一 TF  卡  BMP  图片读取、 HDMI  显示与图片切换轮播 赛题解析 基础要求1、2实现思路示意图 基础要求1、2实现思路系统框图
+©2026 Anlogic Infotech, all rights reserved FPGA 读取 TF 卡中的 BMP 图片并写入 SDRAM 帧缓存，由 HDMI 模块输出显示；同时生成 I2S 测试音，经音频处理后与视频数据复用，通过 HDMI 接口实现图像显示与音频播放。 基础要求3一一 HDMI  音频输出与音视频同步播放 赛题解析 基础要求3实现思路示意图 基础要求3实现思路系统框图
+©2026 Anlogic Infotech, all rights reserved 基础要求以及例程中涉及的安路IP核。 涉及IP核、参考设计 赛题解析 IP核或相关工程 参考手册 sdram_read_write_with_local_bus_reference_design_V1.1 APUG010_Local bus总线的SDRAM读写v1.1.pdf high_performance_sdram_read_write_reference_design_v1.2 APUG011_基于ERAM接口实现的高性能SDRAM读写v1.2.pdf APUG092_HDMI1.4b_Transmitter_V1.0 APUG092_HDMI1.4b_Transmitter_V1.0.pdf Soft_fifo IPUG012_Soft_FIFO用户手册.pdf
+©2026 Anlogic Infotech, all rights reserved 选题一：基于安路EG4S20的HDMI多媒体播放系统 扩展要求1、2一一图层叠加与字幕效果、图片切换与转场特效 FPGA Board SD/TF Interface FPGA SDRAM HDMI Interface 显示器 KEY2 KEY4 OSD叠加引擎(Alpha混合) 转场特效引擎(淡入淡出/滑动) 系统 50MHz 数码管 100MHz KEY2 KEY4 消抖 SD卡 125MHz 写FIFO SDRAM帧缓存 (双缓冲) 读FIFO OSD叠加引擎 转场特效引擎 OSD ROM HDMI控制器 状态显示： 1.空闲 2.搜索BMP 3.写入SDRAM 4.OSD叠加 BMP数据 RGB+Alpha 建议路线：先完成OSD字幕，再做帧边界切换。淡入淡出需要双缓冲或等效的帧级提交机制；若存储带宽或容量不足，优先保证无撕裂，再降低特效复杂度。
+©2026 Anlogic Infotech, all rights reserved 选题一：基于安路EG4S20的HDMI多媒体播放系统 扩展要求3、4一一图片缩放适配、实时调节与信息叠加 FPGA Board SD/TF Interface FPGA SDRAM HDMI Interface 显示器 KEY2 KEY4 缩放引擎(双线性插值) 亮度/对比度调节+OSD 拨码开关 系统 50MHz 数码管 100MHz KEY2 KEY4 消抖 SD卡 125MHz 写FIFO SDRAM帧缓存 读FIFO 缩放引擎 亮度/对比度调节 OSD 参数 HDMI控制器 参数 寄存器 BMP解析 (信息头) 状态/参数显示： 分辨率、缩放比 亮度、对比度 分辨率信息 建议路线：先验证最近邻缩放和定点亮度调节，再评估双线性插值。参数在帧边界统一生效，并通过OSD显示当前值，避免调节过程造成画面跳变。
+选题方向 Part 01 竞赛技术平台 Part 02 赛题解析 Part 03 技术支持与技术资源 Part 04
+©2026 Anlogic Infotech, all rights reserved 选题一：基于安路EG4S20的HDMI多媒体播放系统 扩展要求5一一音频可视化表现与自主创意 FPGA Board SD/TF Interface FPGA SDRAM HDMI Interface 显示器 KEY2 KEY4 Audio Interface(I2S) FFT频谱分析 频谱/波形渲染(RGB) 系统 50MHz 数码管 100MHz KEY2 KEY4 消抖 SD卡 12.288MHz(音频) I2S 接收 PCM 解串 FFT/ DFT 125MHz(视频) 写FIFO SDRAM帧缓存 读FIFO 频谱/波形渲染 视频叠加 HDMI控制器 I2S测试音/ACR 状态显示： 频谱模式/幅值 频谱能量 PCM/CTS/N 高阶扩展：先验证lab_ex_5的48kHz测试音稳定输出，再从24-bit PCM样本计算频谱能量并叠加显示。加入FFT/DFT前，需先核对12.288MHz音频主时钟与HDMI ACR/N/CTS链路。
+赛题一所用开发板必须为HX4S20C开发板。 最终提交设计必须固化在开发板上，上电即可运行，无需再使用PC下载。 最终已实现的基础要求和扩展要求必须整合为完整的最终设计，在测试时不能通过多次加载固化镜像以单独实现基础要求和扩展要求。 最终设计应该具有实用性。 lab_ex_4和lab_ex_5为参考例程，为赛题一提供基础链路和扩展方向。 赛题最终评测不依据使用资源的大小，推荐以优化的逻辑和最低的功耗来实现最终的设计。 赛题注意事项 赛题解析
+技术支持与技术资源 Part 04
+QQ群：1050628457 竞赛技术交流 技术支持与技术资源 通过百度网盘分享的文件：HX4S20_Contest_202606 链接: https://pan.baidu.com/s/1ysv_FmmgZKuM0rBiHfSv8w 提取码：M5N1  板卡资料下载 板卡申请与购买：以大赛官网最新通知为准
+上海市浦东新区中科路1867号C座8/11-12层 www.anlogic.com 021-61633787 欢迎各位同学选择选题一 Thanks
+选题方向 Part 01
+本赛题面向基于FPGA的HDMI多媒体播放系统设计，适用于数字广告牌、商业展陈终端、应急信息发布、车载辅助显示及教育演示等应用场景。相比依赖通用处理器的软件栈方案，FPGA方案能够以更确定的时序、更低的显示延迟和更高的可靠性完成音视频展示。 比赛要求使用定制开发板，以安路科技EG4S20BG256器件作为核心平台。该器件采用BG256（17mm×17mm）封装，提供19,600个LUT、19,600个触发器、与一块SDRAM（2M×32bits）、 4个PLL、16路全局时钟以及最多193个用户IO，适合构建存储介质管理、帧缓存控制、视频显示与音频输出一体化系统 。 赛题简介 选题一：基于安路EG4S20的HDMI多媒体播放系统
+©2026 Anlogic Infotech, all rights reserved 实现 TF 卡 BMP 图片读取与 HDMI 显示 : 通过 SPI 接口读取 TF 卡中 640X480 、 24-bit RGB 非压缩 BMP 图片，解析后写入 SDRAM 帧缓存， HDMI 接口实时输出至显示器 ; 实现图片切换与轮播功能 : 支持按键手动切换图片与自动轮播模式，画面连续稳定，无明显闪烁或异常 ; 实现 HDMI 音频输出 : 通过 HDMI 接口输出 48kHz 音频测试音，实现音视频同步播放 ; 系统稳定运行 : 最终设计须固化在开发板上，上电即可运行，形成稳定的运行状态和良好的现场演示效果 。 基础要求在最终设计中必须全部实现 。 使用开发板必须是HX4S20C开发板 。 基础要求 选题一：基于安路EG4S20的HDMI多媒体播放系统
+©2026 Anlogic Infotech, all rights reserved 图层叠加与字幕效果：在图片播放时叠加动态文字，探索多图层混合与平滑滚动； 图片切换与转场特效：加入淡入淡出、滑动等过渡，保证切换连续； 图片缩放适配：支持不同分辨率图片并优化缩放质量； 实时调节与信息叠加：用按键或拨码调节亮度、对比度，并通过OSD显示参数； 音频可视化表现：将频谱或波形叠加到视频画面。 扩展要求不强制。基础功能稳定后，建议选择1-2项做深做透；完成即可获得额外区分度。 赛题网址：http://www.fpgachina.cn/download?value=11 扩展要求 选题一：基于安路EG4S20的HDMI多媒体播放系统
+竞赛技术平台 Part 02
+HX4S20C开发板 竞赛技术平台 硬件参数配置 FPGA 安路EG4系列EG4S20BG256 LUTs 19600 片内集成SDRAM 2M x 32bit 嵌入式片上RAM 64 块9Kb(ERAM9K), 16 块32Kb 调试下载方式 板载USB Cable下载器 供电方式 USB口5V供电板载：5V、3.3V、2.5V、1.2V电路系统 人机互换信号 4组输入按键  4组拨码开关 1组控制蜂鸣器开关 1组切换数码管和双色LED开关
+HX4S20C开发板 竞赛技术平台 硬件参数配置 显示信号 4组LED发光管 1组电源显示LED 1组配置信号显示LED 8组数码管 8组双色16个LED 通信接口 USB转UART 千兆以太网口 蜂鸣器 存储器 掉电配置Qspi Flash 16MB SPI Flash 64MB TF卡槽，可接插TF卡存储器

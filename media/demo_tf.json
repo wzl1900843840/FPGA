@@ -1,0 +1,40 @@
+{
+  "image": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\demo_tf.img",
+  "sha256": "5a550fbef96b372d47a6311962c4334b59e35d8621588dc596e968c6716f46f8",
+  "pcm_start_lba": 32768,
+  "pcm_total_sectors": 1875,
+  "pcm_seconds": 10.0,
+  "rtl_configured": true,
+  "files": [
+    {
+      "name": "PIC1    BMP",
+      "first_cluster": 3,
+      "bytes": 921654,
+      "sectors": 1801
+    },
+    {
+      "name": "PIC2    BMP",
+      "first_cluster": 1804,
+      "bytes": 921654,
+      "sectors": 1801
+    },
+    {
+      "name": "PIC3    BMP",
+      "first_cluster": 3605,
+      "bytes": 921654,
+      "sectors": 1801
+    },
+    {
+      "name": "PIC4    BMP",
+      "first_cluster": 5406,
+      "bytes": 921654,
+      "sectors": 1801
+    },
+    {
+      "name": "AUDIO   PCM",
+      "first_cluster": 30690,
+      "bytes": 960000,
+      "sectors": 1875
+    }
+  ]
+}
