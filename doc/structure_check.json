@@ -1,0 +1,11 @@
+{
+  "protected_files_unchanged": 667,
+  "project_references_valid": 83,
+  "moves": {
+    "release_before_read_alignment": "archive/releases/release_before_read_alignment",
+    "release_before_refresh_fix": "archive/releases/release_before_refresh_fix",
+    "release_demo_pcm_previous": "archive/releases/release_demo_pcm_previous",
+    "演示视频": "archive/reference/演示视频",
+    "设计参考例程文档.docx": "archive/reference/设计参考例程文档.docx"
+  }
+}

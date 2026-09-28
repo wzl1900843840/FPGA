@@ -8,7 +8,7 @@
 /tests/results/*
 !/tests/results/hardware_pass_20260928/
 /media/*.img
-/演示视频/
+/archive/reference/演示视频/
 __pycache__/
 *.pyc
 *.vvp

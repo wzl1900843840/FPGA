@@ -1,3 +1,5 @@
+> 历史排查记录：文中下载路径和验收结论属于当时版本。当前入口与固件请以根目录 [README](../README.md) 为准。
+
 # F盘无图片、显示1E80的排查与修复
 
 ## 实际发现
@@ -27,7 +29,7 @@ Windows允许卷内只读访问，但拒绝物理盘访问；因此该快照证�
 3. F盘没有配套PCM布局，默认PCM_START_LBA/PCM_TOTAL_SECTORS改为0，使用合成媒体音调，SW4可强制测试音。否则此前固定LBA32768可能把该卡的无关数据解释为音频。
 4. PCM禁用会被综合常量优化，SDC的可选PCM指针约束块同步移除（TD不执行SDC中的Tcl条件块，不能仅用if包裹）；`build.py`、`prepare_media.py`负责保持参数与约束开关一致。
 
-匹配旧演示PCM镜像的上一次release已保留为 `release_demo_pcm_previous`，供明确使用demo_tf.img的场景参考；当前应下载 `release/lab_ex4_tf_complete.bit`。
+匹配旧演示PCM镜像的上一次release已保留为 `archive/releases/release_demo_pcm_previous`，供明确使用demo_tf.img的场景参考；当前应下载 `release/lab_ex4_tf_complete.bit`。
 
 ## 操作
 

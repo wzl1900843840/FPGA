@@ -1,23 +1,41 @@
-# HX4S20C 教程整合工程
+# HX4S20C HDMI 多媒体播放工程
 
-完整复盘见 [问题与解决方案复盘](doc/问题与解决方案复盘.md)，包含故障现象、有效处理、证据边界和当前可用固件。
+## 打开与下载
 
-**实板阶段验证通过：官方原始读 FIFO 恢复后，用户确认二级测试图清晰，正常上电也能显示照片。** 当前保留已验证数据链路，不再追加猜测性修改。下载仍使用 `src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0.bit`（2026-09-28 15:52:25），SHA256 `5da0cca6640e639fede72455c69a0c8c2cd9f44c787242f77701b8563458c4a9`。同目录 validation.json 记录源码、构建及实板验证范围；四图切换、自动循环、长稳及其他外设功能尚未完成验收。[实验记录](doc/花屏单变量实板实验.md)。
+- **唯一日常工程入口：** [lab_ex5_i2s_v1.0.al](src/td_project/lab_ex5_i2s_v1.0.al)，顶层 `top`。沿用原工程名称。
+- **当前已验证固件：** [lab_ex5_i2s_v1.0.bit](src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0.bit)。
+- 构建时间：2026-09-28 15:52:25。SHA256：`5da0cca6640e639fede72455c69a0c8c2cd9f44c787242f77701b8563458c4a9`。
+- [构建记录](src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/validation.json)；[实板通过快照](tests/results/hardware_pass_20260928)。
 
-按 `D:\FPGA\anlu\micu` 第一讲至第十六讲整合为一个镜像。入口为 `src/td_project/lab_ex5_i2s_v1.0.al`，顶层 `top`。沿用原工程文件名，不另建工程。
+TF 卡根目录使用 PIC1.BMP～PIC4.BMP。当前 PCM 物理范围为 0，音频为 FPGA 合成音调。`release/` 和 `archive/releases/` 中的旧固件不作为当前下载入口。
 
-**当前默认配置（F盘实板排障后）：** 根目录PIC1.BMP～PIC4.BMP，PCM物理范围为0，播放合成音调。此前匹配demo_tf.img的固件保留在 `release_demo_pcm_previous`。
+## 文档导航
 
-先读 [全链路使用与验收](代码说明.md)，模块、接口、时钟及教程差异见 [设计说明](设计参考例程文档.md) 和 [逐讲落实表](doc/教程落实对照.md)。
+| 用途 | 文档 |
+| --- | --- |
+| 按键、拨码、使用和验收 | [代码说明](代码说明.md) |
+| 目录职责、源码分层、工具入口 | [工程结构与维护](doc/工程结构与维护.md) |
+| 详细模块、接口和时钟设计 | [设计参考例程文档](设计参考例程文档.md) |
+| 第一讲到第十六讲落实情况 | [教程落实对照](doc/教程落实对照.md) |
+| 故障及解决过程 | [问题与解决方案复盘](doc/问题与解决方案复盘.md) |
+| 花屏单变量实板证据 | [实板实验](doc/花屏单变量实板实验.md) |
+| Git 基线、压缩备份与恢复 | [版本基线与备份](doc/版本基线与备份.md) |
 
-上一轮重复工程入口和刷新宏处理见 [工程入口与花屏排查](doc/工程入口与花屏排查.md)，该轮实板仍花屏，不代表当前修复范围。未重构目录或更改 PLL/管脚。刷新宏修复前固件在 `release_before_refresh_fix`；本轮之前固件在 `release_before_read_alignment`。
+## 当前状态
 
-- `src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0.bit`：当前原工程默认下载文件；诊断操作见上文。
-- `release/lab_ex4_tf_complete.bit`：上一轮脚本构建的历史文件。
-- `media/demo_tf.img`：64 MiB FAT32整盘镜像，四张BMP和10秒PCM；当前默认固件为普通FAT32图片卡配置，使用镜像音乐前须重新配置PCM参数并编译。
-- `release/manifest.json`：源码/bitstream散列、时序、工具警告。
-- `tests/results/summary.json`、`tests/results/chain.log`：自检仿真结果。
+用户已确认图片显示、切图、自动轮播、HDMI 音频、亮度/对比度、字幕滚动计时和音频波形正常。UART 此前无回复的原因已定位为发送命令缺少回车；串口助手需追加 CRLF。不同分辨率缩放、重复冷启动和长时间稳定性仍需专项验收。软件仿真通过不能替代这些实板验收。
 
-**软件验证不等于实板验收。** 用户已反馈上一版本实板 OSD 和切图编号正常、图片花屏。当前原始 FIFO 版本已确认二级图案与正常照片显示，其他功能、重复冷启动和长期运行仍需验收。
+## 目录
 
-旧版源码和说明保存在 `doc/original_baseline`。根目录原有DOCX和演示视频是历史资料。`doc/migration_scripts` 是迁移记录，不是构建入口，不要重复执行。
+```text
+lab_ex4_tf/
+├─ src/          原工程、有效源码、IP、约束及 TD 工作目录
+├─ tools/        构建、仿真、TF 卡检查与素材工具
+├─ tests/        测试源、模型、结果及实板通过快照
+├─ media/        演示素材和磁盘镜像
+├─ doc/          当前说明、教程对照和历史排查证据
+├─ archive/      历史固件、原始 DOCX 和演示视频
+└─ release/      旧 build.py 的输出位置，非当前默认固件
+```
+
+不重复执行 `doc/migration_scripts/` 中的迁移脚本。`doc/original_baseline/` 为原始资料备份，不是当前编译入口。
