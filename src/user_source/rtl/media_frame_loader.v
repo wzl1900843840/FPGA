@@ -5,7 +5,8 @@ module media_frame_loader #(
     parameter integer IMAGE_WORDS = 307200,
     parameter integer FIFO_DEPTH = 512,
     parameter integer BURST_SIZE = 128,
-    parameter integer STALL_TIMEOUT = 65535
+    parameter integer STALL_TIMEOUT = 65535,
+    parameter integer DRAIN_ON_ERROR = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -58,6 +59,7 @@ module media_frame_loader #(
     reg [PTR_WIDTH:0] fifo_count;
     reg burst_active;
     reg [PTR_WIDTH:0] burst_remaining;
+    reg [7:0] pending_error;
     wire pop_allowed;
     wire push_allowed;
     wire start_burst;
@@ -67,14 +69,14 @@ module media_frame_loader #(
     // The inherited controller consumes a continuous App_wr_en burst and
     // handles busy/refresh internally. Those status outputs are not per-word
     // ready signals and must not split an active write burst.
-    assign start_burst = active && controller_init_done && !burst_active &&
+    assign start_burst = active && pending_error==0 && controller_init_done && !burst_active &&
                          fifo_count != 0 &&
                          (fifo_count >= EFFECTIVE_BURST || commit_seen);
     assign next_burst_words = (fifo_count >= EFFECTIVE_BURST) ?
                               EFFECTIVE_BURST : fifo_count;
     assign pop_allowed = active && controller_init_done && burst_active &&
                          fifo_count != 0;
-    assign push_allowed = active && pixel_valid &&
+    assign push_allowed = active && pending_error==0 && pixel_valid &&
                           (fifo_count < FIFO_DEPTH || pop_allowed);
 
     function [ADDR_WIDTH-1:0] bank_base;
@@ -93,10 +95,18 @@ module media_frame_loader #(
         input [7:0] code;
         begin
             memory_error <= code;
-            active <= 1'b0;
-            burst_active <= 1'b0;
-            burst_remaining <= 0;
-            load_done <= 1'b1;
+            if(DRAIN_ON_ERROR && burst_active) begin
+                // The burst was admitted only with all its words buffered.
+                // Finish that burst so the downstream CDC never holds a
+                // partial block across retry/skip. Failed banks stay private.
+                pending_error <= code;
+            end else begin
+                active <= 1'b0;
+                burst_active <= 1'b0;
+                burst_remaining <= 0;
+                pending_error <= 0;
+                load_done <= 1'b1;
+            end
         end
     endtask
 
@@ -104,7 +114,7 @@ module media_frame_loader #(
     wire transfer_ok=decode_error==0 && !(pixel_valid && pixels_received>=IMAGE_WORDS) && !(pixel_valid && !push_allowed);
     always @(posedge clk) begin
         if(push_allowed && transfer_ok) fifo_mem[wr_ptr]<={8'h00,pixel_rgb};
-        if(pop_allowed && transfer_ok) app_wr_data<=fifo_mem[rd_ptr];
+        if(pop_allowed && (transfer_ok || pending_error!=0)) app_wr_data<=fifo_mem[rd_ptr];
     end
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -120,6 +130,7 @@ module media_frame_loader #(
             fifo_count <= {(PTR_WIDTH+1){1'b0}};
             burst_active <= 1'b0;
             burst_remaining <= 0;
+            pending_error <= 0;
             load_done <= 1'b0;
             image_complete <= 4'd0;
             memory_error <= ERR_NONE;
@@ -144,6 +155,7 @@ module media_frame_loader #(
                 fifo_count <= {(PTR_WIDTH+1){1'b0}};
                 burst_active <= 1'b0;
                 burst_remaining <= 0;
+                pending_error <= 0;
                 memory_error <= ERR_NONE;
                 case (image_index)
                     2'd0: image_complete[0] <= 1'b0;
@@ -154,7 +166,21 @@ module media_frame_loader #(
             end
 
             if (active) begin
-                if (decode_error != 0) begin
+                if (pending_error != 0) begin
+                    if(pop_allowed) begin
+                        app_wr_en<=1;
+                        app_wr_addr<=bank_base(active_image)+(IMAGE_WORDS==307200 ?
+                            (source_top_down ? write_row : 479-write_row)*640+write_column :
+                            pixels_written[ADDR_WIDTH-1:0]);
+                        app_wr_mask<=0;rd_ptr<=rd_ptr+1'b1;
+                        fifo_count<=fifo_count-1'b1;pixels_written<=pixels_written+1'b1;
+                        if(write_column==639) begin write_column<=0;write_row<=write_row+1'b1;end
+                        else write_column<=write_column+1'b1;
+                        burst_remaining<=burst_remaining-1'b1;
+                        if(burst_remaining==1) burst_active<=0;
+                    end
+                    if(!burst_active) fail_load(pending_error);
+                end else if (decode_error != 0) begin
                     fail_load(ERR_DECODE);
                 end else if (pixel_valid && pixels_received >= IMAGE_WORDS) begin
                     fail_load(ERR_PIXEL_COUNT);

@@ -13,6 +13,7 @@ module player_config_persistence #(
     parameter [31:0] MIN_PERIOD_MS = 32'd1000,
     parameter [31:0] MAX_PERIOD_MS = 32'd60000,
     parameter [7:0] DEFAULT_VOLUME = 8'd255,
+    parameter integer RESTORE_VOLUME_ON_BOOT = 1,
     parameter [7:0] DEFAULT_MODE = 8'd0,
     parameter [23:0] SLOT0_ADDRESS = 24'h7fe000,
     parameter [23:0] SLOT1_ADDRESS = 24'h7ff000,
@@ -280,7 +281,11 @@ module player_config_persistence #(
                     stored_config_valid <= staged_stored_valid;
                     config_rejected <= staged_rejected;
                     error_code <= staged_error_code;
-                    apply_config(staged_period_ms,staged_volume,staged_mode);
+                    // Only startup overrides volume. Save verification must apply
+                    // the actual runtime volume without changing the record format.
+                    apply_config(staged_period_ms,
+                        RESTORE_VOLUME_ON_BOOT ? staged_volume : DEFAULT_VOLUME,
+                        staged_mode);
                     state <= ST_READY;
                 end
                 ST_READY: begin

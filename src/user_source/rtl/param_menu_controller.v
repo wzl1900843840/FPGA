@@ -101,7 +101,7 @@ module param_menu_controller #(
             long_marked <= 1'b0;
             cfg_update_valid <= 1'b0;
             cfg_period_ms <= 32'd5000;
-            cfg_volume <= 8'd64;
+            cfg_volume <= 8'd0;
             menu_event <= 1'b0;
             menu_kind <= 2'd0;
             menu_level <= 4'd0;

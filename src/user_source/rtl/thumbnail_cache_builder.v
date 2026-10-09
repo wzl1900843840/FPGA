@@ -1,10 +1,11 @@
 `timescale 1ns/1ps
 // 四原图 bank 保持不变，剩余 SDRAM 中预合成一张 640x480 缩略图页。
 // 每次读取源图一行的连续 640 字，抽取 x=0,4,...636，组成两个160x120窗口。
-// 所有外部访问均为128字连续 burst，构建期间 reader 尚未使能。
+// 所有外部访问均为128字连续 burst；共享模式下由仲裁器调度后台构建。
 module thumbnail_cache_builder #(
     parameter integer FRAME_WORDS=307200,
-    parameter integer WAIT_CYCLES=256
+    parameter integer WAIT_CYCLES=256,
+    parameter integer SHARED_MEMORY=0
 )(
     input wire clk,rst_n,start,
     input wire [3:0] image_complete,
@@ -18,7 +19,9 @@ module thumbnail_cache_builder #(
     output reg app_wr_en,
     output reg [20:0] app_wr_addr,
     output reg [31:0] app_wr_data,
-    input wire controller_busy,refresh_active
+    input wire controller_busy,refresh_active,
+    input wire burst_grant,
+    output wire burst_request,burst_write
 );
     reg [31:0] row [0:639] /* fehdl force_ram=1, ram_style="bram" */;
     reg [3:0] state;
@@ -31,6 +34,8 @@ module thumbnail_cache_builder #(
     wire [20:0] source_base=bank*FRAME_WORDS + ((y>=120?y-120:y)*4)*640;
     localparam IDLE=0,CLEAR=1,PREPARE=2,READ=3,DRAIN=4,WRITE=5,GAP=6,FINISH=7;
     assign busy=state!=IDLE;
+    assign burst_write=state==WRITE;
+    assign burst_request=(state==READ || state==WRITE) && x[6:0]==0 && gap==0;
     wire row_write=state==CLEAR || ((state==READ || state==DRAIN) && rd_valid && received<640 && received[1:0]==0);
     wire [9:0] row_address=state==CLEAR ? x : (side?160:0)+(received>>2);
     always @(posedge clk) if(state==WRITE) app_wr_data<=row[x];
@@ -57,7 +62,7 @@ module thumbnail_cache_builder #(
             READ: begin
                 // 每128字后留出控制器排队间隙，返回数据与发出请求分别计数。
                 if(gap!=0) gap<=gap-1'b1;
-                else if(x[6:0]!=0 || (!controller_busy && !refresh_active)) begin
+                else if(x[6:0]!=0 || (!controller_busy && !refresh_active && (!SHARED_MEMORY || burst_grant))) begin
                     app_rd_en<=1;app_rd_addr<=source_base+x;
                     if(x==639) state<=DRAIN;
                     else begin x<=x+1'b1;if(x[6:0]==127) gap<=16;end
@@ -70,7 +75,7 @@ module thumbnail_cache_builder #(
                 end else if(watchdog==20'hfffff) begin error<=8'h65;state<=FINISH;end
                 else watchdog<=watchdog+1'b1;
             end
-            WRITE: if(x[6:0]!=0 || (!controller_busy && !refresh_active)) begin
+            WRITE: if(x[6:0]!=0 || (!controller_busy && !refresh_active && (!SHARED_MEMORY || burst_grant))) begin
                 app_wr_en<=1;app_wr_addr<=FRAME_WORDS*4+y*640+x;
                 if(x==639) begin x<=0;gap<=WAIT_CYCLES;state<=FINISH;end
                 else begin

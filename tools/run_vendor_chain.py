@@ -6,6 +6,7 @@ come from the actual files. IS42s32200 supplies the bus-level SDRAM chip model.
 from pathlib import Path
 import argparse, subprocess, json, hashlib, time
 from PIL import Image
+from rtl_dependencies import reachable_files
 
 root=Path(__file__).resolve().parents[1]
 out=root/'tests/results/vendor_chain';out.mkdir(parents=True,exist_ok=True)
@@ -35,7 +36,7 @@ s=s.replace('always @(posedge mc)begin rv<=re;if(re)rd<=memory[ra];end','''reg m
 sdram vendor(.Clk(mc),.Clk_sft(msclk),.Rst(!rst),.Sdr_init_done(vendor_init),.Sdr_busy(vendor_busy),.Sdr_init_ref_vld(vendor_refresh),
 .App_wr_en(mw),.App_wr_addr(mwa),.App_wr_dm(mmask),.App_wr_din(mwdata),
 .App_rd_en(re),.App_rd_addr(ra),.Sdr_rd_en(rv),.Sdr_rd_dout(rd));''')
-s=s.replace("mwdata,idle,1'b0,1'b0);", "mwdata,idle,vendor_busy,vendor_refresh);")
+s=s.replace("mwdata,idle,1'b0,1'b0,1'b1,);", "mwdata,idle,vendor_busy,vendor_refresh,1'b1,);")
 s=s.replace(".controller_init_done(prst),.controller_busy(1'b0),.refresh_active(1'b0)",".controller_init_done(prst),.controller_busy(vendor_busy),.refresh_active(vendor_refresh)")
 s=s.replace('if(mwdata[23:0]!==expected)', 'if(writes%307200==0)begin $display("LOAD bank=%d",bank);$fflush();end\nif(mwdata[23:0]!==expected)')
 s=s.replace('#51;rst=1;' ,'#51;rst=1;wait(vendor_init);')
@@ -51,9 +52,11 @@ tb=out/'tb_vendor_chain.v';tb.write_text(s)
 lib=out/'work'
 if not lib.exists():subprocess.run([str(ms/'vlib.exe'),str(lib)],check=True,capture_output=True)
 rtl=root/'src/user_source/rtl';inc=root/'src/user_source/hdl_source/include'
-files=[str(x) for x in sorted(rtl.glob('*.v')) if x.name not in ['sys_pll_promax_40.v','global_def_125.v']]
+files=[str(x) for x in reachable_files(s,[x for x in rtl.glob('*.v') if x.name not in ['sys_pll_promax_40.v','global_def_125.v']])]
 groups=[(['-suppress','2121','+incdir+'+str(inc)],[str(inc/n) for n in ['sdr_as_ram.enc.v','sdr_init_ref.enc.v','sdr_wrrd.enc.v']]+[str(root/'src/user_source/hdl_source/SD/sdram.v'),str(chip),str(root/'tests/sdram_chip_model.v')]),
         (['-sv'],files+[str(root/'tests/lut1_model.v'),str(tb)])]
+source_hashes={str(Path(f).relative_to(root)):hashlib.sha256(Path(f).read_bytes()).hexdigest()
+               for flags,group in groups for f in group if Path(f).is_relative_to(root/'src')}
 with (out/'compile.log').open('w') as log:
  for flags,group in groups:
   c=subprocess.run([str(ms/'vlog.exe'),'-work',str(lib)]+flags+group,cwd=project,stdout=log,stderr=subprocess.STDOUT)
@@ -64,6 +67,8 @@ with (out/'console.log').open('w') as log:
  c=subprocess.run([str(ms/'vsim.exe'),'-c','-onfinish','exit','-lib',str(lib),'tb_vendor_chain',*(['+VIDEO_ONLY'] if a.video_only else []),'-l',str(out/'transcript.log'),'-do','run -all; quit -f'],cwd=project,stdout=log,stderr=subprocess.STDOUT,timeout=1800)
 log=(out/'transcript.log').read_text(errors='replace')
 ok=c.returncode==0 and 'PASS VENDOR CHAIN:' in log and '# ** Fatal:' not in log and 'ERROR:' not in log
-(out/'result.json').write_text(json.dumps(dict(passed=ok,seconds=time.time()-t,files=metadata,video_only=a.video_only,sources={str(Path(f).relative_to(root)):hashlib.sha256(Path(f).read_bytes()).hexdigest() for flags,group in groups for f in group if Path(f).is_relative_to(root/'src')},scope='actual BMP contents, synthetic FAT sectors, encrypted controller, bus-level SDRAM, pre-TMDS video and audio packet input'),indent=2))
+if any(hashlib.sha256((root/f).read_bytes()).hexdigest()!=h for f,h in source_hashes.items()):
+ raise RuntimeError('Instantiated source changed during simulation')
+(out/'result.json').write_text(json.dumps(dict(passed=ok,seconds=time.time()-t,files=metadata,video_only=a.video_only,sources=source_hashes,source_manifest_scope='instantiated hierarchy; unused compilation units excluded',scope='actual BMP contents, synthetic FAT sectors, encrypted controller, bus-level SDRAM, pre-TMDS video and audio packet input'),indent=2))
 print('\n'.join(log.splitlines()[-18:]),flush=True)
 raise SystemExit(0 if ok else 1)

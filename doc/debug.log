@@ -1,0 +1,3 @@
+[1009/012508.313:ERROR:registration_protocol_win.cc(135)] TransactNamedPipe: 管道的另一端上无任何进程。 (0xE9)
+[1009/012508.356:ERROR:registration_protocol_win.cc(135)] TransactNamedPipe: 管道的另一端上无任何进程。 (0xE9)
+[1009/012508.784:ERROR:registration_protocol_win.cc(135)] TransactNamedPipe: 管道的另一端上无任何进程。 (0xE9)

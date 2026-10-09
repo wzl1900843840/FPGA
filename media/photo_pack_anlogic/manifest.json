@@ -1,0 +1,152 @@
+{
+  "created_at": "2026-10-09T00:50:43.626728+08:00",
+  "logo": {
+    "source": "D:\\FPGA\\anlu\\guanfang\\lab_ex4_tf\\doc\\TF卡图片\\logo_640x480_24bit_不翻转.bmp",
+    "source_sha256": "f9938325dcf16100ef4cd08ab2827e1e646878ae54518cb1604dc04875dca218",
+    "crop_box": [
+      13,
+      63,
+      288,
+      241
+    ],
+    "resized_size": [
+      63,
+      41
+    ],
+    "position": [
+      16,
+      16
+    ],
+    "permission": "User-supplied logo, used as requested; logo is separate from the photo licenses"
+  },
+  "photos": [
+    {
+      "file": "PIC1.BMP",
+      "theme": "日间城市建筑",
+      "slug": "downtown-city-skyline",
+      "source_page": "https://www.shopify.com/stock-photos/photos/downtown-city-skyline",
+      "author": "Mitul Shah",
+      "license": "Creative Commons",
+      "license_url": "https://www.shopify.com/stock-photos/licenses/creative-commons",
+      "download_url": "https://burst.shopifycdn.com/photos/downtown-city-skyline.jpg?width=1600&format=pjpg",
+      "source_size": [
+        1600,
+        1067
+      ],
+      "crop_box": [
+        88.66666666666663,
+        0.0,
+        1511.3333333333335,
+        1067.0
+      ],
+      "source_sha256": "edefa8465ed8a5a862b351905043815abe21359e49a15b405872c5a525d5d6ad",
+      "size_bytes": 921654,
+      "sha256": "2434d0ba45deeca5f5b3686bc61fb969a396c0abe471260bbd16a9aee90a9203",
+      "width": 640,
+      "height": 480,
+      "bits_per_pixel": 24,
+      "compression": 0,
+      "pixel_offset": 54,
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "processing": "center crop to 4:3; Lanczos resize; original transparent Anlogic logo at (16,16)",
+      "pixel_round_trip": true,
+      "serialized_row_orientation": true
+    },
+    {
+      "file": "PIC2.BMP",
+      "theme": "城市黄昏",
+      "slug": "toronto-stunning-sunset",
+      "source_page": "https://www.shopify.com/stock-photos/photos/toronto-stunning-sunset",
+      "author": "Mitul Shah",
+      "license": "Creative Commons",
+      "license_url": "https://www.shopify.com/stock-photos/licenses/creative-commons",
+      "download_url": "https://burst.shopifycdn.com/photos/toronto-stunning-sunset.jpg?width=1600&format=pjpg",
+      "source_size": [
+        1600,
+        1067
+      ],
+      "crop_box": [
+        88.66666666666663,
+        0.0,
+        1511.3333333333335,
+        1067.0
+      ],
+      "source_sha256": "b0dac22cb7fcc3637b7ddfe234cced098145ead6725c7da341c3f43aa29c40e1",
+      "size_bytes": 921654,
+      "sha256": "4286be00a4120bf972087e88c680b96eddad3f7cbde3dc8597b14da1e2197113",
+      "width": 640,
+      "height": 480,
+      "bits_per_pixel": 24,
+      "compression": 0,
+      "pixel_offset": 54,
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "processing": "center crop to 4:3; Lanczos resize; original transparent Anlogic logo at (16,16)",
+      "pixel_round_trip": true,
+      "serialized_row_orientation": true
+    },
+    {
+      "file": "PIC3.BMP",
+      "theme": "山地湖泊",
+      "slug": "mountains-and-blue-lake",
+      "source_page": "https://www.shopify.com/stock-photos/photos/mountains-and-blue-lake",
+      "author": "Samuel Mitchell",
+      "license": "shopify-some-rights-reserved",
+      "license_url": "https://www.shopify.com/stock-photos/licenses/shopify-some-rights-reserved",
+      "download_url": "https://burst.shopifycdn.com/photos/mountains-and-blue-lake.jpg?width=1200",
+      "source_size": [
+        1200,
+        797
+      ],
+      "crop_box": [
+        68.66666666666663,
+        0.0,
+        1131.3333333333335,
+        797.0
+      ],
+      "source_sha256": "d247b9667271841cef05263155783b3fab3709c72ce48d0c21400eea63d44776",
+      "size_bytes": 921654,
+      "sha256": "8622f94a64fa0553fdedee085b13b5670ed78521ba4354230400035b3a8d5c1e",
+      "width": 640,
+      "height": 480,
+      "bits_per_pixel": 24,
+      "compression": 0,
+      "pixel_offset": 54,
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "processing": "center crop to 4:3; Lanczos resize; original transparent Anlogic logo at (16,16)",
+      "pixel_round_trip": true,
+      "serialized_row_orientation": true
+    },
+    {
+      "file": "PIC4.BMP",
+      "theme": "林间自然光",
+      "slug": "sunlit-forest",
+      "source_page": "https://www.shopify.com/stock-photos/photos/sunlit-forest",
+      "author": "Angelique Downing",
+      "license": "shopify-some-rights-reserved",
+      "license_url": "https://www.shopify.com/stock-photos/licenses/shopify-some-rights-reserved",
+      "download_url": "https://burst.shopifycdn.com/photos/sunlit-forest.jpg?width=1200",
+      "source_size": [
+        1200,
+        795
+      ],
+      "crop_box": [
+        70.0,
+        0.0,
+        1130.0,
+        795.0
+      ],
+      "source_sha256": "ac766a71950b4b8b05e3c6ee5994ae4d2dcbdfe4e4f9702ea9270544b5a812ed",
+      "size_bytes": 921654,
+      "sha256": "baf86e3a150eed71626aa69440a3f11b18d5e7ca07bfaa7b8d1dbb6a99ec6c38",
+      "width": 640,
+      "height": 480,
+      "bits_per_pixel": 24,
+      "compression": 0,
+      "pixel_offset": 54,
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "processing": "center crop to 4:3; Lanczos resize; original transparent Anlogic logo at (16,16)",
+      "pixel_round_trip": true,
+      "serialized_row_orientation": true
+    }
+  ]
+}

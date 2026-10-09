@@ -7,7 +7,7 @@ wire locked=1;wire init,busy,refresh,rv;wire[31:0]rd;
 reg we=0,re=0;reg[20:0]wa=0,ra=0;reg[31:0]wd=0;
 // Clock periods/offset measured with the vendor PLL model in tb_pll_clocks.
 wire cwe,full,overflow,idle;wire[20:0]cwa;wire[31:0]cwd;wire[3:0]cmask;
-media_sdram_write_cdc bridge(clk,!reset,we,wa,4'd0,wd,full,overflow,mc,!reset,cwe,cwa,cmask,cwd,idle,busy,refresh);
+media_sdram_write_cdc bridge(clk,!reset,we,wa,4'd0,wd,full,overflow,mc,!reset,cwe,cwa,cmask,cwd,idle,busy,refresh,1'b1,);
 sdram dut(.Clk(mc),.Clk_sft(ms),.Rst(reset||!locked),.Sdr_init_done(init),.Sdr_busy(busy),.Sdr_init_ref_vld(refresh),
 .App_wr_en(cwe),.App_wr_addr(cwa),.App_wr_dm(cmask),.App_wr_din(cwd),.App_rd_en(re),.App_rd_addr(ra),.Sdr_rd_en(rv),.Sdr_rd_dout(rd));
 integer b,i,got=0,errors=0;reg check=0;

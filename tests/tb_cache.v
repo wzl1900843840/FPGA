@@ -3,7 +3,7 @@ module tb_cache;
 reg clk=0;always #5 clk=~clk;
 reg rst=0,start=0;wire busy,done;wire[7:0]error;wire re,we;wire[20:0]ra,wa;wire[31:0]wd;
 reg rv=0;reg [31:0]rd=0;integer count=0,pos,x,y,bank,sx,sy,expected;
-thumbnail_cache_builder dut(clk,rst,start,4'b1101,busy,done,error,re,ra,rv,rd,we,wa,wd,1'b0,1'b0);
+thumbnail_cache_builder dut(clk,rst,start,4'b1101,busy,done,error,re,ra,rv,rd,we,wa,wd,1'b0,1'b0,1'b1,,);
 // Independent address-pattern memory. Every source word encodes its own address.
 always @(posedge clk) begin rv<=re;rd<=ra;
  if(we) begin

@@ -11,7 +11,7 @@ media_ingest_frontend front(.clk(sc),.rst_n(rst),.start(start),.done(idone),.ing
 .resource_valid(resources),.image_complete(complete),.reader_req(req),.reader_lba(lba),.reader_busy(busy),
 .reader_valid(sv),.reader_byte(sbyte),.reader_byte_index(bi),.reader_done(sd),.reader_error(8'd0),
 .controller_init_done(!full),.controller_busy(1'b0),.refresh_active(1'b0),.app_wr_en(sw),.app_wr_addr(swa),.app_wr_mask(mask),.app_wr_data(swdata));
-media_sdram_write_cdc cdc(sc,rst,sw,swa,mask,swdata,full,overflow,mc,rst,mw,mwa,mmask,mwdata,idle,1'b0,1'b0);
+media_sdram_write_cdc cdc(sc,rst,sw,swa,mask,swdata,full,overflow,mc,rst,mw,mwa,mmask,mwdata,idle,1'b0,1'b0,1'b1,);
 reg[31:0]memory[0:1535999];integer writes=0,bank,pos,x,y;reg[23:0]expected;
 function[23:0]pixel;input integer bank,x,y;begin pixel={x[7:0],y[7:0],8'd5+bank[7:0]*8'd40};end endfunction
 always @(posedge mc)if(mw)begin

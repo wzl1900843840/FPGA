@@ -32,13 +32,13 @@ if min(values.values())<0:raise RuntimeError('Timing failed: '+str(values))
 bit=phy/(name+'.bit')
 if bit.stat().st_mtime<max(p.stat().st_mtime for p in files):raise RuntimeError('Stale bit')
 best=RUNS/'best_result';best.mkdir(exist_ok=True)
-backup=ROOT/'tests/results/before_local_diagnostic';backup.mkdir(exist_ok=True)
+backup=ROOT/'tests/results/before_photo_ui_20261009/best_result';backup.mkdir(parents=True,exist_ok=True)
 old=best/bit.name
 if old.exists() and not (backup/bit.name).exists():shutil.copy2(old,backup/bit.name)
 for filename in (bit.name,name+'_phy.ts',name+'_inst.bid'):
  shutil.copy2(phy/filename,best/filename)
-report={'built_at':datetime.datetime.now().isoformat(),'bit_sha256':digest(bit),'timing_ns':values,'sources':hashes,'hardware_tested':False,'warnings':warnings,
- 'purpose':'K4 held with SW4 high at reset: SW3 low = local pixels, SW3 high = synthetic stream through read FIFO; normal reset restores player'}
+report={'built_at':datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(),'bit_sha256':digest(bit),'timing_ns':values,'sources':hashes,'hardware_tested':False,'warnings':warnings,
+ 'purpose':'Boot/K1 mute with runtime persistence, photo-first transparent waveform, frame-committed cached numeric OSD and shadowed subtitles; existing fast boot and shared SDRAM preserved'}
 (best/'validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps({k:v for k,v in report.items() if k!='sources'},ensure_ascii=False,indent=2),flush=True)
 

@@ -6,7 +6,8 @@ module media_ingest_pipeline #(
     parameter integer ADDR_WIDTH = 21,
     parameter integer FIFO_DEPTH = 512,
     parameter integer STALL_TIMEOUT = 65535,
-    parameter integer ALLOW_2X_SOURCE = 0
+    parameter integer ALLOW_2X_SOURCE = 0,
+    parameter integer EARLY_DISPLAY = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -35,7 +36,9 @@ module media_ingest_pipeline #(
     output wire                  app_wr_en,
     output wire [ADDR_WIDTH-1:0] app_wr_addr,
     output wire [3:0]            app_wr_mask,
-    output wire [31:0]           app_wr_data
+    output wire [31:0]           app_wr_data,
+    input  wire                 write_drain_idle,
+    output wire [3:0]           image_ready
 );
     localparam integer IMAGE_WORDS = IMAGE_WIDTH * IMAGE_HEIGHT;
     localparam ERR_NONE   = 8'h00;
@@ -49,12 +52,16 @@ module media_ingest_pipeline #(
     localparam ST_FILE_START= 3'd2;
     localparam ST_FILE      = 3'd3;
     localparam ST_FAIL_WAIT = 3'd4;
+    localparam ST_DRAIN     = 3'd5;
 
     reg [2:0] state;
     reg scan_start;
     reg file_start;
     reg load_start;
     reg load_finished;
+    reg [3:0] verified_images;
+    reg [7:0] drain_count;
+    assign image_ready=EARLY_DISPLAY ? verified_images : image_complete;
     // 解码/SDRAM写完不等于文件FAT尾链校验完成；两端排空后才开下一文件。
 
     wire scan_busy;
@@ -153,7 +160,7 @@ module media_ingest_pipeline #(
 
     media_frame_loader #(
         .ADDR_WIDTH(ADDR_WIDTH), .IMAGE_WORDS(IMAGE_WORDS),
-        .FIFO_DEPTH(FIFO_DEPTH), .STALL_TIMEOUT(STALL_TIMEOUT)
+        .FIFO_DEPTH(FIFO_DEPTH), .STALL_TIMEOUT(STALL_TIMEOUT), .DRAIN_ON_ERROR(EARLY_DISPLAY)
     ) u_frame_loader (
         .clk(clk), .rst_n(rst_n), .load_start(load_start), .image_index(current_image),
         .pixel_valid(pixel_valid), .pixel_rgb(pixel_rgb), .source_top_down(source_top_down), .frame_commit(frame_commit),
@@ -175,6 +182,7 @@ module media_ingest_pipeline #(
             ingest_detail_error <= ERR_NONE;
             current_image <= 2'd0; retry_count<=0;
             image_scale_2x <= 4'd0;
+            verified_images<=0;drain_count<=0;
         end else begin
             scan_start <= 1'b0;
             file_start <= 1'b0;
@@ -187,6 +195,7 @@ module media_ingest_pipeline #(
                     ingest_detail_error <= ERR_NONE;
                     current_image <= 2'd0; retry_count<=0;
                     image_scale_2x <= 4'd0;
+                    verified_images<=0;drain_count<=0;
                     scan_start <= 1'b1;
                     state <= ST_SCAN;
                 end
@@ -221,6 +230,11 @@ module media_ingest_pipeline #(
                         ingest_error <= ERR_MEMORY;
                         ingest_detail_error <= memory_error;
                         state <= ST_FAIL_WAIT;
+                    end else if (EARLY_DISPLAY) begin
+                        // Publish after file/FAT validation and the write CDC
+                        // have both finished; never expose a partial frame.
+                        image_scale_2x[current_image] <= source_scale_2x;
+                        drain_count<=0;state<=ST_DRAIN;
                     end else if (current_image == 2'd3) begin
                         image_scale_2x[current_image] <= source_scale_2x;
                         done <= 1'b1;
@@ -238,6 +252,13 @@ module media_ingest_pipeline #(
                     else if(current_image==3) begin done<=1;state<=ST_IDLE;end
                     else begin current_image<=current_image+1'b1;retry_count<=0;state<=ST_FILE_START;end
                 end
+                ST_DRAIN: if(write_drain_idle) begin
+                    if(drain_count==255) begin
+                        verified_images[current_image]<=1'b1;retry_count<=0;
+                        if(current_image==3) begin done<=1;state<=ST_IDLE;end
+                        else begin current_image<=current_image+1'b1;state<=ST_FILE_START;end
+                    end else drain_count<=drain_count+1'b1;
+                end else drain_count<=0;
                 default: state <= ST_IDLE;
             endcase
         end

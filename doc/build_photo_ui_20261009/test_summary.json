@@ -1,0 +1,228 @@
+{
+  "built_at": "2026-10-09T01:16:44.517940+08:00",
+  "bit_sha256": "634bd3a10b4330d328760cd5555e4e1c4a66873cb8c6a6f4584b198951c0df2e",
+  "timing_ns": {
+    "SWNS": 0.782,
+    "STNS": 0.0,
+    "HWNS": 0.015,
+    "HTNS": 0.0
+  },
+  "resources": {
+    "lut": 16069,
+    "reg": 8347,
+    "bram": 15,
+    "dsp": 16
+  },
+  "hardware_tested": false,
+  "test_groups": {
+    "portable": [
+      {
+        "test": "keys",
+        "passed": true,
+        "seconds": 0.14
+      },
+      {
+        "test": "fade",
+        "passed": true,
+        "seconds": 0.12
+      },
+      {
+        "test": "uart",
+        "passed": true,
+        "seconds": 0.23
+      },
+      {
+        "test": "bmp",
+        "passed": true,
+        "seconds": 0.14
+      },
+      {
+        "test": "pixels",
+        "passed": true,
+        "seconds": 0.16
+      },
+      {
+        "test": "thumbnail",
+        "passed": true,
+        "seconds": 0.11
+      },
+      {
+        "test": "cache",
+        "passed": true,
+        "seconds": 2.86
+      },
+      {
+        "test": "wav",
+        "passed": true,
+        "seconds": 0.25
+      },
+      {
+        "test": "sd_delay",
+        "passed": true,
+        "seconds": 10.52
+      },
+      {
+        "test": "fat32",
+        "passed": true,
+        "seconds": 0.16
+      },
+      {
+        "test": "streamer",
+        "passed": true,
+        "seconds": 0.11
+      },
+      {
+        "test": "cdc",
+        "passed": true,
+        "seconds": 0.1
+      },
+      {
+        "test": "flash",
+        "passed": true,
+        "seconds": 0.2
+      },
+      {
+        "test": "sd_protocol",
+        "passed": true,
+        "seconds": 0.25
+      }
+    ],
+    "vendor": [
+      {
+        "test": "tb_pll_clocks",
+        "passed": true,
+        "seconds": 10.316588163375854
+      },
+      {
+        "test": "tb_vendor_sdram",
+        "passed": true,
+        "seconds": 7.786712169647217
+      },
+      {
+        "test": "tb_vendor_cdc",
+        "passed": true,
+        "seconds": 26.535517930984497
+      },
+      {
+        "test": "tb_vendor_cache",
+        "passed": true,
+        "seconds": 29.36831021308899
+      }
+    ],
+    "fast_boot": [
+      {
+        "test": "early_valid",
+        "passed": true,
+        "seconds": 0.18
+      },
+      {
+        "test": "early_bad_tail",
+        "passed": true,
+        "seconds": 0.19
+      },
+      {
+        "test": "early_abort_burst",
+        "passed": true,
+        "seconds": 0.2
+      },
+      {
+        "test": "sd_fast",
+        "passed": true,
+        "seconds": 0.39
+      },
+      {
+        "test": "waveform",
+        "passed": true,
+        "seconds": 5.26
+      },
+      {
+        "test": "vendor_shared",
+        "passed": true,
+        "seconds": 5.96
+      },
+      {
+        "test": "vendor_shared_cache",
+        "passed": true,
+        "seconds": 110.53
+      }
+    ],
+    "photo_ui": [
+      {
+        "test": "boot_mute",
+        "passed": true,
+        "seconds": 0.19
+      },
+      {
+        "test": "audio_mute",
+        "passed": true,
+        "seconds": 23.55
+      },
+      {
+        "test": "decode_pic1",
+        "passed": true,
+        "seconds": 11.02
+      },
+      {
+        "test": "ui_pic1",
+        "passed": true,
+        "seconds": 11.95
+      },
+      {
+        "test": "decode_pic2",
+        "passed": true,
+        "seconds": 10.74
+      },
+      {
+        "test": "ui_pic2",
+        "passed": true,
+        "seconds": 11.73
+      },
+      {
+        "test": "decode_pic3",
+        "passed": true,
+        "seconds": 10.74
+      },
+      {
+        "test": "ui_pic3",
+        "passed": true,
+        "seconds": 11.37
+      },
+      {
+        "test": "decode_pic4",
+        "passed": true,
+        "seconds": 11.87
+      },
+      {
+        "test": "ui_pic4",
+        "passed": true,
+        "seconds": 12.65
+      },
+      {
+        "test": "ui_startup_muted",
+        "passed": true,
+        "seconds": 12.34
+      },
+      {
+        "test": "ui_chinese_optional",
+        "passed": true,
+        "seconds": 12.0
+      }
+    ],
+    "photo_chain": {
+      "passed": true,
+      "pixels": 2150400,
+      "SDRAM_words": 1228800,
+      "PCM_samples": 5656,
+      "HDMI_packets": 1535
+    }
+  },
+  "waveform_followup": {
+    "passed": true,
+    "scope": "latest waveform: frame-stable bank ownership, six-frame silence decay including +27->13 and -27->-14, peak-hold behavior",
+    "rtl_sha256": "40be5d82dee06ce071ab0363823b5d909e843613a8b8cf408c5357e33484ab84",
+    "test_sha256": "e345918a7f5b75d437a2d97747f272b9726d598c41d9390ce413ee060fdde9f0"
+  },
+  "scope": "RTL simulation, source/license and BMP verification, TD synthesis/place-route/STA; no hardware programming",
+  "clock_constraint_sha256": "db275c80efb4e7c26c44f0ac92b2dc129fdc98a7956644ce2430969c29a1fad5",
+  "passed_checks": 38
+}

@@ -4,7 +4,7 @@ wire vi,vbusy,vref;reg ms=0;initial begin #10;forever #12.5 ms=~ms;end
 reg clk=0;always #12.5 clk=~clk;
 reg rst=0,start=0;wire busy,done;wire[7:0]error;wire re,we;wire[20:0]ra,wa;wire[31:0]wd;
 wire rv;wire[31:0]rd;integer count=0,pos,x,y,bank,sx,sy,expected;
-thumbnail_cache_builder dut(clk,rst,start,4'b1101,busy,done,error,re,ra,rv,rd,we,wa,wd,vbusy,vref);
+thumbnail_cache_builder dut(clk,rst,start,4'b1101,busy,done,error,re,ra,rv,rd,we,wa,wd,vbusy,vref,1'b1,,);
 sdram vendor(.Clk(clk),.Clk_sft(ms),.Rst(!rst),.Sdr_init_done(vi),.Sdr_busy(vbusy),.Sdr_init_ref_vld(vref),
 .App_wr_en(we),.App_wr_addr(wa),.App_wr_dm(4'd0),.App_wr_din(wd),.App_rd_en(re),.App_rd_addr(ra),.Sdr_rd_en(rv),.Sdr_rd_dout(rd));
 // Independent address-pattern memory. Every source word encodes its own address.

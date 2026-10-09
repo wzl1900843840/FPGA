@@ -1,20 +1,72 @@
 {
-  "built_at": "2026-09-28T15:52:26.199105",
-  "bit_sha256": "5da0cca6640e639fede72455c69a0c8c2cd9f44c787242f77701b8563458c4a9",
-  "timing_ns": {
-    "SWNS": 0.018,
-    "STNS": 0.0,
-    "HWNS": 0.004,
-    "HTNS": 0.0
-  },
+  "results": [
+    {
+      "test": "boot_mute",
+      "passed": true,
+      "seconds": 0.19
+    },
+    {
+      "test": "audio_mute",
+      "passed": true,
+      "seconds": 23.55
+    },
+    {
+      "test": "decode_pic1",
+      "passed": true,
+      "seconds": 11.02
+    },
+    {
+      "test": "ui_pic1",
+      "passed": true,
+      "seconds": 11.95
+    },
+    {
+      "test": "decode_pic2",
+      "passed": true,
+      "seconds": 10.74
+    },
+    {
+      "test": "ui_pic2",
+      "passed": true,
+      "seconds": 11.73
+    },
+    {
+      "test": "decode_pic3",
+      "passed": true,
+      "seconds": 10.74
+    },
+    {
+      "test": "ui_pic3",
+      "passed": true,
+      "seconds": 11.37
+    },
+    {
+      "test": "decode_pic4",
+      "passed": true,
+      "seconds": 11.87
+    },
+    {
+      "test": "ui_pic4",
+      "passed": true,
+      "seconds": 12.65
+    },
+    {
+      "test": "ui_startup_muted",
+      "passed": true,
+      "seconds": 12.34
+    },
+    {
+      "test": "ui_chinese_optional",
+      "passed": true,
+      "seconds": 12.0
+    }
+  ],
   "sources": {
-    "src\\user_source\\constraints_source\\pin.adc": "0b094691e9df8b6ebbf635ad9167c851f2018c69825a55aea30d2632650a3f7b",
-    "src\\user_source\\constraints_source\\timing.sdc": "db275c80efb4e7c26c44f0ac92b2dc129fdc98a7956644ce2430969c29a1fad5",
     "src\\user_source\\hdl_source\\hdmi_phy_warpper.v": "416b082b0987001bdbc0a7e20a557cb8fb1dca34e25dc881e6d28a8cb3cf4300",
     "src\\user_source\\hdl_source\\key_remove_shakes.v": "8832f59e7ba94bfb8cf31e4f5a772ef7177d5257a5a2532d53cbfa1d9b7f5cd9",
     "src\\user_source\\hdl_source\\lane_lvds_10_1.v": "de9529321354f04837e051d0ec1681cf44783d4be3284703a788e081147500bc",
     "src\\user_source\\hdl_source\\startup_pulse.v": "396e1e56febb8028339e646bc2f06b83e07ab11ef840e447422fb941956741c9",
-    "src\\user_source\\hdl_source\\top_tf_hdmi_audio.v": "1dba9c55de5a25da0c910a7394a9948ae599e9a92b0a6149d89642d0e9da166f",
+    "src\\user_source\\hdl_source\\top_tf_hdmi_audio.v": "a1e278dae096ec9845e0f85df68d37a9a077062002dfb140b1c0a3ceaf2b2f78",
     "src\\user_source\\hdl_source\\video_rgb_to_axis_640x480.v": "1c8fc26c789f87227036bea034f1ab6fc5633f2ab2684be422c54687a290fb96",
     "src\\user_source\\hdl_source\\video_source_test.v": "39cc05c9684a594d4254d11e66e97344053ab75bdb00f3f5a301643fd7aadbfc",
     "src\\user_source\\ip_source\\pll.v": "202799f886f12cfc1d837afa932328b636c6c3dee70167be68c084133647b39c",
@@ -45,25 +97,26 @@
     "src\\user_source\\rtl\\hdmi_terc4_encoder.v": "03879709456f4857d861833fd2290b4469a03e0fecb2d3f830ff939912ee8daa",
     "src\\user_source\\rtl\\hdmi_tmds_channel_encoder.v": "a2a8d1422f82f3cf826dcdfc6ed824745617ea358e220021ea48f9cda5d7ac3d",
     "src\\user_source\\rtl\\m06_pcm_contract_adapter.v": "33e0a6ea7f76480935c27b94ee39ff7918697ede4555083327e96ba9834430c4",
-    "src\\user_source\\rtl\\media_frame_loader.v": "bcaf2f63b8abc579925d8a38392e79d5be86430fdd2a268076b14416878df1ee",
-    "src\\user_source\\rtl\\media_frame_reader.v": "79c6c5b464e21b3d66568fe4ae4dd440b1e6b53b299877ff9f1357d9ca2f567d",
+    "src\\user_source\\rtl\\media_frame_loader.v": "1897915c3dae32f16a8caf36a5046e4f9e4e7fb145e97210b01925edaf883e6f",
+    "src\\user_source\\rtl\\media_frame_reader.v": "daf31e7c2ebcc016906b906f5b7ee0bf085e37ce95b59080b857f161df42f3e4",
     "src\\user_source\\rtl\\media_hdmi_audio_bridge.v": "dc90cde4996dc64d06c418d1f6f33f419f9271ea121c5e3d7ba57ac59eec61b2",
-    "src\\user_source\\rtl\\media_ingest_frontend.v": "3e11e7d41e442000596b0e8eb24c694d94d119cd9bec35f581604078bd3e6d1b",
-    "src\\user_source\\rtl\\media_ingest_pipeline.v": "700d04c9848a32446582c3ed124d85baa5f029ca19aaeb5e4439d3f19e69b62d",
+    "src\\user_source\\rtl\\media_ingest_frontend.v": "2568e44576a0040685fff5d3c42721f90253d7fb470e1aa5fc1bcdf2b277009e",
+    "src\\user_source\\rtl\\media_ingest_pipeline.v": "321765e8e0dcc97b080331bb74cc7c047ae7cb70bc98e63b9144532f7c6c8def",
     "src\\user_source\\rtl\\media_player_control.v": "d7abf2ed5b0b3db1613c4e8d5cf89231096aeed644a228f7eb60ec0858e41dfe",
     "src\\user_source\\rtl\\media_policy.v": "e4c123c1073531780c36adc3774c20c68a5ed234ff325702726418c9d516a2f5",
     "src\\user_source\\rtl\\media_recovery_fsm.v": "b959ae8cec711eb0f5b80fa05b2ff54263380a1b8bd87509b32f723a3f3f9207",
-    "src\\user_source\\rtl\\media_sdram_write_cdc.v": "0b151a90aa4d45482c9ec3ce5843af1121d549f4c7d9f218f6bd1ea2f0c83e0c",
-    "src\\user_source\\rtl\\media_storage_ingest_top.v": "8908a7931e94660cc2e368d19814142d39953a4f155c40e6fb18f7ca73cbb28f",
-    "src\\user_source\\rtl\\media_video_pipeline.v": "aa2abac3c0c878c24a0c24aa456c80f875d9277678cd5b92956665751172c619",
+    "src\\user_source\\rtl\\media_sdram_arbiter.v": "63a1e4e543eb02e12516e86388fe385a30d447e465d24c019762cfd0f0c784d1",
+    "src\\user_source\\rtl\\media_sdram_write_cdc.v": "5fe143c0eac0db42dbd00cbc65970f08d6e20a89047f8f3a71205db11b0c0b23",
+    "src\\user_source\\rtl\\media_storage_ingest_top.v": "c51476db00af92961772aa23e1595150b2349515437abf0f689cac47d3668e6a",
+    "src\\user_source\\rtl\\media_video_pipeline.v": "177f9810f1b8f51f19c654598659bc989d08348c5d44688eb5d634d153695709",
     "src\\user_source\\rtl\\osd_overlay_24.v": "2efde3e174ab0bff8638cab4f99faf8981c686927051f24eae9e2d8d54480df0",
-    "src\\user_source\\rtl\\param_menu_controller.v": "68844b5e5824ad8591566c707171f1310f8ff4eabc24aa19d3bdbbeb7fbc521e",
+    "src\\user_source\\rtl\\param_menu_controller.v": "2efb681b5c518f6ce7d8e8f629c2e1f8db873bc4dd50fc497c958849cb20ccc6",
     "src\\user_source\\rtl\\pcm_content_mux.v": "0935d932acf9a4c5971f994a7a07e6eb1451fe96aff53c79bcef4ec4816de37d",
     "src\\user_source\\rtl\\pcm_media_tone.v": "e709e9331f323a8738feb84970b498c609a746256b1e3b78d7c02326e547b0e0",
     "src\\user_source\\rtl\\pcm_test_tone.v": "eaf6fe15573bd49062bdc9390e99f08214af26940d23cca9323499c63002a6ff",
-    "src\\user_source\\rtl\\player_config_persistence.v": "ba17a5f50061ec1cdc971ba1485a7d3af952d10051799d66e50eb893e22b5664",
-    "src\\user_source\\rtl\\promax_audio_waveform.v": "9c0a9b0043808e33e22f0ee1f97ff1b9bc2582edc14698c71ee6d3e56ed0f7d7",
-    "src\\user_source\\rtl\\promax_text_overlay.v": "d44ad9c5560b4095819c2613d25152fd5041bb6ae67783610ed515aca9f0cce0",
+    "src\\user_source\\rtl\\player_config_persistence.v": "9565a9d10274bef4a701b92621b71192e07c9e2e279c75c5fdc0a9f14bea8eae",
+    "src\\user_source\\rtl\\promax_audio_waveform.v": "40be5d82dee06ce071ab0363823b5d909e843613a8b8cf408c5357e33484ab84",
+    "src\\user_source\\rtl\\promax_text_overlay.v": "b68fca5ff74c4beaea8757bfaac7f165e85122f822ea8cadc1fc75016704115f",
     "src\\user_source\\rtl\\pulse_toggle_sync.v": "f0f7f6adc7b6a7ead517f09c0f1260bc2011880e0fb2dda65daac9b3333f6d01",
     "src\\user_source\\rtl\\reset_sync.v": "422024379917ce7895550df38c07600a32ecf11c4bb643e91abd235ddd42fd9d",
     "src\\user_source\\rtl\\rgb_video_adapter.v": "edcca4a11291e590e48ab292567dba3eb40b185f021e00112b8155db9bd19e68",
@@ -77,11 +130,11 @@
     "src\\user_source\\rtl\\spi_byte_engine.v": "7f4eb1fa86e01610451ec140ab5aaaa24052977b5df972c2f08b68dc8404e7ea",
     "src\\user_source\\rtl\\status_osd_overlay.v": "7bb371cf980beea18985c807658b5e2b100e6f6db38fd9973f9c940dd30687fc",
     "src\\user_source\\rtl\\subtitle_frame_commit.v": "4049c911722c6838d65796c3e359333e9bc9be81fab9782fa27cb44c0c39565f",
-    "src\\user_source\\rtl\\subtitle_uart_controller.v": "ffa3291bfec618d00dcf83f0d6e00d95a56425b01a415431d89df698f5fdb49a",
+    "src\\user_source\\rtl\\subtitle_uart_controller.v": "a36f2689dafbd005df1f2500a925a6c8cb51b3b09a3f6b572d8070745e14d2fc",
     "src\\user_source\\rtl\\sync_2ff.v": "691a3ea359a4ac443ab87d3202a1f3398f16e46b83066efd485f25f912f47fe9",
     "src\\user_source\\rtl\\sync_fade_gain.v": "400429304f46d3ce16fc99fc48eb53e6f174cc58010fa82ea0dbc17650562067",
     "src\\user_source\\rtl\\sys_pll_promax_40.v": "66b07acad5f77c901de7e7ef5997da1e08600f7085f60050fcd00923f53e8d13",
-    "src\\user_source\\rtl\\thumbnail_cache_builder.v": "22347b7f4bb2bae6b5a7f2bfd18410482d5d07d6bf044068000e4ac2c9ed45d8",
+    "src\\user_source\\rtl\\thumbnail_cache_builder.v": "b1bd1831cbba714be5b0c2bbc0382067ae6a5346920e5d3e5be5f63d5bb719cf",
     "src\\user_source\\rtl\\thumbnail_controller.v": "66be798ff67a39371aed842740be033158653a98f9c5074a9c96cc7da1263b95",
     "src\\user_source\\rtl\\thumbnail_layout.v": "adfb4e77fbb1ab41ceb779d6181e04a428e9cd16c9119035f360cd8f29a85ba7",
     "src\\user_source\\rtl\\timestamp_osd.v": "5752d5e050997fa4a33f7379e16ac87e2f5b2a54c46d42fa542b73ecabd1cf36",
@@ -121,79 +174,105 @@
     "src\\user_source\\hdl_source\\SD\\spi_master.v": "37f7a21144fa5cca3cc5c3b5f68a5ad40b3108336b600e45a1367734ac61403c",
     "src\\user_source\\hdl_source\\SD\\video_define.v": "77748966850a8f5af0d77f2cdb08006088ba5e1a31b98391fba6cc61c5247da2",
     "src\\user_source\\hdl_source\\SD\\video_delay.v": "f47c4b63f8baa6d8874c87dca5b72dfdadd19f4a107403da98752bce98936433",
-    "src\\user_source\\hdl_source\\SD\\video_timing_data.v": "c6f75501e98dd5995f687aafb40455beffe45b426137b5089a73ac3a036f7282",
-    "src\\td_project\\lab_ex5_i2s_v1.0.al": "5c88bf0ebd7d7fdc79b763fb456fab2224d86360b5568fd8daa0552b6ffa944e",
-    "src\\td_project\\lab_ex5_i2s_v1.0_Runs\\syn_1\\settings.cfg": "0ffe4b332d4d98d2125ba965370a821c8ba7b1c4a2ec515611833fae724f37bc",
-    "src\\td_project\\lab_ex5_i2s_v1.0_Runs\\phy_1\\settings.cfg": "28f1722e88701c2fa001456e3620924301913cabc11c5302c88ce70fe551be0a"
+    "src\\user_source\\hdl_source\\SD\\video_timing_data.v": "c6f75501e98dd5995f687aafb40455beffe45b426137b5089a73ac3a036f7282"
   },
-  "hardware_tested": true,
-  "warnings": [
-    "HDL-5007 WARNING: concatenation with an unsized literal will be treated as 32 bits in ../../../user_source/hdl_source/include/sdr_init_ref.enc.v(47)",
-    "HDL-5007 WARNING: concatenation with an unsized literal will be treated as 32 bits in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(283)",
-    "HDL-5007 WARNING: concatenation with an unsized literal will be treated as 32 bits in ../../../user_source/hdl_source/include/sdr_init_ref.enc.v(47)",
-    "HDL-5007 WARNING: concatenation with an unsized literal will be treated as 32 bits in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(283)",
-    "HDL-5317 WARNING: input port '**' is not connected on this instance in ../../../user_source/hdl_source/include/sdr_as_ram.enc.v(17)",
-    "HDL-5317 WARNING: input port 'dib[31]' is not connected on this instance in ../../../user_source/rtl/afifo_32_16_256.v(231)",
-    "HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed",
-    "HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed",
-    "HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed",
-    "HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed",
-    "HDL-5001 WARNING: Contains anonymous inst(s) and/or net(s) that have not been renamed",
-    "SYN-5013 WARNING: Undriven net: model \"top\" / net \"U3/u2_ram/u2_wrrd/Sdr_init_ref_ba[1]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0)",
-    "SYN-5013 WARNING: Undriven net: model \"top\" / net \"U3/u2_ram/u2_wrrd/Sdr_init_ref_ba[0]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0)",
-    "SYN-5025 WARNING: Using 0 for all undriven pins and nets",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/ramread0_syn_4\" in ../../../user_source/rtl/media_frame_loader.v(107) / pin \"bea[0]\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/ramread0_syn_4\" in ../../../user_source/rtl/media_frame_loader.v(107) / pin \"beb[0]\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_video/u_reader/u_read_fifo/ram_inst/ramread0_syn_4\" in ../../../user_source/rtl/afifo_32_16_256.v(822) / pin \"bea[0]\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_video/u_reader/u_read_fifo/ram_inst/ramread0_syn_4\" in ../../../user_source/rtl/afifo_32_16_256.v(822) / pin \"beb[0]\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_write_cdc/u_fifo/ramread0_syn_4\" in ../../../user_source/rtl/media_sdram_write_cdc.v(226) / pin \"bea[0]\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"u_write_cdc/u_fifo/ramread0_syn_4\" in ../../../user_source/rtl/media_sdram_write_cdc.v(226) / pin \"beb[0]\"",
-    "SYN-5025 WARNING: Using 0 for all undriven pins and nets",
-    "SYN-6577 WARNING: The clock signal \"U3/u2_ram/SDRAM_CLK\" is added with the synthetic instruction (keep/mark_debug/dont_touch/max_fanout), which may create additional logic on this net",
-    "SYN-6562 WARNING: The init value of \"u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/ramread0_syn_4(../../../user_source/rtl/media_frame_loader.v(107))\" will be ignored since gate eram_init is set to off",
-    "SYN-6562 WARNING: The init value of \"u_storage/u_ingest_frontend/u_sector_replay/ramread0_syn_4(../../../user_source/rtl/sd_sector_replay_buffer.v(47))\" will be ignored since gate eram_init is set to off",
-    "SYN-6562 WARNING: The init value of \"u_video/u_reader/u_read_fifo/ram_inst/ramread0_syn_4(../../../user_source/rtl/afifo_32_16_256.v(822))\" will be ignored since gate eram_init is set to off",
-    "SYN-6562 WARNING: The init value of \"u_write_cdc/u_fifo/ramread0_syn_4(../../../user_source/rtl/media_sdram_write_cdc.v(226))\" will be ignored since gate eram_init is set to off",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[0]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[1]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[2]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[3]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[4]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[5]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[6]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[7]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[8]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5011 WARNING: Undriven pin: model \"top\" / inst \"U3/u2_ram/u2_wrrd/Sdr_rd_dout_reg[9]\" in ../../../user_source/hdl_source/include/sdr_wrrd.enc.v(0) / pin \"clk\"",
-    "SYN-5025 WARNING: Using 0 for all undriven pins and nets",
-    "PHY-7002 CRITICAL-WARNING: Instance U3/sdram location (12, 12) is not honored. Cell's initial location is not legal at the beginning of ECO placement, and will be moved during placement. Please verify user location constraints through the adc file.",
-    "PHY-7002 CRITICAL-WARNING: Instance U3/sdram location (164, 288) is not honored. Cell's initial location is not legal at the beginning of ECO placement, and will be moved during placement. Please verify user location constraints through the adc file.",
-    "PHY-7002 CRITICAL-WARNING: Instance U3/sdram location (164, 288) is not honored. Cell's initial location is not legal at the beginning of ECO placement, and will be moved during placement. Please verify user location constraints through the adc file.",
-    "PHY-5079 CRITICAL-WARNING: Marked 1 clock net(s) utilize the local routing resources. Please check log message and the sinks of clock nets."
-  ],
-  "purpose": "K4 held with SW4 high at reset: SW3 low = local pixels, SW3 high = synthetic stream through read FIFO; normal reset restores player",
-  "experiment": "Official original read FIFO, unchanged manual diagnostic entry and prefetch; high-effort placement/routing, unchanged SDC",
-  "test_log": "tests/results/fifo_pattern.log",
-  "comparison_evidence": "tests/results/original_fifo_compare.json",
-  "default_effort_failed": {
-    "SWNS": -0.289,
-    "STNS": -3.47,
-    "HWNS": 0.012,
-    "HTNS": 0.0,
-    "path": "mem reset -> pixel prefetch async reset recovery"
+  "scope": "Real RTL with simulated clocks, real photo bytes and synthetic PCM; hardware not exercised",
+  "rendered": {
+    "resolution": [
+      640,
+      480
+    ],
+    "volume": 64,
+    "period_ms": 5000,
+    "mode": "AUTO",
+    "startup_volume": 0,
+    "subtitle": "disabled; optional neutral Chinese glyphs tested separately"
   },
-  "hardware_validation": {
-    "recorded_at": "2026-09-28T15:59:38.815567",
-    "source": "user report",
-    "exact_report": "二级清晰 并且这次上电显示图片了！",
-    "passed": [
-      "synthetic pattern through original read FIFO displays clearly",
-      "normal boot displays photograph"
+  "files": {
+    "PIC1.BMP": "2434d0ba45deeca5f5b3686bc61fb969a396c0abe471260bbd16a9aee90a9203",
+    "PIC2.BMP": "4286be00a4120bf972087e88c680b96eddad3f7cbde3dc8597b14da1e2197113",
+    "PIC3.BMP": "8622f94a64fa0553fdedee085b13b5670ed78521ba4354230400035b3a8d5c1e",
+    "PIC4.BMP": "baf86e3a150eed71626aa69440a3f11b18d5e7ca07bfaa7b8d1dbb6a99ec6c38"
+  },
+  "end_to_end": {
+    "passed": true,
+    "seconds": 940.5183548927307,
+    "files": [
+      {
+        "file": "media\\photo_pack_anlogic\\PIC1.BMP",
+        "sha256": "2434d0ba45deeca5f5b3686bc61fb969a396c0abe471260bbd16a9aee90a9203"
+      },
+      {
+        "file": "media\\photo_pack_anlogic\\PIC2.BMP",
+        "sha256": "4286be00a4120bf972087e88c680b96eddad3f7cbde3dc8597b14da1e2197113"
+      },
+      {
+        "file": "media\\photo_pack_anlogic\\PIC3.BMP",
+        "sha256": "8622f94a64fa0553fdedee085b13b5670ed78521ba4354230400035b3a8d5c1e"
+      },
+      {
+        "file": "media\\photo_pack_anlogic\\PIC4.BMP",
+        "sha256": "baf86e3a150eed71626aa69440a3f11b18d5e7ca07bfaa7b8d1dbb6a99ec6c38"
+      }
     ],
-    "not_yet_verified": [
-      "all four photo selections and automatic cycle",
-      "60-minute stability and repeated cold boots",
-      "audio UART configuration flash and multiple displays"
-    ],
-    "full_acceptance": false
-  }
+    "video_only": false,
+    "sources": {
+      "src\\user_source\\hdl_source\\include\\sdr_as_ram.enc.v": "767dbdfbd83d42223b77dfa7deab42ce8216a8fd6f6cb41b7e7593d9a345ba57",
+      "src\\user_source\\hdl_source\\include\\sdr_init_ref.enc.v": "7d86bb8597b05d7304d651504ef6f3d58be3bee9af16ce7f1b3926900d1bfddc",
+      "src\\user_source\\hdl_source\\include\\sdr_wrrd.enc.v": "c7d7fe07d75f66aa88d9f986b3006319c995162434f104f9990664b374cdfdd2",
+      "src\\user_source\\hdl_source\\SD\\sdram.v": "635a9910d0b0ab5767265cdeb6e75fc1f38783bb65989abb3435ce5d202519c0",
+      "src\\user_source\\rtl\\afifo_32_16_256.v": "7c3ee41f30be75ae686c9abff3a840fc5439209cda077e4aa275eac0dab9f564",
+      "src\\user_source\\rtl\\audio_source_mux.v": "4e755bdeb8f2e13157636f94bc3bcdf8b19b876489720783de751ca7bd69e04a",
+      "src\\user_source\\rtl\\bmp24_decoder.v": "06b246de39d973f411b7c10e82a1897ad7fa44773446e5de84eb41260fcf5bff",
+      "src\\user_source\\rtl\\brightness_contrast_adjust.v": "40e53b82ae00b6758d9da55b78ae0bd19d9c5342c6b6ef4d7a08a120d8bb3d68",
+      "src\\user_source\\rtl\\fat32_file_streamer.v": "4c6a91390d85caf2924eee29267e1bf6181c702e115c565105208e2213466595",
+      "src\\user_source\\rtl\\fat32_volume_scanner.v": "7688675e099c03e91583f9e171253337d22836f105e84c9810f288dda4335539",
+      "src\\user_source\\rtl\\fifo_prefetch_2.v": "c5c088f4e195f1c193ef84f0ecb70e0dc83adf88736b31fcb58ffba036d3a76d",
+      "src\\user_source\\rtl\\hdmi_audio_acr_packetizer.v": "ad881027db5aafcb6418ccefc306ea180750523bea95436278c395798326712b",
+      "src\\user_source\\rtl\\hdmi_audio_infoframe_packetizer.v": "ac4af542aa190d43323ddd45fd6eecef712c573a4a57abe6e91ebe5dddc5ae61",
+      "src\\user_source\\rtl\\hdmi_audio_packet_scheduler.v": "216d8ee51aac51c1eb2ac071c36ed153beea928cc0273d38ef59f19bf822de8f",
+      "src\\user_source\\rtl\\hdmi_audio_sample_packetizer.v": "85177298bb0463d2ecfbae2ea5a36792d0538a6a8720d890f78ba5b6597238fe",
+      "src\\user_source\\rtl\\hdmi_audio_symbol_core.v": "ef05ef0aa8770255d7c60a7459d63e44fe5caf9fa3cdfa6cfa2f7e4ea5762a20",
+      "src\\user_source\\rtl\\hdmi_bch8.v": "b8b73dba7fddce6eeb49f1c6745af8853a265b4cfc44a0ca4425b10f201cd2d9",
+      "src\\user_source\\rtl\\hdmi_data_island_mapper.v": "711eca917fbcb9aa69153b0678411a155b70d05ecffb353f9a2eefa4e93ea542",
+      "src\\user_source\\rtl\\hdmi_data_island_scheduler.v": "3cbc82d784ee52c9a1ddf7420a7a1403429f47d99b8b4f11fe28a06911e9d1ef",
+      "src\\user_source\\rtl\\hdmi_terc4_encoder.v": "03879709456f4857d861833fd2290b4469a03e0fecb2d3f830ff939912ee8daa",
+      "src\\user_source\\rtl\\hdmi_tmds_channel_encoder.v": "a2a8d1422f82f3cf826dcdfc6ed824745617ea358e220021ea48f9cda5d7ac3d",
+      "src\\user_source\\rtl\\m06_pcm_contract_adapter.v": "33e0a6ea7f76480935c27b94ee39ff7918697ede4555083327e96ba9834430c4",
+      "src\\user_source\\rtl\\media_frame_loader.v": "1897915c3dae32f16a8caf36a5046e4f9e4e7fb145e97210b01925edaf883e6f",
+      "src\\user_source\\rtl\\media_frame_reader.v": "daf31e7c2ebcc016906b906f5b7ee0bf085e37ce95b59080b857f161df42f3e4",
+      "src\\user_source\\rtl\\media_hdmi_audio_bridge.v": "dc90cde4996dc64d06c418d1f6f33f419f9271ea121c5e3d7ba57ac59eec61b2",
+      "src\\user_source\\rtl\\media_ingest_frontend.v": "2568e44576a0040685fff5d3c42721f90253d7fb470e1aa5fc1bcdf2b277009e",
+      "src\\user_source\\rtl\\media_ingest_pipeline.v": "321765e8e0dcc97b080331bb74cc7c047ae7cb70bc98e63b9144532f7c6c8def",
+      "src\\user_source\\rtl\\media_player_control.v": "d7abf2ed5b0b3db1613c4e8d5cf89231096aeed644a228f7eb60ec0858e41dfe",
+      "src\\user_source\\rtl\\media_sdram_write_cdc.v": "5fe143c0eac0db42dbd00cbc65970f08d6e20a89047f8f3a71205db11b0c0b23",
+      "src\\user_source\\rtl\\media_video_pipeline.v": "177f9810f1b8f51f19c654598659bc989d08348c5d44688eb5d634d153695709",
+      "src\\user_source\\rtl\\pcm_media_tone.v": "e709e9331f323a8738feb84970b498c609a746256b1e3b78d7c02326e547b0e0",
+      "src\\user_source\\rtl\\rgb_video_adapter.v": "edcca4a11291e590e48ab292567dba3eb40b185f021e00112b8155db9bd19e68",
+      "src\\user_source\\rtl\\sd_sector_replay_buffer.v": "332bc4578901bc80d73305ae8a5b74ba690fb29e72003eae2778ce8cc03f6ff6",
+      "src\\user_source\\rtl\\sync_2ff.v": "691a3ea359a4ac443ab87d3202a1f3398f16e46b83066efd485f25f912f47fe9",
+      "src\\user_source\\rtl\\video_fade_transition.v": "2408e5cabe59232a0e9516f0463048d7c7f5d90e99f338c39f3eb9b7a3a04139",
+      "src\\user_source\\rtl\\video_timing_ctrl.v": "102ebea7ad166cb4f13e54ea704cbc9b9b6ec93c81838a5a964061483b12d71d",
+      "src\\user_source\\rtl\\wav_stream_player.v": "9facef603e89aab618c261325724b155c0093b89ab29079d0210eb14c4ccc890"
+    },
+    "scope": "actual BMP contents, synthetic FAT sectors, encrypted controller, bus-level SDRAM, pre-TMDS video and audio packet input",
+    "source_manifest_scope": "instantiated hierarchy; unused compilation units excluded"
+  },
+  "build": {
+    "bit_sha256": "634bd3a10b4330d328760cd5555e4e1c4a66873cb8c6a6f4584b198951c0df2e",
+    "timing_ns": {
+      "SWNS": 0.782,
+      "STNS": 0.0,
+      "HWNS": 0.015,
+      "HTNS": 0.0
+    },
+    "area": {
+      "lut": 16069,
+      "reg": 8347,
+      "bram": 15,
+      "dsp": 16
+    },
+    "hardware_tested": false
+  },
+  "subtitle_default": "off and empty; previous workshop signature removed"
 }

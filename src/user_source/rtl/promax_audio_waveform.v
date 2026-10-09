@@ -1,140 +1,196 @@
 `timescale 1ns/1ps
 
+// Frame-stable time-domain waveform, filled envelope and peak-hold VU meter.
+// No FFT, per-pixel multipliers or frame buffer are required.
 module promax_audio_waveform #(
-    parameter integer WAVE_X = 64,
-    parameter integer WAVE_Y = 400,
-    parameter integer WAVE_WIDTH = 512,
-    parameter integer WAVE_HEIGHT = 64,
-    parameter integer DECIMATE = 12
-) (
-    input  wire        clk,
-    input  wire        rst_n,
-    input  wire        vsync,
-    input  wire        de,
-    input  wire [23:0] rgb_in,
-    input  wire [9:0]  pixel_x,
-    input  wire        enable,
-    input  wire        pcm_tap_valid,
-    input  wire signed [15:0] pcm_tap_left,
+    parameter integer WAVE_X=64, WAVE_Y=400, WAVE_WIDTH=512, WAVE_HEIGHT=64,
+    parameter integer DECIMATE=8,
+    parameter integer PIPELINE_OUTPUT=0
+)(
+    input wire clk,rst_n,vsync,de,
+    input wire [23:0] rgb_in,
+    input wire [9:0] pixel_x,
+    input wire enable,pcm_tap_valid,
+    input wire signed [15:0] pcm_tap_left,
     output wire [23:0] rgb_out,
-    output wire        waveform_active
+    output wire waveform_active
 );
-    localparam integer SAMPLE_COUNT = 32;
-    localparam integer SAMPLE_SPACING = WAVE_WIDTH / SAMPLE_COUNT;
-    localparam integer CENTER_Y = WAVE_Y + WAVE_HEIGHT/2;
-
+    localparam integer SAMPLE_COUNT=64;
+    localparam integer SAMPLE_SPACING=WAVE_WIDTH/SAMPLE_COUNT;
+    localparam integer CENTER=WAVE_HEIGHT/2;
+    localparam signed [8:0] DISP_MAX=CENTER-5, DISP_MIN=5-CENTER;
     reg [11:0] line_y;
-    reg de_q;
-    reg vs_q;
-    wire frame_start = vs_q && !vsync;
-
-    reg signed [7:0] sample_bank0 [0:SAMPLE_COUNT-1];
-    reg signed [7:0] sample_bank1 [0:SAMPLE_COUNT-1];
-    reg write_bank;
-    reg display_bank;
-    reg display_valid;
-    reg [5:0] capture_count;
-    reg [7:0] decimate_count;
-    reg [7:0] peak_bank0;
-    reg [7:0] peak_bank1;
-    reg [7:0] display_peak;
-    wire [7:0] sample_abs = pcm_tap_left[15] ?
-                            (~pcm_tap_left[15:8] + 1'b1) : pcm_tap_left[15:8];
-
+    reg de_q,vs_q;
+    wire frame_start=vs_q && !vsync;
+    reg signed [7:0] sample_bank0[0:SAMPLE_COUNT-1];
+    reg signed [7:0] sample_bank1[0:SAMPLE_COUNT-1];
+    reg write_bank,display_bank,display_valid;
+    reg [6:0] capture_count;
+    reg [7:0] decimate_count,peak_bank0,peak_bank1;
+    reg [7:0] display_peak,held_peak;
+    reg [3:0] hold_frames;
+    reg [2:0] silence_shift;
+    wire [7:0] sample_abs=pcm_tap_left[15] ?
+        (~pcm_tap_left[15:8]+1'b1) : pcm_tap_left[15:8];
+    wire [7:0] captured_peak=write_bank ? peak_bank1 : peak_bank0;
     always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            line_y <= 12'd0;
-            de_q <= 1'b0;
-            vs_q <= 1'b1;
-            write_bank <= 1'b0;
-            display_bank <= 1'b1;
-            display_valid <= 1'b0;
-            capture_count <= 6'd0;
-            decimate_count <= 8'd0;
-            peak_bank0 <= 8'd0;
-            peak_bank1 <= 8'd0;
-            display_peak <= 8'd0;
+        if(!rst_n) begin
+            line_y<=0;de_q<=0;vs_q<=1;write_bank<=0;display_bank<=1;
+            display_valid<=0;capture_count<=0;decimate_count<=0;
+            peak_bank0<=0;peak_bank1<=0;display_peak<=0;held_peak<=0;hold_frames<=0;
+            silence_shift<=0;
         end else begin
-            de_q <= de;
-            vs_q <= vsync;
-            if (!vsync)
-                line_y <= 12'd0;
-            else if (de_q && !de)
-                line_y <= line_y + 1'b1;
-
-            if (frame_start) begin
-                if (capture_count == SAMPLE_COUNT) begin
-                    display_bank <= write_bank;
-                    display_valid <= 1'b1;
-                    display_peak <= write_bank ? peak_bank1 : peak_bank0;
-                    write_bank <= ~write_bank;
-                end
-                capture_count <= 6'd0;
-                decimate_count <= 8'd0;
-                if (write_bank) peak_bank0 <= 8'd0;
-                else peak_bank1 <= 8'd0;
-            end else if (pcm_tap_valid && capture_count < SAMPLE_COUNT) begin
-                if (decimate_count == 0) begin
-                    if (write_bank)
-                        sample_bank1[capture_count] <= pcm_tap_left[15:8];
-                    else
-                        sample_bank0[capture_count] <= pcm_tap_left[15:8];
-                    capture_count <= capture_count + 1'b1;
-                    decimate_count <= DECIMATE-1;
-                    if (write_bank) begin
-                        if (sample_abs > peak_bank1) peak_bank1 <= sample_abs;
+            de_q<=de;vs_q<=vsync;
+            if(!vsync) line_y<=0;
+            else if(de_q && !de) line_y<=line_y+1'b1;
+            if(frame_start) begin
+                if(capture_count==SAMPLE_COUNT) begin
+                    // On silence, retain the visible bank and attenuate it for
+                    // six frames (~101 ms). Capture still owns the other bank.
+                    // Audio gain itself is zero immediately; only the visual decays.
+                    if(captured_peak==0 && display_valid && silence_shift<5) begin
+                        silence_shift<=silence_shift+1'b1;
+                        if(write_bank) peak_bank1<=0;else peak_bank0<=0;
                     end else begin
-                        if (sample_abs > peak_bank0) peak_bank0 <= sample_abs;
+                        display_bank<=write_bank;display_valid<=1;write_bank<=~write_bank;
+                        silence_shift<=0;
+                        // Clear the new capture bank, never the visible bank.
+                        if(write_bank) peak_bank0<=0;else peak_bank1<=0;
                     end
+                    if(captured_peak>=display_peak) display_peak<=captured_peak;
+                    else if(display_peak>2) display_peak<=display_peak-2;
+                    else display_peak<=0;
+                    if(captured_peak>=held_peak) begin held_peak<=captured_peak;hold_frames<=12;end
+                    else if(hold_frames!=0) hold_frames<=hold_frames-1'b1;
+                    else if(held_peak!=0) held_peak<=held_peak-1'b1;
                 end else begin
-                    decimate_count <= decimate_count - 1'b1;
+                    if(write_bank) peak_bank1<=0;else peak_bank0<=0;
                 end
+                capture_count<=0;decimate_count<=0;
+            end else if(enable && pcm_tap_valid && capture_count<SAMPLE_COUNT) begin
+                if(decimate_count==0) begin
+                    if(write_bank) begin
+                        sample_bank1[capture_count[5:0]]<=pcm_tap_left[15:8];
+                        if(sample_abs>peak_bank1) peak_bank1<=sample_abs;
+                    end else begin
+                        sample_bank0[capture_count[5:0]]<=pcm_tap_left[15:8];
+                        if(sample_abs>peak_bank0) peak_bank0<=sample_abs;
+                    end
+                    capture_count<=capture_count+1'b1;decimate_count<=DECIMATE-1;
+                end else decimate_count<=decimate_count-1'b1;
             end
         end
     end
-
-    integer sample_index;
-    integer sample_value;
-    integer sample_y;
-    integer peak_height;
-    reg signed [7:0] selected_sample;
-    reg wave_pixel;
-    reg axis_pixel;
-    reg peak_pixel;
-
+    wire [9:0] local_x=pixel_x-WAVE_X;
+    wire [6:0] local_y=line_y-WAVE_Y;
+    wire panel=enable && de && pixel_x>=WAVE_X && pixel_x<WAVE_X+WAVE_WIDTH+24 &&
+        line_y>=WAVE_Y && line_y<WAVE_Y+WAVE_HEIGHT &&
+        !((local_x<3 || local_x>=WAVE_WIDTH+21) && (local_y<3 || local_y>=WAVE_HEIGHT-3));
+    wire [5:0] sample_index=local_x/SAMPLE_SPACING;
+    wire [5:0] previous_index=sample_index==0 ? 0 : sample_index-1'b1;
+    reg signed [7:0] selected_sample,previous_sample;
+    reg signed [8:0] displacement,previous_displacement;
+    reg [6:0] sample_y,previous_y,trace_y,amplitude;
+    reg signed [9:0] delta;
+    reg signed [12:0] interpolated_delta;
+    reg [6:0] distance,level,marker;
+    reg [23:0] color;
+    reg trace,glow,fill,grid,border,meter;
+    // Widen before shifting: floor((7*photo+effect)/8) and
+    // floor((3*photo+effect)/4). Blends always use the original pixel,
+    // so overlapping layers never compound the darkening. No DSP required.
+    function [23:0] blend;
+        input [23:0] photo,effect;
+        input quarter;
+        reg [10:0] r,g,b;
+        begin
+            if(quarter) begin
+                r=({3'd0,photo[23:16]}<<2)-{3'd0,photo[23:16]}+{3'd0,effect[23:16]};
+                g=({3'd0,photo[15:8]}<<2)-{3'd0,photo[15:8]}+{3'd0,effect[15:8]};
+                b=({3'd0,photo[7:0]}<<2)-{3'd0,photo[7:0]}+{3'd0,effect[7:0]};
+                blend={r[9:2],g[9:2],b[9:2]};
+            end else begin
+                r=({3'd0,photo[23:16]}<<3)-{3'd0,photo[23:16]}+{3'd0,effect[23:16]};
+                g=({3'd0,photo[15:8]}<<3)-{3'd0,photo[15:8]}+{3'd0,effect[15:8]};
+                b=({3'd0,photo[7:0]}<<3)-{3'd0,photo[7:0]}+{3'd0,effect[7:0]};
+                blend={r[10:3],g[10:3],b[10:3]};
+            end
+        end
+    endfunction
+    reg [23:0] effect_color;
+    reg quarter_mix,solid;
     always @* begin
-        sample_index = 0;
-        selected_sample = 8'sd0;
-        sample_value = 0;
-        sample_y = CENTER_Y;
-        peak_height = display_peak >> 2;
-        wave_pixel = 1'b0;
-        axis_pixel = 1'b0;
-        peak_pixel = 1'b0;
-
-        if (enable && de && pixel_x >= WAVE_X &&
-            pixel_x < WAVE_X + WAVE_WIDTH &&
-            line_y >= WAVE_Y && line_y < WAVE_Y + WAVE_HEIGHT) begin
-            axis_pixel = (line_y == CENTER_Y);
-            sample_index = (pixel_x-WAVE_X) / SAMPLE_SPACING;
-            if (display_valid && sample_index < SAMPLE_COUNT) begin
-                selected_sample = display_bank ?
-                                  sample_bank1[sample_index] : sample_bank0[sample_index];
-                sample_value = $signed(selected_sample);
-                sample_y = CENTER_Y - sample_value/4;
-                wave_pixel = (line_y >= sample_y-1 && line_y <= sample_y+1);
+        selected_sample=0;previous_sample=0;displacement=0;previous_displacement=0;
+        sample_y=CENTER;previous_y=CENTER;trace_y=CENTER;amplitude=0;
+        delta=0;interpolated_delta=0;
+        distance=local_y>=CENTER ? local_y-CENTER : CENTER-local_y;
+        level=display_peak>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : display_peak;
+        marker=held_peak>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : held_peak;
+        trace=0;glow=0;fill=0;grid=0;border=0;meter=0;
+        effect_color=24'h142c4c;quarter_mix=0;solid=0;
+        if(panel) begin
+            border=local_y==0 || local_y==WAVE_HEIGHT-1 || local_x==0 || local_x==WAVE_WIDTH+23;
+            grid=local_x<WAVE_WIDTH && (local_x[5:0]==0 || local_y[3:0]==0);
+            if(local_x<WAVE_WIDTH && display_valid) begin
+                selected_sample=display_bank ? sample_bank1[sample_index] : sample_bank0[sample_index];
+                previous_sample=display_bank ? sample_bank1[previous_index] : sample_bank0[previous_index];
+                displacement=$signed(selected_sample) >>> 1;
+                previous_displacement=$signed(previous_sample) >>> 1;
+                if(displacement>DISP_MAX) displacement=DISP_MAX;
+                else if(displacement<DISP_MIN) displacement=DISP_MIN;
+                if(previous_displacement>DISP_MAX) previous_displacement=DISP_MAX;
+                else if(previous_displacement<DISP_MIN) previous_displacement=DISP_MIN;
+                displacement=displacement >>> silence_shift;
+                previous_displacement=previous_displacement >>> silence_shift;
+                sample_y=CENTER-displacement;previous_y=CENTER-previous_displacement;
+                // Eight-pixel linear interpolation uses three shift/add terms.
+                // Sample spacing is fixed at eight pixels in the production panel.
+                delta=$signed({1'b0,sample_y})-$signed({1'b0,previous_y});
+                interpolated_delta=(local_x[0] ? {{3{delta[9]}},delta} : 13'sd0)+
+                    (local_x[1] ? ({{3{delta[9]}},delta} <<< 1) : 13'sd0)+
+                    (local_x[2] ? ({{3{delta[9]}},delta} <<< 2) : 13'sd0);
+                trace_y=$signed({1'b0,previous_y})+(interpolated_delta >>> 3);
+                amplitude=trace_y<CENTER ? CENTER-trace_y : trace_y-CENTER;
+                fill=distance<=amplitude && local_x[2:0]!=7;
+                trace=local_y>=trace_y-1 && local_y<=trace_y+1;
+                glow=local_y>=trace_y-3 && local_y<=trace_y+3;
             end
+            meter=local_x>=WAVE_WIDTH+8 && local_x<WAVE_WIDTH+18 &&
+                local_y>=4 && local_y<WAVE_HEIGHT-4;
+            if(grid) effect_color=24'h233747;
+            if(local_x<WAVE_WIDTH && local_y==CENTER && local_x[2:0]<4) effect_color=24'h3c6675;
+            if(fill) begin
+                effect_color=distance>16 ? 24'h197b86 : distance>8 ? 24'h145361 : 24'h103b4d;
+                quarter_mix=1;
+            end
+            if(glow) begin effect_color=24'h237f8a;quarter_mix=1;end
+            if(trace) begin effect_color=local_y<CENTER ? 24'h70efff : 24'h42e6b5;solid=1;end
+            if(meter) begin
+                effect_color=24'h1b3442;
+                if(local_y>=WAVE_HEIGHT-4-level && local_y[2:0]!=0) begin
+                    effect_color=local_y<12 ? 24'hff7868 : local_y<24 ? 24'hffc669 : 24'h42e6b5;
+                    quarter_mix=1;
+                end
+                if(marker!=0 && local_y==WAVE_HEIGHT-4-marker) begin effect_color=24'hfff1bf;solid=1;end
+            end
+            if(border) begin effect_color=24'h365468;quarter_mix=0;end
+            if(local_y==0 && local_x>=8 && local_x<96) begin effect_color=24'h42e6b5;solid=1;end
         end
-
-        if (enable && de && pixel_x >= WAVE_X+WAVE_WIDTH+8 &&
-            pixel_x < WAVE_X+WAVE_WIDTH+16 &&
-            line_y >= WAVE_Y+WAVE_HEIGHT-peak_height &&
-            line_y < WAVE_Y+WAVE_HEIGHT)
-            peak_pixel = 1'b1;
+        color=solid ? effect_color : blend(rgb_in,effect_color,quarter_mix);
     end
-
-    assign waveform_active = wave_pixel || axis_pixel || peak_pixel;
-    assign rgb_out = wave_pixel ? 24'h20ff90 :
-                     peak_pixel ? 24'hffb020 :
-                     axis_pixel ? 24'h406060 : rgb_in;
+    generate if(PIPELINE_OUTPUT) begin:g_output_stage
+        reg [23:0] photo_q,effect_q;
+        reg panel_q,quarter_q,solid_q;
+        always @(posedge clk or negedge rst_n)
+            if(!rst_n) begin photo_q<=0;effect_q<=0;panel_q<=0;quarter_q<=0;solid_q<=0;end
+            else begin
+                photo_q<=rgb_in;effect_q<=effect_color;panel_q<=panel;
+                quarter_q<=quarter_mix;solid_q<=solid;
+            end
+        assign waveform_active=panel_q;
+        assign rgb_out=panel_q ? (solid_q ? effect_q : blend(photo_q,effect_q,quarter_q)) : photo_q;
+    end else begin:g_combinational
+        assign waveform_active=panel;
+        assign rgb_out=panel ? color : rgb_in;
+    end endgenerate
 endmodule

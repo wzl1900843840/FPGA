@@ -10,7 +10,8 @@ module media_frame_reader #(
     parameter integer MAX_INFLIGHT_BURSTS = 2,
     parameter integer DIAG_RETURN_PATTERN = 0,
     parameter integer DIAG_SYNTH_STREAM = 0,
-    parameter integer RUNTIME_DIAG = 0
+    parameter integer RUNTIME_DIAG = 0,
+    parameter integer SHARED_MEMORY = 0
 ) (
     input  wire                  diag_synth_stream,
     input  wire                  mem_clk,
@@ -35,7 +36,10 @@ module media_frame_reader #(
     output reg                   reader_busy,
     output reg                   frame_read_done,
     output reg  [1:0]            reader_index,
-    output reg  [7:0]            reader_error
+    output reg  [7:0]            reader_error,
+    input  wire                 burst_grant,
+    output wire                 burst_request,
+    output wire                 read_urgent
 );
     // Runtime selection is latched at boot, before any frame request.
     wire synth_stream = DIAG_SYNTH_STREAM || (RUNTIME_DIAG && diag_synth_stream);
@@ -121,12 +125,14 @@ module media_frame_reader #(
         reserved_after_burst <= (FIFO_DEPTH - FIFO_MARGIN);
     reg inflight_window_ok_q;
     reg fifo_reservation_ok_q;
-    wire start_burst = !synth_stream && reader_busy && controller_init_done &&
+    assign read_urgent=fifo_wrusedw <= FIFO_DEPTH/2;
+    assign burst_request = !synth_stream && reader_busy && controller_init_done &&
                        fifo_ready_mem[1] && !burst_active_mem &&
                        !controller_busy && !refresh_active &&
                        burst_gap_count_mem == 0 &&
                        issued_count_mem != IMAGE_WORDS &&
                        inflight_window_ok_q && fifo_reservation_ok_q;
+    wire start_burst=burst_request && (!SHARED_MEMORY || burst_grant);
     wire issue_allowed = !synth_stream && reader_busy && burst_active_mem;
     wire diag_stream_write = synth_stream && reader_busy &&
                              fifo_ready_mem[1] && !fifo_full;

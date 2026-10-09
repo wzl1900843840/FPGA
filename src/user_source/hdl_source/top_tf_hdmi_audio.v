@@ -81,43 +81,57 @@ module top #(
     reg [7:0] drain_count;
     wire cache_done_sys,cache_start_mem,cache_failed_sys;
     reg cache_start;
+    reg cache_ready;
+    wire write_drained,write_drained_sys;
+    wire video_request,video_urgent,video_grant,write_request,write_grant;
+    wire cache_request,cache_grant,cache_write_request;
+    wire [1:0] memory_owner;
+    wire video_return,cache_return;
+    wire mem_app_read,mem_app_write;
+    sync_2ff u_write_drained(.clk(clk),.rst_n(sys_reset_n),
+        .async_in(write_drained),.sync_out(write_drained_sys));
     wire audio_req,audio_busy,audio_done,audio_valid;
     wire [31:0] audio_lba;
     wire [7:0] audio_byte,audio_error;
     wire [8:0] audio_byte_index;
-    media_storage_ingest_top #(.SPI_CLK_DIV(4),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1)) u_storage(
+    media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1)) u_storage(
         .clk(clk),.rst_n(sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
         .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),
-        .image_complete(image_complete),.image_scale_2x(image_scale),
+        .image_complete(),.image_ready(image_complete),.image_scale_2x(image_scale),
+        .write_drain_idle(cdc_idle_sys && write_drained_sys && !source_wr),
         .controller_init_done(init_sys && !cdc_full),.controller_busy(1'b0),.refresh_active(1'b0),
         .app_wr_en(source_wr),.app_wr_addr(source_addr),.app_wr_mask(source_mask),.app_wr_data(source_data),
         .sd_cs_n(sd_ncs),.sd_sclk(sd_dclk),.sd_mosi(sd_mosi),.sd_miso(sd_miso),
-        .audio_owner(player_enable),.audio_req(audio_req),.audio_lba(audio_lba),
+        .audio_owner(boot_state==4),.audio_req(audio_req),.audio_lba(audio_lba),
         .audio_busy(audio_busy),.audio_done(audio_done),.audio_valid(audio_valid),
         .audio_byte(audio_byte),.audio_error(audio_error),.audio_byte_index(audio_byte_index));
     wire cdc_wr;
     wire [20:0] cdc_addr;
     wire [3:0] cdc_mask;
     wire [31:0] cdc_data;
-    media_sdram_write_cdc u_write_cdc(.src_clk(clk),.src_rst_n(sys_reset_n),
+    media_sdram_write_cdc #(.SHARED_MEMORY(1)) u_write_cdc(.src_clk(clk),.src_rst_n(sys_reset_n),
         .src_wr_en(source_wr),.src_wr_addr(source_addr),.src_wr_mask(source_mask),.src_wr_data(source_data),
         .src_full(cdc_full),.src_overflow(cdc_overflow),.dst_clk(mem_clk),.dst_rst_n(mem_reset_n),
         .dst_app_wr_en(cdc_wr),.dst_app_wr_addr(cdc_addr),.dst_app_wr_mask(cdc_mask),
         .dst_app_wr_data(cdc_data),.dst_idle(cdc_idle),
-        .controller_busy(sdram_busy),.refresh_active(sdram_refresh));
+        .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
+        .burst_grant(write_grant),.burst_request(write_request));
     always @(posedge clk or negedge sys_reset_n) begin
-        if(!sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;end
+        if(!sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;cache_ready<=0;end
         else begin
             ingest_start<=0;cache_start<=0;
+            // Verified images are published only after file/FAT checking and
+            // write draining. The first can display while later files load.
+            if(image_complete!=0 && !cdc_overflow) player_enable<=1;
             case(boot_state)
                 0: if(init_sys && diag_boot_count==63 && !diag_local_sys) begin ingest_start<=1;boot_state<=1;end
                 1: if(ingest_done) begin boot_state<=2;drain_count<=0;end
-                2: if(cdc_idle_sys && !source_wr) begin
+                2: if(cdc_idle_sys && write_drained_sys && !source_wr) begin
                     if(drain_count==255) begin cache_start<=1;boot_state<=3;end
                     else drain_count<=drain_count+1'b1;
                 end else drain_count<=0;
-                3: if(cache_done_sys) begin player_enable<=image_complete!=0 && !cdc_overflow && !cache_failed_sys;boot_state<=4;end
+                3: if(cache_done_sys) begin cache_ready<=!cache_failed_sys;boot_state<=4;end
                 default: ;
             endcase
         end
@@ -135,22 +149,32 @@ module top #(
         sync_2ff u_sync(.clk(mem_clk),.rst_n(mem_reset_n),.async_in(image_complete[cm]),.sync_out(complete_mem[cm]));
     end endgenerate
     // image_complete 在 cache_start 握手之前已稳定，仍使用目的域寄存值。
-    thumbnail_cache_builder u_cache(.clk(mem_clk),.rst_n(mem_reset_n),.start(cache_start_mem),
+    thumbnail_cache_builder #(.SHARED_MEMORY(1)) u_cache(.clk(mem_clk),.rst_n(mem_reset_n),.start(cache_start_mem),
         .image_complete(complete_mem),.busy(cache_busy),.done(cache_done),.error(cache_error),
-        .app_rd_en(cache_rd),.app_rd_addr(cache_rd_addr),.rd_valid(rd_valid),.rd_data(rd_data),
+        .app_rd_en(cache_rd),.app_rd_addr(cache_rd_addr),.rd_valid(rd_valid && cache_return),.rd_data(rd_data),
         .app_wr_en(cache_wr),.app_wr_addr(cache_wr_addr),.app_wr_data(cache_wr_data),
-        .controller_busy(sdram_busy),.refresh_active(sdram_refresh));
+        .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
+        .burst_grant(cache_grant),.burst_request(cache_request),.burst_write(cache_write_request));
     pulse_toggle_sync u_cache_done(.src_clk(mem_clk),.src_rst_n(mem_reset_n),.src_pulse(cache_done),
         .dst_clk(clk),.dst_rst_n(sys_reset_n),.dst_pulse(cache_done_sys));
     wire player_mem;
     sync_2ff u_player_mem(.clk(mem_clk),.rst_n(mem_reset_n),.async_in(player_enable),.sync_out(player_mem));
     wire video_rd;
     wire [20:0] video_rd_addr;
+    media_sdram_arbiter u_memory_arbiter(.clk(mem_clk),.rst_n(mem_reset_n),
+        .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
+        .video_request(video_request),.video_urgent(video_urgent),
+        .write_request(write_request),.cache_request(cache_request),.cache_write(cache_write_request),
+        .app_read(mem_app_read),.app_write(mem_app_write),.rd_valid(rd_valid),
+        .video_grant(video_grant),.write_grant(write_grant),.cache_grant(cache_grant),
+        .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained));
+    assign mem_app_write=!diag_local_mem && ((memory_owner==3 && cache_wr) || (memory_owner==2 && cdc_wr));
+    assign mem_app_read=!diag_local_mem && ((memory_owner==3 && cache_rd) || (memory_owner==1 && video_rd));
     sdram U3(.Clk(mem_clk),.Clk_sft(mem_clk_shift),.Rst(~mem_reset_n),
         .Sdr_init_done(sdram_init),.Sdr_init_ref_vld(sdram_refresh),.Sdr_busy(sdram_busy),
-        .App_wr_en(!diag_local_mem && (cache_busy?cache_wr:cdc_wr)),.App_wr_addr(cache_busy?cache_wr_addr:cdc_addr),
-        .App_wr_dm(cache_busy?4'd0:cdc_mask),.App_wr_din(cache_busy?cache_wr_data:cdc_data),
-        .App_rd_en(!diag_local_mem && (player_mem?video_rd:cache_rd)),.App_rd_addr(player_mem?video_rd_addr:cache_rd_addr),
+        .App_wr_en(mem_app_write),.App_wr_addr(memory_owner==3?cache_wr_addr:cdc_addr),
+        .App_wr_dm(memory_owner==3?4'd0:cdc_mask),.App_wr_din(memory_owner==3?cache_wr_data:cdc_data),
+        .App_rd_en(mem_app_read),.App_rd_addr(memory_owner==3?cache_rd_addr:video_rd_addr),
         .Sdr_rd_en(rd_valid),.Sdr_rd_dout(rd_data));
 
     wire next_sys,auto_sys,previous_sys,save_event;
@@ -192,7 +216,7 @@ module top #(
     wire view_sys,view_mode;
     sync_2ff u_view_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(view_mode),.sync_out(view_sys));
     wire mode_update=auto_sys && !sw_sync2[1] && !view_sys;
-    player_config_persistence u_config(.clk(clk),.rst_n(sys_reset_n),
+    player_config_persistence #(.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(.clk(clk),.rst_n(sys_reset_n),
         .cfg_update_valid((menu_update && !view_sys) || mode_update),.cfg_period_ms(menu_update?menu_period:period_ms),
         .cfg_volume(menu_update?menu_volume:volume),.cfg_mode(mode_update?{7'd0,~mode[0]}:mode),.save_request(save_event),
         .service_ready(cfg_ready),.busy(cfg_busy),.load_done(cfg_load_done),.save_done(cfg_save_done),
@@ -213,11 +237,15 @@ module top #(
     pulse_toggle_sync u_confirm(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(menu_event && view_sys),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(confirm_pix));
     wire [63:0] config_pix;
-    frame_config_cdc #(.WIDTH(64),.RESET_VALUE({4'd0,4'd0,8'd128,8'd255,8'd255,32'd5000})) u_params(
+    frame_config_cdc #(.WIDTH(64),.RESET_VALUE({4'd0,4'd0,8'd128,8'd255,8'd0,32'd5000})) u_params(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({sw_sync2,3'd0,mode[0],contrast,brightness,volume,period_ms}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(config_pix));
     wire [7:0] contrast_pix=config_pix[55:48],bright_pix=config_pix[47:40],volume_pix=config_pix[39:32];
     wire [3:0] switches_pix=config_pix[63:60];
+    wire cache_ready_pix;
+    sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
+        .async_in(cache_ready),.sync_out(cache_ready_pix));
+    wire thumbnail_switch=switches_pix[0] && cache_ready_pix;
     reg mode_seen;
     wire [1:0] focus_index,selected_index;
     wire thumb_transition,thumbnail_select;
@@ -227,10 +255,10 @@ module top #(
         sync_2ff u_sync(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(image_complete[k]),.sync_out(complete_pix[k]));
     end endgenerate
     always @(posedge pixel_clk or negedge pix_reset_n)
-        if(!pix_reset_n) mode_seen<=0;else mode_seen<=switches_pix[0];
+        if(!pix_reset_n) mode_seen<=0;else mode_seen<=thumbnail_switch;
     thumbnail_controller u_thumbnail(.clk(pixel_clk),.rst_n(pix_reset_n),
         .key_right(next_pix),.key_left(auto_pix),.key_confirm(confirm_pix),
-        .key_mode((switches_pix[0] && !mode_seen) || (!switches_pix[0] && mode_seen && view_mode)),.image_complete(complete_pix),.frame_start(frame_start),
+        .key_mode((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode)),.image_complete(complete_pix),.frame_start(frame_start),
         .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),.transition_req(thumb_transition),
         .selection_committed(thumbnail_select));
     wire hs,vs,de;
@@ -256,7 +284,7 @@ module top #(
             end
         end
     // 控制逻辑同像素域运行，周期从毫秒换算为25MHz周期；手动/自动统一帧边界提交。
-    media_video_pipeline #(.RUNTIME_DIAG(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
+    media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
         .diag_fifo_pix(diag_fifo_pix),.diag_fifo_mem(diag_fifo_mem),
         .ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(next_pix && !display_view),
@@ -265,9 +293,10 @@ module top #(
         .transition_alpha(fade_alpha),.transition_active(fade_active),.video_y(video_y),
         .toggle_auto_event(1'b0),.period_cfg_valid(last_period!=config_pix[31:0]),
         .period_cfg_cycles(config_pix[31:0]*32'd25000),.auto_cfg_valid(display_view || last_display_view!=display_view || last_cfg_mode!=config_pix[56]),.auto_cfg_enabled(config_pix[56] && !display_view),
-        .image_complete(complete_pix),.player_enable(diag_fifo_pix || (player_enable && !diag_local_pix)),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
+        .image_complete(complete_pix),.player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
         .controller_init_done(sdram_init && player_mem),.controller_busy(sdram_busy),.refresh_active(sdram_refresh),
-        .app_rd_en(video_rd),.app_rd_addr(video_rd_addr),.sdram_rd_valid(rd_valid && player_mem && !diag_local_mem),.sdram_rd_data(rd_data),
+        .app_rd_en(video_rd),.app_rd_addr(video_rd_addr),.sdram_rd_valid(rd_valid && video_return && !diag_local_mem),.sdram_rd_data(rd_data),
+        .burst_grant(video_grant),.burst_request(video_request),.read_urgent(video_urgent),
         .brightness(bright_pix),.contrast(contrast_pix),.pix_clk(pixel_clk),.pix_rst_n(pix_reset_n),.video_clk(),.video_hs(hs),.video_vs(vs),
         .video_de(de),.video_rgb(video_rgb),.video_x(video_x),.active_index(active_index),.pending_index(),
         .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error));
@@ -281,22 +310,18 @@ module top #(
         .focus_index(focus_index),.image_complete(complete_pix),.thumb_de(thumb_de),.source_index(),
         .source_x(),.source_y(),.focus_border(focus_border));
     wire [23:0] focus_rgb=(display_view && focus_border)?24'hffff00:adjusted_rgb;
-    wire [23:0] status_rgb,detail_rgb,timestamp_rgb,text_rgb,final_rgb;
+    wire [23:0] text_rgb,final_rgb;
     wire [7:0] system_error=cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
-    wire [7:0] display_error=video_error!=0?video_error:system_error;
-    osd_overlay_24 u_status(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(focus_rgb),.pixel_x(x_adjust),.active_index(active_index),.auto_enabled(auto_enabled),
-        .error_code(display_error),.rgb_out(status_rgb),.de_out(),.osd_active());
+    wire [7:0] system_error_pix;
+    frame_config_cdc #(.WIDTH(8)) u_error_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data(system_error),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
+        .frame_start(frame_start),.dst_data(system_error_pix));
+    wire [7:0] error_pix=video_error!=0 ? video_error : system_error_pix;
     wire [7:0] detail_pix;
     frame_config_cdc #(.WIDTH(8)) u_error_detail_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
         .src_data(ingest_detail),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
         .frame_start(frame_start),.dst_data(detail_pix));
-    // 显示 D xx 细分码；80只能说明扫描失败，不能区分格式/文件名/扇区错误。
-    osd_overlay_24 #(.OSD_X(48),.DETAIL_MODE(1)) u_error_detail(
-        .clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(status_rgb),.pixel_x(x_adjust),.active_index(2'd0),.auto_enabled(1'b0),
-        .error_code(detail_pix),.rgb_out(detail_rgb),.de_out(),.osd_active());
     wire [7:0] rx_data;
     wire rx_valid,rx_error,subtitle_commit,subtitle_enable;
     wire [95:0] subtitle_text;
@@ -308,7 +333,7 @@ module top #(
     reg [5:0] live_length;
     reg live_subtitle;
     always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) begin live_text<=96'h524559414c5020414944454d;live_length<=12;live_subtitle<=1;end
+        if(!sys_reset_n) begin live_text<=0;live_length<=0;live_subtitle<=0;end
         else if(subtitle_commit) begin live_text<=subtitle_text;live_length<=subtitle_length;live_subtitle<=subtitle_enable;end
     subtitle_uart_controller u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
         .rx_framing_error(rx_error),.service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
@@ -316,27 +341,38 @@ module top #(
         .cfg_update_valid(subtitle_commit),.cfg_text(subtitle_text),.cfg_length(subtitle_length),.cfg_enable(subtitle_enable),
         .save_request(subtitle_save),.reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready));
     wire [102:0] subtitle_pix;
-    frame_config_cdc #(.WIDTH(103),.RESET_VALUE({1'b1,6'd12,96'h524559414c5020414944454d})) u_subtitle_frame_commit(
+    frame_config_cdc #(.WIDTH(103),.RESET_VALUE(103'd0)) u_subtitle_frame_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({live_subtitle,live_length,live_text}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(subtitle_pix));
-    timestamp_osd u_timestamp(.pix_clk(pixel_clk),.pix_rst_n(pix_reset_n),.enable(1'b1),
-        .vsync(vs_adjust),.de(de_adjust),.pixel_x(x_adjust),.pixel_y({2'd0,y_adjust}),
-        .rgb_in(detail_rgb),.rgb_out(timestamp_rgb),.ts_active(),.sys_rst_n(sys_reset_n));
     promax_text_overlay u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(timestamp_rgb),.pixel_x(x_adjust),.enable(1'b1),.subtitle_enable(subtitle_pix[102]),
+        .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.subtitle_enable(subtitle_pix[102]),
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
         .contrast(contrast_pix),.volume(volume_pix),.period_ms(config_pix[31:0]),.auto_enabled(auto_enabled),
-        .source_scale_2x(image_scale[active_index]),.rgb_out(text_rgb),.overlay_active());
+        .source_scale_2x(image_scale[active_index]),.active_index(active_index),
+        .loading(complete_pix!=4'hf || !cache_ready_pix),.error_code(error_pix),.error_detail(detail_pix),.rgb_out(text_rgb),.overlay_active());
     wire pcm_tap_valid;
     wire signed [15:0] pcm_tap_left;
-    promax_audio_waveform u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(text_rgb),.pixel_x(x_adjust),.enable(1'b1),.pcm_tap_valid(pcm_tap_valid),
+    // Pipeline the entire bundle between text lookup and waveform composition.
+    reg [23:0] text_stage_rgb,diag_stage_rgb;
+    reg [23:0] diag_rgb;
+    reg [9:0] text_stage_x,text_stage_y;
+    reg text_stage_hs,text_stage_vs,text_stage_de;
+    always @(posedge pixel_clk or negedge pix_reset_n)
+        if(!pix_reset_n) begin
+            text_stage_rgb<=0;diag_stage_rgb<=0;text_stage_x<=0;text_stage_y<=0;
+            text_stage_hs<=1;text_stage_vs<=1;text_stage_de<=0;
+        end else begin
+            text_stage_rgb<=text_rgb;diag_stage_rgb<=diag_fifo_pix?video_rgb:diag_rgb;
+            text_stage_x<=x_adjust;text_stage_y<=y_adjust;text_stage_hs<=hs_adjust;text_stage_vs<=vs_adjust;text_stage_de<=de_adjust;
+        end
+    promax_audio_waveform #(.PIPELINE_OUTPUT(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
+        .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(1'b1),.pcm_tap_valid(pcm_tap_valid),
         .pcm_tap_left(pcm_tap_left),.rgb_out(final_rgb),.waveform_active());
 
     wire sample_tick,wav_valid,wav_ready,wav_active;
     wire signed [15:0] wav_sample;
     wav_stream_player u_wav(.wr_clk(clk),.wr_rst_n(sys_reset_n),
-        .play_enable(player_enable && PCM_START_LBA!=0 && PCM_TOTAL_SECTORS!=0),
+        .play_enable(player_enable && boot_state==4 && PCM_START_LBA!=0 && PCM_TOTAL_SECTORS!=0),
         .start_lba(PCM_START_LBA),.total_sectors(PCM_TOTAL_SECTORS),.sd_req(audio_req),.sd_lba(audio_lba),
         .sd_busy(audio_busy),.sd_valid(audio_valid),.sd_byte(audio_byte),.sd_byte_index(audio_byte_index),
         .sd_done(audio_done),.sd_error(audio_error),.rd_clk(pixel_clk),.rd_rst_n(pix_reset_n),
@@ -348,7 +384,6 @@ module top #(
     // 与最终视频同拍的坐标，直接进入既有 HDMI 编码/串行链路。
     // 上半屏 8 色条；第三个 120 行灰阶；最后 120 行逐位彩色渐变+棋盘格。
     // 诊断绕过颜色调节、转场和全部叠加层，完全不使用 reader_rgb。
-    reg [23:0] diag_rgb;
     always @* begin
         if(y_adjust<240) begin
             if(x_adjust<80) diag_rgb=24'hffffff;
@@ -366,10 +401,22 @@ module top #(
         else
             diag_rgb=(x_adjust[3]^y_adjust[3])?24'hffffff:24'h000000;
     end
-    wire [23:0] hdmi_input_rgb=diag_local_pix?(diag_fifo_pix?video_rgb:diag_rgb):final_rgb;
+    // Waveform geometry is registered before the transparent color blend.
+    // Delay every companion signal (including diagnostics and Y) by the same cycle.
+    reg [9:0] wave_stage_x,wave_stage_y;
+    reg wave_stage_hs,wave_stage_vs,wave_stage_de;
+    reg [23:0] wave_diag_rgb;
+    always @(posedge pixel_clk or negedge pix_reset_n)
+        if(!pix_reset_n) begin
+            wave_stage_x<=0;wave_stage_y<=0;wave_stage_hs<=1;wave_stage_vs<=1;wave_stage_de<=0;wave_diag_rgb<=0;
+        end else begin
+            wave_stage_x<=text_stage_x;wave_stage_y<=text_stage_y;
+            wave_stage_hs<=text_stage_hs;wave_stage_vs<=text_stage_vs;wave_stage_de<=text_stage_de;wave_diag_rgb<=diag_stage_rgb;
+        end
+    wire [23:0] hdmi_input_rgb=diag_local_pix?wave_diag_rgb:final_rgb;
     wire [9:0] ch0,ch1,ch2;
     media_hdmi_audio_bridge u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
-        .video_hsync(hs_adjust),.video_vsync(vs_adjust),.video_de(de_adjust),.video_x(x_adjust),.video_rgb(hdmi_input_rgb),
+        .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
         .media_id(active_index),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
         .force_test(switches_pix[3]),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),

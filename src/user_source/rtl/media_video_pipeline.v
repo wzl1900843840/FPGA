@@ -20,7 +20,8 @@ module media_video_pipeline #(
     // legacy direct-switch behaviour for the existing regression suites.
     parameter integer FADE_FRAMES = 0,
     parameter integer ENABLE_COLOR_ADJUST = 0,
-    parameter integer RUNTIME_DIAG = 0
+    parameter integer RUNTIME_DIAG = 0,
+    parameter integer SHARED_MEMORY = 0
 ) (
     input  wire        diag_fifo_pix,
     input  wire        diag_fifo_mem,
@@ -71,7 +72,10 @@ module media_video_pipeline #(
     output wire        frame_start,
     output wire        reader_busy,
     output wire        reader_underflow,
-    output wire [7:0]  video_error
+    output wire [7:0]  video_error,
+    input  wire       burst_grant,
+    output wire       burst_request,
+    output wire       read_urgent
 );
     wire raw_hs;
     wire raw_vs;
@@ -223,7 +227,7 @@ module media_video_pipeline #(
         .ADDR_WIDTH(21), .IMAGE_WORDS(IMAGE_WORDS),
         .FIFO_DEPTH(FIFO_DEPTH), .FIFO_MARGIN(FIFO_MARGIN),
         .MAX_INFLIGHT_BURSTS(2), .DIAG_RETURN_PATTERN(0),
-        .DIAG_SYNTH_STREAM(0), .RUNTIME_DIAG(RUNTIME_DIAG)
+        .DIAG_SYNTH_STREAM(0), .RUNTIME_DIAG(RUNTIME_DIAG), .SHARED_MEMORY(SHARED_MEMORY)
     ) u_reader (
         .diag_synth_stream(diag_fifo_mem),
         .mem_clk(mem_clk), .mem_rst_n(mem_rst_n),
@@ -236,7 +240,8 @@ module media_video_pipeline #(
         .pixel_consume(raw_de && player_enable_pix), .pixel_rgb(reader_rgb),
         .pixel_valid(reader_pixel_valid), .underflow(reader_underflow),
         .reader_busy(reader_busy), .frame_read_done(reader_done),
-        .reader_index(reader_index), .reader_error(reader_error)
+        .reader_index(reader_index), .reader_error(reader_error),
+        .burst_grant(burst_grant),.burst_request(burst_request),.read_urgent(read_urgent)
     );
 
     // Fade multiplies the selected frame by the ramp alpha; an automatic

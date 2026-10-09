@@ -3,7 +3,8 @@
 module media_sdram_write_cdc #(
     parameter integer ADDR_WIDTH = 21,
     parameter integer FIFO_ADDR_WIDTH = 9,
-    parameter integer BURST_SIZE = 128
+    parameter integer BURST_SIZE = 128,
+    parameter integer SHARED_MEMORY = 0
 ) (
     input  wire                  src_clk,
     input  wire                  src_rst_n,
@@ -22,7 +23,9 @@ module media_sdram_write_cdc #(
     output wire [31:0]           dst_app_wr_data,
     output wire                  dst_idle,
     input wire                   controller_busy,
-    input wire                   refresh_active
+    input wire                   refresh_active,
+    input wire                   burst_grant,
+    output wire                  burst_request
 );
     localparam integer COMMAND_WIDTH = ADDR_WIDTH + 36;
     localparam integer BURST_COUNT_WIDTH = $clog2(BURST_SIZE);
@@ -50,8 +53,10 @@ module media_sdram_write_cdc #(
     // FIRST word. A registered start decision several cycles earlier is stale
     // when refresh begins during FIFO latency. Remaining words stay continuous.
     wire prefetch_request = !burst_active && !prefetch_pending && block_pending;
+    assign burst_request=burst_active && burst_first;
     assign dst_app_wr_en = burst_active &&
-        (!burst_first || (!controller_busy && !refresh_active));
+        (!burst_first || (!controller_busy && !refresh_active &&
+                         (!SHARED_MEMORY || burst_grant)));
     assign fifo_rd_en = prefetch_request || (dst_app_wr_en && burst_remaining > 1);
 
     async_command_fifo #(

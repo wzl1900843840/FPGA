@@ -25,10 +25,8 @@ module subtitle_uart_controller (
 );
     localparam integer MAX_LINE = 40;
     localparam integer MAX_TEXT = 12;
-    localparam [95:0] CN_SUBTITLE_TEXT = {
-        8'h00,8'h00,8'h00,8'h88,8'h87,8'h86,
-        8'h85,8'h84,8'h83,8'h82,8'h81,8'h80
-    };
+    // Optional neutral phrase "照片音乐". No workshop signature is built in.
+    localparam [95:0] CN_SUBTITLE_TEXT = {64'd0,8'h83,8'h82,8'h81,8'h80};
     localparam [3:0] R_OK_TEXT = 4'd0;
     localparam [3:0] R_OK_ON   = 4'd1;
     localparam [3:0] R_OK_OFF  = 4'd2;
@@ -81,18 +79,13 @@ module subtitle_uart_controller (
     function cn_phrase_match;
         input dummy;
         begin
-            cn_phrase_match = line_length == 31 &&
+            cn_phrase_match = line_length == 16 &&
                 line_char(0)=="S" && line_char(1)=="U" &&
                 line_char(2)=="B" && line_char(3)=="=" &&
-                line_char(4)==8'he7 && line_char(5)==8'hb1 && line_char(6)==8'hb3 &&
-                line_char(7)==8'he9 && line_char(8)==8'h86 && line_char(9)==8'h8b &&
-                line_char(10)==8'he7 && line_char(11)==8'h94 && line_char(12)==8'hb5 &&
-                line_char(13)==8'he5 && line_char(14)==8'had && line_char(15)==8'h90 &&
-                line_char(16)==8'he5 && line_char(17)==8'hb7 && line_char(18)==8'ha5 &&
-                line_char(19)==8'he4 && line_char(20)==8'hbd && line_char(21)==8'h9c &&
-                line_char(22)==8'he5 && line_char(23)==8'hae && line_char(24)==8'ha4 &&
-                line_char(25)==8'he5 && line_char(26)==8'hbf && line_char(27)==8'ha7 &&
-                line_char(28)==8'he9 && line_char(29)==8'h83 && line_char(30)==8'h81;
+                line_char(4)==8'he7 && line_char(5)==8'h85 && line_char(6)==8'ha7 &&
+                line_char(7)==8'he7 && line_char(8)==8'h89 && line_char(9)==8'h87 &&
+                line_char(10)==8'he9 && line_char(11)==8'h9f && line_char(12)==8'hb3 &&
+                line_char(13)==8'he4 && line_char(14)==8'hb9 && line_char(15)==8'h90;
         end
     endfunction
 
@@ -242,7 +235,7 @@ module subtitle_uart_controller (
                             end else if ((line_length == 6 && line_char(4)=="C" && line_char(5)=="N") ||
                                          cn_phrase_match(1'b0)) begin
                                 cfg_text <= CN_SUBTITLE_TEXT;
-                                cfg_length <= 6'd9;
+                                cfg_length <= 6'd4;
                                 cfg_enable <= live_enable;
                                 cfg_update_valid <= 1'b1;
                                 start_reply(R_OK_TEXT,9);

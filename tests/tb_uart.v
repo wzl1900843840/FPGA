@@ -33,6 +33,9 @@ command("SUB=OFF");if(live_en)$fatal(1,"off reply [%s]",response);
 command("SUB=ON");if(!live_en)$fatal(1,"on reply [%s]",response);
 command("SUB=ABCDEFGHIJKLM");
 if(live_len!=5)$fatal(1,"long changed text");
+command("SUB=CN");if(live_len!=4 || live_text[31:0]!=32'h83828180)$fatal(1,"neutral Chinese phrase");
+command("SUB=照片音乐");if(live_len!=4 || response!="OK\015\012")$fatal(1,"UTF8 Chinese phrase");
+command("SUB=米醋电子工作室忧郁");if(response!="ERR\015\012" || live_len!=4)$fatal(1,"removed signature alias");
 $display("PASS uart: serial RX -> subtitle command -> TX reply and query, enable/disable, overlength rejection");$finish;
 end
 initial begin #1000000;$fatal(1,"UART watchdog");end

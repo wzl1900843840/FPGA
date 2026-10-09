@@ -6,7 +6,8 @@ module media_ingest_frontend #(
     parameter integer ADDR_WIDTH = 21,
     parameter integer FIFO_DEPTH = 512,
     parameter integer STALL_TIMEOUT = 65535,
-    parameter integer ALLOW_2X_SOURCE = 0
+    parameter integer ALLOW_2X_SOURCE = 0,
+    parameter integer EARLY_DISPLAY = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -33,7 +34,9 @@ module media_ingest_frontend #(
     output wire                  app_wr_en,
     output wire [ADDR_WIDTH-1:0] app_wr_addr,
     output wire [3:0]            app_wr_mask,
-    output wire [31:0]           app_wr_data
+    output wire [31:0]           app_wr_data,
+    input  wire                 write_drain_idle,
+    output wire [3:0]           image_ready
 );
     wire replay_busy;
     wire replay_valid;
@@ -62,7 +65,7 @@ module media_ingest_frontend #(
     media_ingest_pipeline #(
         .IMAGE_WIDTH(IMAGE_WIDTH), .IMAGE_HEIGHT(IMAGE_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH), .FIFO_DEPTH(FIFO_DEPTH),
-        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE)
+        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE), .EARLY_DISPLAY(EARLY_DISPLAY)
     ) u_ingest_pipeline (
         .clk(clk), .rst_n(rst_n), .start(start), .busy(ingest_busy), .done(done),
         .ingest_error(ingest_error), .ingest_detail_error(ingest_detail_error),
@@ -75,6 +78,7 @@ module media_ingest_frontend #(
         .sector_done(replay_done), .sector_error(replay_error),
         .controller_init_done(controller_init_done), .controller_busy(controller_busy),
         .refresh_active(refresh_active), .app_wr_en(app_wr_en),
-        .app_wr_addr(app_wr_addr), .app_wr_mask(app_wr_mask), .app_wr_data(app_wr_data)
+        .app_wr_addr(app_wr_addr), .app_wr_mask(app_wr_mask), .app_wr_data(app_wr_data),
+        .write_drain_idle(write_drain_idle),.image_ready(image_ready)
     );
 endmodule

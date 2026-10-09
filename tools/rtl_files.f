@@ -79,3 +79,4 @@ src/user_source/hdl_source/SD/sdram.v
 src/user_source/hdl_source/include/sdr_as_ram.enc.v
 src/user_source/hdl_source/include/sdr_init_ref.enc.v
 src/user_source/hdl_source/include/sdr_wrrd.enc.v
+src/user_source/rtl/media_sdram_arbiter.v
