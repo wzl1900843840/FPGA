@@ -1,5 +1,27 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 装载主管线：从"扫卡"到"图片进SDRAM"的完整流程控制（50MHz 系统域）
+//
+// 一次 start 做的事（状态机顺序）：
+//   ST_SCAN      → 调 fat32_volume_scanner 扫 FAT32，找到 PIC1~PIC4 的位置；
+//   ST_FILE_START→ 选中下一张要装的图（跳过已经装好的）；
+//   ST_FILE      → 调 fat32_file_streamer 顺着簇链把文件字节流吐出来，
+//                  字节流同时喂给 bmp24_decoder 解码，解出的像素交给
+//                  media_frame_loader 写 SDRAM；
+//   ST_FAIL_WAIT → 某张图失败：按 MD 约定重试1次，仍失败就跳过这一张；
+//   ST_DRAIN     → 收尾：等写入真正排空、FAT 尾链也校验完，才开下一个文件。
+//
+// 为什么要有 ST_DRAIN：解码完成、SDRAM 写完，并不代表文件本身读完整（簇链可能还有
+// 尾巴没校验）。两端都排空再进下一张，避免"上一张的残余读"混进下一张的数据。
+//
+// EARLY_DISPLAY：置1时 image_ready 用的是"已校验通过"掩码，所以第一张图
+//   校验+排空完成后就能立刻显示，其余图片继续在后台装（顶层的提前显示就靠它）；
+//   置0时只能等全部装完（image_complete）。
+//
+// 错误码：80=文件系统扫描失败，82=读文件失败，83=BMP校验失败，84=写SDRAM失败。
+//         ingest_detail_error 保留底层细分码，顶层 OSD 的 D xx 就是它。
+// -----------------------------------------------------------------------------
 module media_ingest_pipeline #(
     parameter integer IMAGE_WIDTH = 640,
     parameter integer IMAGE_HEIGHT = 480,
@@ -41,12 +63,14 @@ module media_ingest_pipeline #(
     output wire [3:0]           image_ready
 );
     localparam integer IMAGE_WORDS = IMAGE_WIDTH * IMAGE_HEIGHT;
+    // 主错误码：80=扫卡失败 82=读文件失败 83=BMP校验失败 84=写SDRAM失败
     localparam ERR_NONE   = 8'h00;
     localparam ERR_SCAN   = 8'h80;
     localparam ERR_FILE   = 8'h82;
     localparam ERR_BMP    = 8'h83;
     localparam ERR_MEMORY = 8'h84;
 
+    // 状态机：扫卡 → 逐张装文件（解码+写SDRAM）→ 失败重试 → 排空收尾
     localparam ST_IDLE      = 3'd0;
     localparam ST_SCAN      = 3'd1;
     localparam ST_FILE_START= 3'd2;

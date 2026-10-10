@@ -8,7 +8,9 @@
 // active-low with bit0=A..bit6=G and bit7=decimal point; scan step is 8192
 // clock cycles per digit (1.31 ms frame at 50 MHz, same cadence as the demo).
 //
-// Pages (digit 7 = leftmost):
+// Pages below use logical digit 7 = leftmost; physical selects run left-to-right
+// within each four-digit block. Swap the blocks and reverse each block to match
+// the board's physical left-to-right order (selects 0..7).
 //   PIC:  _ _ _ _ _ P I C n     n = 1..4
 //   VOL:  V O L _ _ _ d d d     volume 0..255 in decimal
 //   PRD:  P R D _ _ _ d d S     period seconds and unit
@@ -184,6 +186,7 @@ module seg7_panel #(
 
     // -------- scan driver --------
     reg [2:0] scan_idx;
+    wire [2:0] symbol_idx = ~scan_idx;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             scan_cnt <= 13'd0;
@@ -201,7 +204,7 @@ module seg7_panel #(
                 scan_cnt <= scan_cnt + 1'b1;
             end
             dig_n <= ~(8'b0000_0001 << scan_idx);
-            seg_n <= {1'b1, ~seg_font(symbols[scan_idx])};
+            seg_n <= {1'b1, ~seg_font(symbols[symbol_idx])};
         end
     end
 endmodule

@@ -1,5 +1,26 @@
 `timescale 1ns/1ps
 
+// 模块职责：播放参数的掉电保存与开机恢复（周期 / 音量 / 自动模式）。
+// 位置：上游是顶层的按键事件与菜单结果，下游是 media_video_pipeline（周期、模式）
+//       和 OSD/数码管（音量），并独占一片 W25X64 用户 Flash 的 SPI 接口。
+// 时钟域：50MHz 系统时钟 clk，单域；SPI 由内部分频产生。
+// 存储布局：Flash 末尾划出两个 4KB 槽（SLOT0=0x7FE000、SLOT1=0x7FF000），
+//       每槽记录"版本号 + 周期 + 音量 + 模式 + CRC"，两块互为备份。
+// 输入约定：cfg_update_valid 是"新参数要生效"的单拍脉冲，save_request 是"写 Flash"请求；
+//       两者可能同拍到达，此时只更新 RAM 不落盘（见 ST_READY 里的 request_dropped）。
+// 输出约定：service_ready 表示可以受理请求；load_done/save_done 各是一拍完成脉冲；
+//       apply_valid 通知下游"新参数已提交"；error_code 见下面的错误码含义。
+//
+// 关键机制：
+//   1) 开机先做 preflight：读 Flash JEDEC ID 并检查保护位，型号/保护不符就进入
+//      ST_ERROR，此时仍允许 RAM 内调参（能看能调），但禁止写 Flash，避免写坏别的区域。
+//   2) 双槽 + 版本号 + CRC：load 时比较两槽，取"CRC 正确且版本更新"的那一槽；
+//      保存时先擦写另一个槽，写成功后版本号加一，所以新槽写坏也能回退到旧槽。
+//   3) 启动时只覆盖音量（RESTORE_VOLUME_ON_BOOT=0 时用默认值），周期和模式照常恢复；
+//      保存后的回读校验仍按实际运行值提交，不改变记录格式。
+// 错误码：0xE_ 前缀=Flash 预检失败（低 4 位为 preflight 细分码）；
+//       0xDE=保存后回读不合法；0xDF=请求被丢弃；0xD1=Flash 里存的字段越界；
+//       0xD2=待写入的字段越界被拒绝；0xFF=状态机异常。
 module player_config_persistence #(
     parameter integer SPI_CLK_DIV = 4,
     parameter integer STARTUP_CYCLES = 1024,
@@ -53,6 +74,9 @@ module player_config_persistence #(
     output wire        flash_wp_n,
     output wire        flash_hold_n
 );
+    // ===== 状态与中间寄存器 =====
+    // 主状态机顺序：预检 → 装载 → 应用 → READY；保存时从 READY 进 SAVE_WAIT/SAVE_APPLY。
+    // staged_* 是"读回来待提交"的暂存值：先校验再整体提交，避免半个配置生效。
     localparam [3:0] ST_PREFLIGHT_ISSUE = 4'd0;
     localparam [3:0] ST_PREFLIGHT_WAIT  = 4'd1;
     localparam [3:0] ST_LOAD_ISSUE      = 4'd2;
@@ -107,6 +131,9 @@ module player_config_persistence #(
         end
     end
 
+    // ===== 参数合法性检查与换算 =====
+    // config_fields_valid：周期必须在 MIN~MAX 之间，模式只允许 0/1（高 7 位必须为 0）。
+    // 越界的值一律不写入 Flash，也不提交给下游，只置错误码。
     function config_fields_valid;
         input [31:0] period_ms;
         input [7:0] mode_value;
@@ -117,6 +144,8 @@ module player_config_persistence #(
         end
     endfunction
 
+    // 周期换算：毫秒 × 每毫秒时钟数。中间乘积用 64 位再截低 32 位，
+    // 防止 60s 这种大周期在乘法里溢出。
     function [31:0] period_to_cycles;
         input [31:0] period_ms;
         reg [63:0] product;
@@ -127,6 +156,8 @@ module player_config_persistence #(
         end
     endfunction
 
+    // 提交配置：四个 live_* 寄存器同时更新，并打一拍 apply_valid 通知下游。
+    // 因为是一拍同时更新，下游不会看到"周期已变、模式还是旧的"的中间态。
     task apply_config;
         input [31:0] period_ms;
         input [7:0] volume_value;
@@ -140,6 +171,8 @@ module player_config_persistence #(
         end
     endtask
 
+    // 进入致命错误：关掉服务就绪、置错误码并停在 ST_ERROR。
+    // 注意 ST_ERROR 里仍受理 RAM 调参，只是不再写 Flash。
     task enter_fatal;
         input [7:0] code;
         begin
@@ -150,6 +183,11 @@ module player_config_persistence #(
         end
     endtask
 
+    // ===== 两套 SPI 逻辑共享同一组引脚 =====
+    // 预检阶段（preflight_owner）由 preflight 读 JEDEC ID 和状态寄存器；
+    // 其余时间由 journal 读写参数槽。因为物理上只有一组 SPI 引脚，
+    // 这里用 owner 信号做引脚多路选择，两个子模块都不会同时驱动。
+    // 另外 journal_rst_n 在预检期间保持复位，保证它不会误发命令。
     assign busy = state != ST_READY && state != ST_ERROR;
     assign flash_cs_n = preflight_owner ? pf_cs_n : st_cs_n;
     assign flash_sclk = preflight_owner ? pf_sclk : st_sclk;
@@ -157,6 +195,9 @@ module player_config_persistence #(
     assign flash_wp_n = preflight_owner ? pf_wp_n : st_wp_n;
     assign flash_hold_n = preflight_owner ? pf_hold_n : st_hold_n;
 
+    // 预检：读 Flash 的 JEDEC ID 与状态/保护寄存器，确认"这片 Flash 能安全写"。
+    // EXPECTED_JEDEC_ID=0xEF4017 是 W25Q64 的型号码；不匹配（例如实际是 W25X64）或
+    // 保护位不允许写时 accepted=0，主状态机据此进入 ST_ERROR，宁可不动 Flash。
     w25q64_preflight_reader #(
         .SPI_CLK_DIV(SPI_CLK_DIV), .STARTUP_CYCLES(STARTUP_CYCLES),
         .WAKE_CYCLES(WAKE_CYCLES), .CS_HIGH_CYCLES(CS_HIGH_CYCLES),
@@ -172,6 +213,9 @@ module player_config_persistence #(
         .status1(status1), .status2(status2), .status3(status3)
     );
 
+    // 参数日志（双槽 + CRC + 版本号）：load 时自己挑可用的槽，
+    // save 时写另一个槽并让版本号加一。地址范围由 ALLOWED_BASE/LIMIT 限定，
+    // 任何越界访问都会被它自己拒绝，避免误擦配置区以外的内容。
     config_flash_journal #(
         .CLK_DIV(SPI_CLK_DIV), .CS_HIGH_CYCLES(CS_HIGH_CYCLES),
         .POLL_INTERVAL_CYCLES(POLL_INTERVAL_CYCLES),

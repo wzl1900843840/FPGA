@@ -1,24 +1,57 @@
 `timescale 1ns/1ps
-// HX4S20C 单镜像媒体播放器。板上 K1复位/K2下一张/K3自动/K4参数。
-// SW1缩略图模式，SW2参数调节模式，SW3选择对比度，SW4强制1kHz测试音。
-// 默认使用普通FAT32图片卡与合成音调。制备匹配PCM镜像后才设置物理音频范围。
-// WAV先用PC转换为48kHz/16bit/mono裸PCM；连续物理扇区范围由下列参数明确指定。
+//==============================================================================
+// 模块：top（HX4S20C / EG4S20BG256 单镜像媒体播放器）
+//
+// 职责：整个工程唯一的顶层。它自己不做图像/音频算法，只负责四件事：
+//   1) 生成四个时钟域及其各自的复位；
+//   2) 把 SD卡→FAT32→BMP→SDRAM→显示→HDMI 这条链上的模块按顺序连起来；
+//   3) 控制上电启动顺序（初始化→装载图片→排空写入→建缩略图缓存→开始播放）；
+//   4) 把所有跨时钟域的信号用规定方式搬过去（单拍事件用 toggle、多位参数用帧提交）。
+//
+// 四个时钟域（都由 sys_pll_promax_40 一个 PLL 产生）：
+//   clk        50MHz 系统域：SD卡SPI、FAT32、BMP解码、按键/菜单/拨码、UART、参数Flash
+//   mem_clk    40MHz 内存域：SDRAM读写、缩略图缓存构建、帧读取
+//   pixel_clk  25MHz 像素域：颜色调节、转场、OSD/字幕/波形、HDMI音频包
+//   pixel_clk_5x 125MHz 串行域：TMDS 10:1 串化输出
+//
+// 图片数据链：
+//   TF卡 → sd_media_service → fat32_* → bmp24_decoder(+2×2缩小) → media_frame_loader
+//        → media_sdram_write_cdc(50→40MHz) → SDRAM四图常驻
+//        → media_frame_reader/预取FIFO → 亮度对比度 → 转场 → OSD/字幕/波形
+//        → media_hdmi_audio_bridge → hdmi_phy_wrapper → HDMI_B
+//
+// 音频数据链：
+//   TF卡扇区 → wav_stream_player(BRAM) → 音量/淡入淡出 → HDMI Data Island 音频包
+//   （PCM_START_LBA=0 时不读卡，音频来自 pcm_media_tone 合成音调）
+//
+// 板上操作：K1复位 / K2下一张 / K3手动自动+长按上一张 / K4音量+长按周期 /
+//           K2+K3同时按3秒保存参数；SW1缩略图 / SW2参数调节 / SW3选对比度 / SW4强制1kHz测试音
+//==============================================================================
 module top #(
+    // 音频PCM在卡上的物理起始LBA与总扇区数。两个都为0表示"不读卡音频"，
+    // 此时 wav_stream_player 不启动，声音来自合成音调。
     parameter [31:0] PCM_START_LBA=0,
     parameter [31:0] PCM_TOTAL_SECTORS=0,
+    // 置1则上电直接进入"本地图案"诊断模式，完全绕过SD卡与SDRAM读取。
     parameter integer DIAG_LOCAL_PATTERN=0
 )(
-    input wire clk,rst_n,key1,key2,key3,
-    input wire [3:0] sw,
+    input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
+    input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
     input wire uart_rx,
     output wire uart_tx,
-    output wire [7:0] seg_sel,seg_data,
+    output wire [7:0] seg_sel,seg_data,    // 数码管位选/段选
     output wire HDMI_CLK_P,HDMI_D2_P,HDMI_D1_P,HDMI_D0_P,
     output wire HDMI_DDC_SCL,inout wire HDMI_DDC_SDA,
-    output wire sd_ncs,sd_dclk,sd_mosi,input wire sd_miso,
+    output wire sd_ncs,sd_dclk,sd_mosi,input wire sd_miso,   // TF卡SPI
     output wire flash_cs_n,flash_sclk,flash_mosi,flash_wp_n,flash_hold_n,
-    input wire flash_miso
+    input wire flash_miso                  // 参数保存用的U33 W25X64用户Flash
 );
+    //--------------------------------------------------------------------------
+    // 1. 时钟与复位
+    //    PLL 输出 mem_clk(40M)/mem_clk_shift(40M移相144°供SDRAM采样)/
+    //    pixel_clk(25M)/pixel_clk_5x(125M)。ext_reset_n 等 PLL 锁定后才释放，
+    //    每个域再用 reset_sync 各自同步释放，避免跨域异步复位。
+    //--------------------------------------------------------------------------
     wire mem_clk,mem_clk_shift,pixel_clk,pixel_clk_5x,mem_locked;
     wire sys_reset_n,mem_reset_n,pix_reset_n,serial_reset_n;
     wire ext_reset_n=rst_n && mem_locked;
@@ -30,8 +63,14 @@ module top #(
     reset_sync u_pix_reset(.clk(pixel_clk),.ext_rst_n(ext_reset_n),.rst_n_sync(pix_reset_n));
     reset_sync u_serial_reset(.clk(pixel_clk_5x),.ext_rst_n(ext_reset_n),.rst_n_sync(serial_reset_n));
 
-    // 单变量实板诊断：按住 K4(key2)，SW4=1，再释放 K1 复位。
-    // 复位释放后仅采样一次，随后可松开 K4；正常复位自动退出。
+    //--------------------------------------------------------------------------
+    // 2. 单变量实板诊断入口
+    //    操作：按住 K4(key2)、把 SW4(sw[3]) 拨到1，再释放 K1 复位。
+    //    复位释放后只采样一次，随后可以松开 K4；下次正常复位自动退出。
+    //    diag_local_sys：输出本地图案，完全不读SDRAM（隔离显示链）。
+    //    diag_fifo_sys ：仍走读取FIFO路径，用于对比"FIFO前/FIFO后"哪个环节花屏。
+    //    这两个标志是系统域单拍量，下面用 sync_2ff 分别同步到内存域和像素域。
+    //--------------------------------------------------------------------------
     reg [5:0] diag_boot_count;
     reg diag_local_sys,diag_fifo_sys;
     reg [1:0] diag_key_sync,diag_sw_sync,diag_fifo_sw_sync;
@@ -43,7 +82,7 @@ module top #(
             diag_key_sync<={diag_key_sync[0],key2};
             diag_sw_sync<={diag_sw_sync[0],sw[3]};
             diag_fifo_sw_sync<={diag_fifo_sw_sync[0],sw[2]};
-            if(diag_boot_count!=63) begin
+            if(diag_boot_count!=63) begin          // 只在复位后的固定窗口内采样一次
                 diag_boot_count<=diag_boot_count+1'b1;
                 if(diag_boot_count==62) begin
                     diag_local_sys<=DIAG_LOCAL_PATTERN || (!diag_key_sync[1] && diag_sw_sync[1]);
@@ -63,11 +102,23 @@ module top #(
     sync_2ff u_diag_fifo_mem(.clk(mem_clk),.rst_n(mem_reset_n),
         .async_in(diag_fifo_sys),.sync_out(diag_fifo_mem));
 
+    //--------------------------------------------------------------------------
+    // 3. SDRAM控制器状态与跨域握手信号
+    //    原厂加密控制器只给出 初始化完成/忙/刷新中/读有效 这几个状态，
+    //    它们属于 mem_clk 域，需要同步回系统域参与启动判断。
+    //--------------------------------------------------------------------------
     wire sdram_init,sdram_busy,sdram_refresh,rd_valid;
     wire [31:0] rd_data;
     wire init_sys,cdc_idle,cdc_idle_sys,cdc_full,cdc_overflow;
     sync_2ff u_init_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(sdram_init),.sync_out(init_sys));
     sync_2ff u_idle_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(cdc_idle),.sync_out(cdc_idle_sys));
+
+    //--------------------------------------------------------------------------
+    // 4. 存储装载链：SD卡 → FAT32 → BMP解码 → 写SDRAM
+    //    media_storage_ingest_top 内部包含 sd_media_service、media_ingest_frontend
+    //    （含FAT32扫描、BMP24解码、2×2缩小、帧完成提交）和写入数据源。
+    //    start 由下面的启动状态机给出；done/error_stage/error_code 回报结果。
+    //--------------------------------------------------------------------------
     wire ingest_busy,ingest_done,card_ready;
     wire [2:0] ingest_stage;
     wire [7:0] ingest_error,ingest_detail;
@@ -99,13 +150,22 @@ module top #(
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
         .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),
         .image_complete(),.image_ready(image_complete),.image_scale_2x(image_scale),
+        // 写入排空判据：CDC 空闲 + 已排空 + 源域当前没有新的写请求
         .write_drain_idle(cdc_idle_sys && write_drained_sys && !source_wr),
         .controller_init_done(init_sys && !cdc_full),.controller_busy(1'b0),.refresh_active(1'b0),
         .app_wr_en(source_wr),.app_wr_addr(source_addr),.app_wr_mask(source_mask),.app_wr_data(source_data),
         .sd_cs_n(sd_ncs),.sd_sclk(sd_dclk),.sd_mosi(sd_mosi),.sd_miso(sd_miso),
+        // 音频与图片共用一条SD服务：boot_state==4 之后 SD 卡交给音频用
         .audio_owner(boot_state==4),.audio_req(audio_req),.audio_lba(audio_lba),
         .audio_busy(audio_busy),.audio_done(audio_done),.audio_valid(audio_valid),
         .audio_byte(audio_byte),.audio_error(audio_error),.audio_byte_index(audio_byte_index));
+
+    //--------------------------------------------------------------------------
+    // 5. 写跨时钟域：50MHz(系统域) 写 → 40MHz(内存域) 写
+    //    SHARED_MEMORY=1 表示与视频读取共享同一个SDRAM控制器，
+    //    因此要把 controller_busy/refresh_active 传进来等待总线空闲，
+    //    并用 burst_grant 参与下面的仲裁。
+    //--------------------------------------------------------------------------
     wire cdc_wr;
     wire [20:0] cdc_addr;
     wire [3:0] cdc_mask;
@@ -117,6 +177,13 @@ module top #(
         .dst_app_wr_data(cdc_data),.dst_idle(cdc_idle),
         .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .burst_grant(write_grant),.burst_request(write_request));
+
+    //--------------------------------------------------------------------------
+    // 6. 上电启动状态机（系统域，50MHz）
+    //    0 等SDRAM初始化 → 1 装载四张图 → 2 等写入排空 → 3 构建缩略图缓存 → 4 播放
+    //    进入播放有两个条件：至少一张图完整校验通过(image_complete!=0)，
+    //    且写入CDC没有溢出。首图校验并排空后即可显示，其余图片继续后台装载。
+    //--------------------------------------------------------------------------
     always @(posedge clk or negedge sys_reset_n) begin
         if(!sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;cache_ready<=0;end
         else begin
@@ -127,6 +194,7 @@ module top #(
             case(boot_state)
                 0: if(init_sys && diag_boot_count==63 && !diag_local_sys) begin ingest_start<=1;boot_state<=1;end
                 1: if(ingest_done) begin boot_state<=2;drain_count<=0;end
+                // 连续256拍确认CDC空闲且源域无写请求，才认为写入真正排空
                 2: if(cdc_idle_sys && write_drained_sys && !source_wr) begin
                     if(drain_count==255) begin cache_start<=1;boot_state<=3;end
                     else drain_count<=drain_count+1'b1;
@@ -136,6 +204,12 @@ module top #(
             endcase
         end
     end
+
+    //--------------------------------------------------------------------------
+    // 7. 缩略图缓存构建（内存域，40MHz）
+    //    启动期把四张图按4:1采样合成到SDRAM第5页(地址1228800起)，
+    //    只做一次；cache_start 是系统域单拍脉冲，用 toggle 同步到内存域。
+    //--------------------------------------------------------------------------
     pulse_toggle_sync u_cache_start(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(cache_start),
         .dst_clk(mem_clk),.dst_rst_n(mem_reset_n),.dst_pulse(cache_start_mem));
     wire cache_busy,cache_done,cache_rd,cache_wr;
@@ -159,6 +233,13 @@ module top #(
         .dst_clk(clk),.dst_rst_n(sys_reset_n),.dst_pulse(cache_done_sys));
     wire player_mem;
     sync_2ff u_player_mem(.clk(mem_clk),.rst_n(mem_reset_n),.async_in(player_enable),.sync_out(player_mem));
+
+    //--------------------------------------------------------------------------
+    // 8. SDRAM访问仲裁（内存域）
+    //    三路竞争同一个SDRAM控制器：视频读(owner=1)、写入CDC(owner=2)、
+    //    缩略图缓存(owner=3)。仲裁器给出 owner 和 grant，下面的读写使能与
+    //    地址/数据多路选择都按 owner 选择，保证同一时刻只有一路在访问。
+    //--------------------------------------------------------------------------
     wire video_rd;
     wire [20:0] video_rd_addr;
     media_sdram_arbiter u_memory_arbiter(.clk(mem_clk),.rst_n(mem_reset_n),
@@ -168,8 +249,15 @@ module top #(
         .app_read(mem_app_read),.app_write(mem_app_write),.rd_valid(rd_valid),
         .video_grant(video_grant),.write_grant(write_grant),.cache_grant(cache_grant),
         .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained));
+    // 诊断本地图案时切断应用侧读写，让SDRAM只做初始化和刷新
     assign mem_app_write=!diag_local_mem && ((memory_owner==3 && cache_wr) || (memory_owner==2 && cdc_wr));
     assign mem_app_read=!diag_local_mem && ((memory_owner==3 && cache_rd) || (memory_owner==1 && video_rd));
+
+    //--------------------------------------------------------------------------
+    // 9. 原厂加密SDRAM控制器实例
+    //    地址单位是32位字，容量2M字；读写通道由 owner 多路选择。
+    //    Clk_sft 是移相时钟，只用于内部采样，不参与逻辑时钟树。
+    //--------------------------------------------------------------------------
     sdram U3(.Clk(mem_clk),.Clk_sft(mem_clk_shift),.Rst(~mem_reset_n),
         .Sdr_init_done(sdram_init),.Sdr_init_ref_vld(sdram_refresh),.Sdr_busy(sdram_busy),
         .App_wr_en(mem_app_write),.App_wr_addr(memory_owner==3?cache_wr_addr:cdc_addr),
@@ -177,6 +265,15 @@ module top #(
         .App_rd_en(mem_app_read),.App_rd_addr(memory_owner==3?cache_rd_addr:video_rd_addr),
         .Sdr_rd_en(rd_valid),.Sdr_rd_dout(rd_data));
 
+    //--------------------------------------------------------------------------
+    // 10. 按键、菜单、拨码与参数持久化（系统域）
+    //     dual_key_chord_router：K2/K3 短按、K3长按1秒、K2+K3同时按3秒保存；
+    //     param_menu_controller：K4 短按改音量、长按1秒改周期；
+    //     sw[1]=1 时拨码进入参数调节，sw[2] 选亮度或对比度；
+    //     player_config_persistence：把周期/音量/自动模式存进U33用户Flash。
+    //     注意：本版 DEFAULT_VOLUME=0 且 RESTORE_VOLUME_ON_BOOT=0，
+    //     即上电和K1复位后音量一定为0，但周期与自动模式仍从Flash恢复。
+    //--------------------------------------------------------------------------
     wire next_sys,auto_sys,previous_sys,save_event;
     wire cfg_ready,cfg_busy,cfg_apply,cfg_load_done,cfg_save_done,cfg_fatal;
     wire [7:0] cfg_error,volume,mode;
@@ -202,7 +299,8 @@ module top #(
     always @(posedge clk or negedge sys_reset_n)
         if(!sys_reset_n) begin sw_sync1<=0;sw_sync2<=0;brightness<=255;contrast<=128;end
         else begin
-            sw_sync1<=sw;sw_sync2<=sw_sync1;
+            sw_sync1<=sw;sw_sync2<=sw_sync1;   // 拨码两级同步
+            // sw[1]=1 进入参数调节：sw[2]=1 调对比度，否则调亮度；K2加16、K3短按减16
             if(sw_sync2[1]) begin
                 if(sw_sync2[2]) begin
                     if(next_sys) contrast<=contrast>239?255:contrast+16;
@@ -214,7 +312,8 @@ module top #(
             end
         end
     wire view_sys,view_mode;
-    sync_2ff u_view_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(view_mode),.sync_out(view_sys));
+    sync_2ff u_view_sys(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(view_mode),.sync_out(view_sys));
+    // 参数调节模式下 K3 短按改的是"自动/手动"开关，而不是减亮度
     wire mode_update=auto_sys && !sw_sync2[1] && !view_sys;
     player_config_persistence #(.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(.clk(clk),.rst_n(sys_reset_n),
         .cfg_update_valid((menu_update && !view_sys) || mode_update),.cfg_period_ms(menu_update?menu_period:period_ms),
@@ -227,6 +326,12 @@ module top #(
         .flash_cs_n(flash_cs_n),.flash_sclk(flash_sclk),.flash_mosi(flash_mosi),
         .flash_wp_n(flash_wp_n),.flash_hold_n(flash_hold_n));
 
+    //--------------------------------------------------------------------------
+    // 11. 系统域 → 像素域的单拍事件
+    //     按键/菜单事件在50MHz产生，显示逻辑在25MHz消费，
+    //     用 pulse_toggle_sync 转成像素域单拍脉冲。
+    //     sw[1]=1 时按键用于调参数，所以不产生切图事件。
+    //--------------------------------------------------------------------------
     wire frame_start,next_pix,auto_pix,previous_pix,confirm_pix;
     pulse_toggle_sync u_next(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(next_sys && !sw_sync2[1]),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(next_pix));
@@ -236,6 +341,12 @@ module top #(
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(previous_pix));
     pulse_toggle_sync u_confirm(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(menu_event && view_sys),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(confirm_pix));
+
+    //--------------------------------------------------------------------------
+    // 12. 多位参数的跨域提交
+    //     拨码、模式、对比度、亮度、音量、周期打包成64位，用 frame_config_cdc
+    //     在帧边界整体更新，避免参数在画面中间变化造成撕裂。
+    //--------------------------------------------------------------------------
     wire [63:0] config_pix;
     frame_config_cdc #(.WIDTH(64),.RESET_VALUE({4'd0,4'd0,8'd128,8'd255,8'd0,32'd5000})) u_params(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({sw_sync2,3'd0,mode[0],contrast,brightness,volume,period_ms}),
@@ -245,7 +356,14 @@ module top #(
     wire cache_ready_pix;
     sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
         .async_in(cache_ready),.sync_out(cache_ready_pix));
+    // SW1(switches_pix[0]) 且缩略图缓存已就绪，才允许进入缩略图模式
     wire thumbnail_switch=switches_pix[0] && cache_ready_pix;
+
+    //--------------------------------------------------------------------------
+    // 13. 缩略图模式控制（像素域）
+    //     缓存未就绪时 SW1 无效；模式切换沿、左右移动、确认选择都交给
+    //     thumbnail_controller，它输出焦点格 focus_index 和已确认的 active_index。
+    //--------------------------------------------------------------------------
     reg mode_seen;
     wire [1:0] focus_index,selected_index;
     wire thumb_transition,thumbnail_select;
@@ -259,8 +377,15 @@ module top #(
     thumbnail_controller u_thumbnail(.clk(pixel_clk),.rst_n(pix_reset_n),
         .key_right(next_pix),.key_left(auto_pix),.key_confirm(confirm_pix),
         .key_mode((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode)),.image_complete(complete_pix),.frame_start(frame_start),
-        .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),.transition_req(thumb_transition),
-        .selection_committed(thumbnail_select));
+        .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),
+        .transition_req(thumb_transition),.selection_committed(thumbnail_select));
+
+    //--------------------------------------------------------------------------
+    // 14. 显示视图状态（像素域）
+    //     display_view=1 表示正在显示缩略图页；退出缩略图时要等选中的图片
+    //     真正被读取器接管(active_index==selected_index)才切回全屏，
+    //     否则会闪回上一张旧图。所有这些判断都在 frame_start 帧边界上做。
+    //--------------------------------------------------------------------------
     wire hs,vs,de;
     wire [23:0] video_rgb;
     wire [9:0] video_x,video_y;
@@ -283,6 +408,16 @@ module top #(
                 else if(!selection_wait || active_index==selected_index) begin display_view<=0;selection_wait<=0;end
             end
         end
+
+    //--------------------------------------------------------------------------
+    // 15. 视频主链（像素域）
+    //     media_video_pipeline 内部按顺序完成：
+    //       从SDRAM读帧(FIFO预取) → 亮度/对比度 → 16帧淡入淡出转场 → 时序产生
+    //     本模块输出 HS/VS/DE、RGB、像素坐标和当前图片号。
+    //     周期参数是毫秒，这里换算成25MHz周期数(*25000)后再交给自动轮播计数。
+    //     player_enable 的判据：诊断FIFO模式直接放行；正常模式下要等本张图
+    //     完整校验(complete_pix[active_index])且不在本地图案诊断中。
+    //--------------------------------------------------------------------------
     // 控制逻辑同像素域运行，周期从毫秒换算为25MHz周期；手动/自动统一帧边界提交。
     media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
@@ -301,6 +436,10 @@ module top #(
         .video_de(de),.video_rgb(video_rgb),.video_x(video_x),.active_index(active_index),.pending_index(),
         .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error));
 
+    //--------------------------------------------------------------------------
+    // 16. 叠加层第一级：缩略图焦点框
+    //     只画左上320×240里的四格；缩略图模式下给当前焦点格加黄色边框。
+    //--------------------------------------------------------------------------
     wire de_adjust=de;
     wire [23:0] adjusted_rgb=video_rgb;
     wire hs_adjust=hs,vs_adjust=vs;
@@ -310,6 +449,13 @@ module top #(
         .focus_index(focus_index),.image_complete(complete_pix),.thumb_de(thumb_de),.source_index(),
         .source_x(),.source_y(),.focus_border(focus_border));
     wire [23:0] focus_rgb=(display_view && focus_border)?24'hffff00:adjusted_rgb;
+
+    //--------------------------------------------------------------------------
+    // 17. 错误码汇总与跨域提交
+    //     优先级：CDC溢出(86) > 缩略图缓存失败(85) > 装载错误(80~84) >
+    //             音频错误(9x) > 参数Flash错误。
+    //     错误码和细分码都要从系统域搬到像素域显示，同样走帧边界提交。
+    //--------------------------------------------------------------------------
     wire [23:0] text_rgb,final_rgb;
     wire [7:0] system_error=cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
@@ -322,6 +468,14 @@ module top #(
     frame_config_cdc #(.WIDTH(8)) u_error_detail_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
         .src_data(ingest_detail),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
         .frame_start(frame_start),.dst_data(detail_pix));
+
+    //--------------------------------------------------------------------------
+    // 18. 串口与字幕（系统域解析，像素域显示）
+    //     uart_rx_byte 收字节 → subtitle_uart_controller 解析 SUB= 命令；
+    //     命令结果先存系统域 live_text/live_length/live_subtitle，
+    //     再用 frame_config_cdc 整体提交到像素域，避免文字在画面中间改动。
+    //     字幕内容不写Flash（SUB=SAVE 返回ERR），参数保存用K2+K3。
+    //--------------------------------------------------------------------------
     wire [7:0] rx_data;
     wire rx_valid,rx_error,subtitle_commit,subtitle_enable;
     wire [95:0] subtitle_text;
@@ -344,12 +498,23 @@ module top #(
     frame_config_cdc #(.WIDTH(103),.RESET_VALUE(103'd0)) u_subtitle_frame_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({live_subtitle,live_length,live_text}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(subtitle_pix));
+
+    //--------------------------------------------------------------------------
+    // 19. 叠加层第二级：OSD文字（状态/参数/计时/错误码 + 字幕）
+    //     输入是已经过焦点框的像素，输出带文字阴影的RGB。
+    //--------------------------------------------------------------------------
     promax_text_overlay u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
         .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.subtitle_enable(subtitle_pix[102]),
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
         .contrast(contrast_pix),.volume(volume_pix),.period_ms(config_pix[31:0]),.auto_enabled(auto_enabled),
         .source_scale_2x(image_scale[active_index]),.active_index(active_index),
         .loading(complete_pix!=4'hf || !cache_ready_pix),.error_code(error_pix),.error_detail(detail_pix),.rgb_out(text_rgb),.overlay_active());
+
+    //--------------------------------------------------------------------------
+    // 20. 流水线级：文字查找与波形合成之间
+    //     波形模块要用到坐标和HS/VS/DE，所以这里把整组信号（RGB、坐标、同步、
+    //     诊断RGB）一起打一拍，保证波形看到的坐标和它处理的像素严格对齐。
+    //--------------------------------------------------------------------------
     wire pcm_tap_valid;
     wire signed [15:0] pcm_tap_left;
     // Pipeline the entire bundle between text lookup and waveform composition.
@@ -365,10 +530,22 @@ module top #(
             text_stage_rgb<=text_rgb;diag_stage_rgb<=diag_fifo_pix?video_rgb:diag_rgb;
             text_stage_x<=x_adjust;text_stage_y<=y_adjust;text_stage_hs<=hs_adjust;text_stage_vs<=vs_adjust;text_stage_de<=de_adjust;
         end
+
+    //--------------------------------------------------------------------------
+    // 21. 叠加层第三级：底部音轨面板（波形、包络、音量柱）
+    //     PIPELINE_OUTPUT=1 表示内部再寄存一拍输出，所以下面还有一级流水线。
+    //--------------------------------------------------------------------------
     promax_audio_waveform #(.PIPELINE_OUTPUT(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
         .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(1'b1),.pcm_tap_valid(pcm_tap_valid),
         .pcm_tap_left(pcm_tap_left),.rgb_out(final_rgb),.waveform_active());
 
+    //--------------------------------------------------------------------------
+    // 22. WAV/PCM播放器（写侧系统域，读侧像素域）
+    //     play_enable 条件：启动完成(boot_state==4) + 两个PCM参数都非0。
+    //     两个参数为0时本模块不工作，声音由下面的合成音调提供。
+    //     播放时它通过 sd_req/sd_lba 向SD服务要扇区，读回的字节经BRAM跨到
+    //     像素域输出48kHz样本；sample_ready 是像素域的背压。
+    //--------------------------------------------------------------------------
     wire sample_tick,wav_valid,wav_ready,wav_active;
     wire signed [15:0] wav_sample;
     wav_stream_player u_wav(.wr_clk(clk),.wr_rst_n(sys_reset_n),
@@ -378,9 +555,21 @@ module top #(
         .sd_done(audio_done),.sd_error(audio_error),.rd_clk(pixel_clk),.rd_rst_n(pix_reset_n),
         .sample_tick(sample_tick),.sample_out(wav_sample),.sample_valid(wav_valid),.sample_ready(wav_ready),
         .sample_counter(),.stream_active(wav_active),.stream_end(),.buffer_low());
+
+    //--------------------------------------------------------------------------
+    // 23. 淡入淡出增益（像素域）
+    //     转场用的 alpha 在像素域产生，音频也在像素域，所以这里把视频转场
+    //     进度换算成音频增益，让画面淡出淡入时声音同步变化。
+    //--------------------------------------------------------------------------
     wire [7:0] fade_gain;
     sync_fade_gain u_gain(.pix_clk(pixel_clk),.pix_rst_n(pix_reset_n),.frame_start(frame_start),
         .alpha_pix(fade_alpha),.fade_active(fade_active),.aud_clk(pixel_clk),.aud_rst_n(pix_reset_n),.gain_aud(fade_gain));
+
+    //--------------------------------------------------------------------------
+    // 24. 本地诊断图案（组合产生，只用于排查）
+    //     上半屏8色条 → 中间120行灰阶 → 下面120行逐位彩色渐变+棋盘格。
+    //     它绕过颜色调节、转场和全部叠加层，不使用读取器出来的像素。
+    //--------------------------------------------------------------------------
     // 与最终视频同拍的坐标，直接进入既有 HDMI 编码/串行链路。
     // 上半屏 8 色条；第三个 120 行灰阶；最后 120 行逐位彩色渐变+棋盘格。
     // 诊断绕过颜色调节、转场和全部叠加层，完全不使用 reader_rgb。
@@ -401,6 +590,12 @@ module top #(
         else
             diag_rgb=(x_adjust[3]^y_adjust[3])?24'hffffff:24'h000000;
     end
+
+    //--------------------------------------------------------------------------
+    // 25. 波形输出后的最后一级流水线
+    //     波形几何在透明混合前已寄存，这里把伴随信号（诊断RGB、Y、同步）
+    //     再延迟一拍，保证它们与最终RGB同拍进入HDMI编码。
+    //--------------------------------------------------------------------------
     // Waveform geometry is registered before the transparent color blend.
     // Delay every companion signal (including diagnostics and Y) by the same cycle.
     reg [9:0] wave_stage_x,wave_stage_y;
@@ -413,7 +608,15 @@ module top #(
             wave_stage_x<=text_stage_x;wave_stage_y<=text_stage_y;
             wave_stage_hs<=text_stage_hs;wave_stage_vs<=text_stage_vs;wave_stage_de<=text_stage_de;wave_diag_rgb<=diag_stage_rgb;
         end
+    // 诊断模式下用本地图案替换真实像素，其余情况用波形/文字叠加后的画面
     wire [23:0] hdmi_input_rgb=diag_local_pix?wave_diag_rgb:final_rgb;
+
+    //--------------------------------------------------------------------------
+    // 26. HDMI音频桥 + 物理层
+    //     media_hdmi_audio_bridge 在视频消隐期插入 Data Island（音频采样包、
+    //     ACR、InfoFrame），输出三路TMDS 10位符号；hdmi_phy_wrapper 用125MHz
+    //     串化成差分对输出。DDC总线保持释放，分辨率固定VIC=1(640×480)。
+    //--------------------------------------------------------------------------
     wire [9:0] ch0,ch1,ch2;
     media_hdmi_audio_bridge u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
         .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
@@ -429,6 +632,12 @@ module top #(
     // Route B 使用固定 VIC=1，不主动读取EDID；DDC总线保持释放。
     assign HDMI_DDC_SCL=1'b1;
     assign HDMI_DDC_SDA=1'bz;
+
+    //--------------------------------------------------------------------------
+    // 27. 人机输出：数码管 + UART状态回报
+    //     图片号/模式在像素域，先搬回系统域再送去显示和串口。
+    //     周期毫秒转"秒"用多拍减法实现，避免32位除法形成长组合路径。
+    //--------------------------------------------------------------------------
     wire [1:0] index_sys;
     frame_config_cdc #(.WIDTH(2)) u_index_report(.src_clk(pixel_clk),.src_rst_n(pix_reset_n),.src_data(active_index),
         .dst_clk(clk),.dst_rst_n(sys_reset_n),.frame_start(1'b1),.dst_data(index_sys));

@@ -1,5 +1,26 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// SD卡上电初始化（SPI 模式）
+//
+// 这一步必须用很慢的 SPI 时钟（约390.625kHz），因为卡刚上电还没跑起来。
+// 顺序是 SD 规范定死的，少一步卡就不认：
+//   1) 上电先等一段时间（STARTUP_DELAY_CYCLES，默认5,000,000拍≈100ms），
+//      期间 CS 拉高、只发 0xFF 空字节给卡供电时钟；
+//   2) CMD0：让卡进入 SPI 模式，回应 0x01；
+//   3) CMD8：带参数 0x1AA，用来判断是不是 V2 卡（SDHC/SDXC）。老卡会不回应，
+//      这时按 V1 卡继续；
+//   4) 循环 CMD55 + ACMD41：反复问"初始化好了吗"，直到卡回 0x00，
+//      表示它准备好并且 OCR 里的 busy 位清了；
+//   5) CMD58：读 OCR，取 CCS 位判断是不是高容量卡（决定后面地址按块还是按字节）。
+//
+// 输出：init_ready=卡可用；card_high_capacity/ocr 供读扇区模块换算地址；
+//      error_code 非0表示失败（哪一步、是超时还是状态错，见下面的错误码）；
+//      last_cmd/last_r1/acmd41_attempts 是留给调试观察的。
+//
+// 每个命令都分成 *_ISSUE（发命令）和 *_WAIT（等响应）两个状态，
+// 因为下面的字节引擎和命令引擎一次只能处理一个字节/一条命令，需要握手。
+// -----------------------------------------------------------------------------
 module sd_spi_init #(
     parameter integer SPI_CLK_DIV = 4,
     parameter integer POWER_UP_BYTES = 80,
@@ -25,6 +46,7 @@ module sd_spi_init #(
     input  wire        sd_miso
 );
 
+    // 错误码按"哪条命令 + 超时还是状态错"分类，方便定位卡在哪一步
     localparam ERR_NONE           = 8'h00;
     localparam ERR_CMD0_TIMEOUT   = 8'h01;
     localparam ERR_CMD0_R1        = 8'h02;
@@ -39,6 +61,7 @@ module sd_spi_init #(
     localparam ERR_CMD58_R1       = 8'h0b;
     localparam ERR_OCR_NOT_READY  = 8'h0c;
 
+    // 状态机：按 SD 规范顺序走 CMD0 → CMD8 → (CMD55+ACMD41)* → CMD58
     localparam ST_IDLE          = 5'd0;
     localparam ST_STARTUP_DELAY = 5'd15;
     localparam ST_POWER_REQ     = 5'd1;

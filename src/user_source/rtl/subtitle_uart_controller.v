@@ -1,5 +1,26 @@
 `timescale 1ns/1ps
 
+// 模块职责：串口字幕命令解析器（SUB=… 系列命令）与回包生成。
+// 位置：上游是 uart_rx_byte（单字节 valid），下游是顶层的帧边界提交 CDC
+//       与 promax_text_overlay（真正画字的地方）。
+// 时钟域：50MHz 系统时钟 clk，单域；与像素域之间由顶层用 frame_config_cdc 做帧提交。
+// 输入约定：rx_data/rx_valid 是已收到的字节；service_ready 表示参数服务可用；
+//       save_done/save_failed/request_dropped 是本模块发出的保存请求的回执；
+//       live_text/live_length/live_enable 是当前生效值，供 SUB? 查询回显。
+// 输出约定：cfg_update_valid 是"新字幕要生效"的单拍脉冲，cfg_text/cfg_length/cfg_enable
+//       是新值；reply_valid/reply_data/reply_last/reply_ready 是串口回包的字节流握手。
+//
+// 命令与回包（一律以 CR 或 LF 结束；回包固定 OK/ERR + CRLF）：
+//   SUB=<文本>  设置最多 12 个可打印 ASCII 字符，小写自动转大写，成功回 OK
+//   SUB=ON/OFF  开/关字幕（沿用当前文本），回 OK
+//   SUB?        查询，回 "SUB=<0/1>:<文本>" 形式
+//   SUB=CN      选中性短句（内置"照片音乐"字形），也接受 UTF-8 的 SUB=照片音乐
+//   SUB=SAVE    本集成没有字幕 Flash 存储，会返回 ERR，不会假报成功
+// 设计要点：
+//   1) 行缓冲 40 字节，超长只记 overflow 标志，在行尾一次性回 ERR，不会边收边解析。
+//   2) CRLF 会被当作一个结束符：收到 CR 后丢弃紧随的一个 LF。
+//   3) 回包用"当前回包 + 一个待发回包"的两级结构，避免上一条还没发完时丢回执。
+//   4) 字幕只在这里改寄存器，真正上屏要等顶层帧边界提交，所以不会撕裂画面。
 module subtitle_uart_controller (
     input  wire         clk,
     input  wire         rst_n,
@@ -23,6 +44,9 @@ module subtitle_uart_controller (
     output wire         reply_last,
     input  wire         reply_ready
 );
+    // ===== 常量与回包种类 =====
+    // MAX_LINE 是整行缓冲上限（含 "SUB=" 前缀），MAX_TEXT 是字幕正文上限。
+    // R_* 是回包种类，决定 reply_char 生成哪一串固定文本。
     localparam integer MAX_LINE = 40;
     localparam integer MAX_TEXT = 12;
     // Optional neutral phrase "照片音乐". No workshop signature is built in.
@@ -61,6 +85,8 @@ module subtitle_uart_controller (
     reg [95:0] parsed_text;
     reg [5:0] parsed_length;
 
+    // 行缓冲与字幕文本都按"字节在低位"存放，下面两个函数就是按下标取字节。
+    // 这样 SUB? 回显、大小写转换都可以直接按索引访问，不需要额外的数组。
     function [7:0] line_char;
         input integer index;
         begin
@@ -76,6 +102,8 @@ module subtitle_uart_controller (
         end
     endfunction
 
+    // 中文短句匹配：只认固定那 12 个字节（"SUB=" + "照片音乐" 的 UTF-8 编码），
+    // 不是通用中文解析——不做任何 Unicode 解码，只做逐字节比较。
     function cn_phrase_match;
         input dummy;
         begin
@@ -89,6 +117,9 @@ module subtitle_uart_controller (
         end
     endfunction
 
+    // 回包字节生成：按 kind 和下标拼出固定字符串。
+    // OK 系列统一为 "OK\r\n"（4 字节），ERR 系列为 "ERR\r\n"（5 字节）；
+    // 查询回包是 "SUB=<0/1>:<文本>\r\n"，长度随文本变化，末尾两字节是 CR、LF。
     function [7:0] reply_char;
         input [3:0] kind;
         input integer index;
@@ -122,6 +153,9 @@ module subtitle_uart_controller (
         end
     endfunction
 
+    // 启动一条回包：若当前已有回包在发，就把这一条挂到 pending（只挂一条），
+    // 等当前回包发完自动接上；两条以上同时到来时后面的会被丢弃，
+    // 因为串口回包本来就要求"收到回复再发下一条"。
     task start_reply;
         input [3:0] kind;
         input [6:0] length;
@@ -144,10 +178,17 @@ module subtitle_uart_controller (
         end
     endtask
 
+    // 回包发送握手：reply_valid 表示当前字节有效，下游取走后 reply_index 前进；
+    // 最后一个字节（reply_last）被取走时，若还有 pending 回包就无缝切换到它，
+    // 否则关闭 reply_active。这样连续两条命令不会粘在一起。
     assign reply_valid = reply_active;
     assign reply_data = reply_char(reply_kind,reply_index);
     assign reply_last = reply_active && reply_index + 1 >= reply_length;
 
+    // ===== 主解析状态机 =====
+    // 每拍先清掉一拍脉冲输出（cfg_update_valid/save_request 只持续一拍），
+    // 然后按优先级处理：回包推进 → 保存回执 → 帧错误 → 收字节。
+    // 所有命令都等到"行尾"才动作，所以半条命令不会生效。
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             line_buffer <= 0;
@@ -190,6 +231,9 @@ module subtitle_uart_controller (
                 end
             end
 
+            // 保存回执：等待期间不回 OK，必须等下游明确给出 done/failed/dropped
+            // 才回 OK 或 ERR——本集成没有字幕存储，所以 SUB=SAVE 一定走到 ERR 分支，
+            // 不会假报保存成功。
             if (waiting_save && (save_done || save_failed || request_dropped)) begin
                 waiting_save <= 1'b0;
                 if (save_done && !save_failed && !request_dropped)
@@ -202,6 +246,9 @@ module subtitle_uart_controller (
                 start_reply(R_FRAME,11);
 
             if (rx_valid) begin
+                // discard_lf：刚收到 CR，下一个字节若是 LF 就当同一个结束符丢掉。
+                // 行尾（CR 或 LF）才进入解析：先判超长/查询/命令，
+                // 再判 SUB= 的各个子命令，最后才是普通文本设置。
                 if (discard_lf && rx_data == 8'h0a) begin
                     discard_lf <= 1'b0;
                 end else if (rx_data == 8'h0d || rx_data == 8'h0a) begin
@@ -240,6 +287,9 @@ module subtitle_uart_controller (
                                 cfg_update_valid <= 1'b1;
                                 start_reply(R_OK_TEXT,9);
                             end else begin
+                                // 普通文本设置：命令总长不超过 16（"SUB=" + 12 字符），
+                                // 小写转大写，非可打印 ASCII（0x20~0x7E）判为非法。
+                                // 越界/非法只回 ERR，不会改动当前生效字幕。
                                 command_good = line_length <= 16;
                                 char_good = 1'b1;
                                 parsed_text = 0;
@@ -275,6 +325,8 @@ module subtitle_uart_controller (
                     line_length <= 0;
                     line_overflow <= 0;
                 end else begin
+                    // 普通字节：追加进行缓冲；超过 40 字节只置 overflow 标志，
+                    // 仍然继续把这一行收完，等行尾再统一回 ERR，避免残行污染下一条命令。
                     discard_lf <= 1'b0;
                     if (line_length < MAX_LINE) begin
                         line_buffer[line_length*8 +: 8] <= rx_data;

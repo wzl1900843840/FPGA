@@ -5,6 +5,7 @@
 !/src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/**
 /src/td_project/build_complete/
 /src/td_project/log/
+/build_out/
 /tests/results/*
 !/tests/results/hardware_pass_20260928/
 /media/*.img

@@ -1,5 +1,30 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 帧读取器：把 SDRAM 里的一张图，按 25MHz 像素节拍连续喂给显示链
+//
+// 两个时钟域：
+//   内存域 mem_clk(40MHz)：发突发读命令、数返回、写进跨域FIFO；
+//   像素域 pix_clk(25MHz)：每帧开始时请求"换到第 N 张图"，然后一拍一个像素取走。
+//
+// 工作过程（一帧）：
+//   1) 像素域在 frame_start 时置 request_pending，下一拍把 active_index 和
+//      request_toggle 发给内存域（延迟一拍是为了让上游先把图号提交好）；
+//   2) 内存域看到 toggle 变化就重载：issued/returned 计数清零、FIFO 复位、
+//      reader_index 换成新图号，然后从 bank_base(图号) 开始发读；
+//   3) 读请求按 BURST_SIZE=128 字一笔，一笔发完要隔 BURST_GAP_CYCLES 拍再发下一笔；
+//   4) 同时在飞的字数不超过 MAX_INFLIGHT_BURSTS*BURST_SIZE，且要保证
+//      FIFO 里已有字数 + 在飞字数 + 下一笔不会超过 FIFO_DEPTH-FIFO_MARGIN
+//      （这两个"闸门"就是 inflight_window_ok / fifo_reservation_ok）；
+//   5) 返回数据写进跨域FIFO，像素域经 fifo_prefetch_2 提前取出一个像素，
+//      所以 pixel_valid 总是提前就绪，正常情况不会欠载。
+//
+// 四个错误码分别代表：换图太快(61)、FIFO写满(62)、显示欠载(63)、帧不完整(64)。
+// read_urgent 表示 FIFO 水位低于一半，交给顶层仲裁器让视频优先拿总线。
+//
+// 诊断旁路：synth_stream=1 时完全不读 SDRAM，直接由本模块合成彩条/灰阶/棋盘格
+// 写进 FIFO，用来单独验证"显示链 + FIFO"是否正常（与 SDRAM 数据无关）。
+// -----------------------------------------------------------------------------
 module media_frame_reader #(
     parameter integer ADDR_WIDTH = 21,
     parameter integer IMAGE_WORDS = 307200,
@@ -44,6 +69,7 @@ module media_frame_reader #(
     // Runtime selection is latched at boot, before any frame request.
     wire synth_stream = DIAG_SYNTH_STREAM || (RUNTIME_DIAG && diag_synth_stream);
     wire accepted_return = sdram_rd_valid && !synth_stream;
+    // 错误码：61=换图时上一帧还没读完，62=FIFO被写满，63=显示欠载，64=帧不完整
     localparam [7:0] ERR_NONE          = 8'h00;
     localparam [7:0] ERR_FRAME_OVERRUN = 8'h61;
     localparam [7:0] ERR_FIFO_OVERFLOW = 8'h62;
@@ -141,6 +167,7 @@ module media_frame_reader #(
     wire [31:0] fifo_write_data = (DIAG_RETURN_PATTERN || synth_stream) ?
                                   {8'h00, diag_rgb_mem} : sdram_rd_data;
 
+    // 诊断图案：默认8色彩条；synth_stream 模式下改成灰阶/彩色渐变+棋盘格
     always @* begin
         if(synth_stream && diag_row_mem>=360) begin
             if(diag_column_mem<512)
@@ -166,6 +193,7 @@ module media_frame_reader #(
             diag_rgb_mem = 24'h000000;
     end
 
+    // SDRAM 里四张图各占 IMAGE_WORDS 个32位字，图号 → 起始地址
     function [ADDR_WIDTH-1:0] bank_base;
         input [1:0] index;
         begin
@@ -180,6 +208,7 @@ module media_frame_reader #(
 
     // Delay the request by one pixel clock so media_player_control can commit
     // active_index on the frame_start edge before this module captures it.
+    // 像素域：帧边界发换图请求 + 统计本帧消费了多少像素（用来判断欠载）
     always @(posedge pix_clk or negedge pix_rst_n) begin
         if (!pix_rst_n) begin
             request_pending_pix <= 1'b0;
@@ -267,6 +296,7 @@ module media_frame_reader #(
             if (burst_gap_count_mem != 0)
                 burst_gap_count_mem <= burst_gap_count_mem - 1'b1;
 
+            // 在飞字数统计：这一拍既发出命令又收到返回时，净变化为0，保持原值
             case ({issue_allowed, accepted_return})
                 2'b10: begin
                     inflight_count_mem <= inflight_count_mem + 1'b1;
@@ -285,6 +315,7 @@ module media_frame_reader #(
                 end
             endcase
 
+            // 收到换图请求（toggle 变化）：如果上一帧还没读完，报 ERR_FRAME_OVERRUN 并强制停下
             if (request_sync2_mem != request_seen_mem) begin
                 request_seen_mem <= request_sync2_mem;
                 reload_pending_mem <= 1'b1;
@@ -296,6 +327,8 @@ module media_frame_reader #(
                 end
             end
 
+            // 等在飞数据全部返回（inflight_empty）才真正换图：
+            // 清计数器、复位FIFO、切换图号，然后开始读新的一帧
             if (reload_pending_mem && inflight_empty_mem) begin
                 reload_pending_mem <= 1'b0;
                 reader_index <= reload_index_mem;
@@ -315,23 +348,26 @@ module media_frame_reader #(
                 reader_error <= ERR_NONE;
             end
 
+            // 开始一笔新突发：记住本笔要发多少个字（末笔可能不足128）
             if (start_burst) begin
                 burst_active_mem <= 1'b1;
                 burst_issued_mem <= 0;
                 burst_target_mem <= next_burst_words[BURST_COUNT_W-1:0];
             end
 
+            // 逐字发读命令：地址 = 图号基址 + 已发字数
             if (issue_allowed) begin
                 app_rd_en <= 1'b1;
                 app_rd_addr <= bank_base(reader_index) + issued_count_mem[ADDR_WIDTH-1:0];
                 issued_count_mem <= issued_count_mem + 1'b1;
                 burst_issued_mem <= burst_issued_mem + 1'b1;
                 if (burst_issued_mem + 1'b1 == burst_target_mem) begin
-                    burst_active_mem <= 1'b0;
+                    burst_active_mem <= 1'b0;               // 本笔发完，进间隔
                     burst_gap_count_mem <= BURST_GAP_CYCLES;
                 end
             end
 
+            // 读返回计数：写满FIFO(62)或整帧读完(64)都结束本帧
             if (!synth_stream && sdram_rd_valid) begin
                 returned_count_mem <= returned_count_mem + 1'b1;
                 if (fifo_full) begin
@@ -362,6 +398,7 @@ module media_frame_reader #(
         end
     end
 
+    // 跨时钟域FIFO：内存域写入，像素域读出（Gray指针在IP内部处理）
     rfifo_32_32_512 #(
         .DATA_WIDTH_W(32), .DATA_WIDTH_R(32),
         .ADDR_WIDTH_W(FIFO_COUNT_W), .ADDR_WIDTH_R(FIFO_COUNT_W),
@@ -376,6 +413,7 @@ module media_frame_reader #(
         .wrusedw(fifo_wrusedw), .rdusedw()
     );
 
+    // 预取一级：像素域提前把FIFO里的下一个像素取出来，这样 pixel_valid 不会临时才有效
     fifo_prefetch_2 #(.DATA_WIDTH(32)) u_prefetch (
         .clk(pix_clk), .rst(fifo_reset), .raw_empty(fifo_empty),
         .raw_valid(fifo_raw_valid), .raw_data(fifo_raw_data),

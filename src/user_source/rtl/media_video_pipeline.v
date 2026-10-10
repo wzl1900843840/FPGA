@@ -1,5 +1,28 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 视频管线：显示侧的总装配模块（跨 40MHz 内存域 + 25MHz 像素域 + 系统域控制）
+//
+// 它把下面这些子模块按顺序串起来，对外只给"同步信号 + RGB + 坐标"：
+//   1) video_timing_ctrl  产生 640×480@59.5Hz 的 HS/VS/DE 和原始坐标；
+//   2) media_frame_reader 按当前图号从 SDRAM 连续取像素（带预取FIFO）；
+//   3) brightness_contrast_adjust 亮度/对比度调节；
+//   4) video_fade_transition 手动切换的淡出淡入、自动轮播的擦除/百叶窗转场；
+//   5) rgb_video_adapter 输出一级寄存，把 HS/VS/DE/RGB/坐标对齐后送HDMI；
+//   6) media_player_control 控制状态机：当前图号、待切图号、自动轮播计时、
+//      切图必须等"目标图已完整校验"，并在帧边界提交（index_commit）。
+//
+// 三个容易搞错的顺序问题（代码里都按这个顺序写的）：
+//   - 颜色调节要在转场之前：低对比度下如果先转场，淡出的黑场会被抬成灰色；
+//   - 转场之后才是 OSD/波形（在顶层做），文字不能被转场一起淡掉；
+//   - 转场期间新的切图请求先被压住（fade_next_event），等画面淡到黑再放行，
+//     避免转场中途换图导致花屏或错位。
+//
+// 缩略图模式：app_rd_addr 在读取器地址上再加 IMAGE_WORDS*4，即切到第5页
+// （启动期合成的缩略图页），所以缩略图和全屏共用同一套突发读取通路。
+//
+// video_error 汇总：读取器错误 > 显示欠载(63) > 控制状态机错误。
+// -----------------------------------------------------------------------------
 module media_video_pipeline #(
     parameter integer IMAGE_WORDS = 307200,
     parameter integer FIFO_DEPTH = 512,
@@ -145,6 +168,7 @@ module media_video_pipeline #(
         end
     end
 
+    // 第1级：产生标准 VGA 时序（640×480，含前后肩和同步脉冲）
     video_timing_ctrl #(
         .H_ACT(H_ACT), .H_FP(H_FP), .H_SYNC(H_SYNC), .H_BP(H_BP),
         .V_ACT(V_ACT), .V_FP(V_FP), .V_SYNC(V_SYNC), .V_BP(V_BP),
@@ -154,6 +178,7 @@ module media_video_pipeline #(
         .vsync(raw_vs), .de(raw_de), .x(raw_x), .y(raw_y)
     );
 
+    // 第2级：转场控制（手动切图先淡出再切，自动轮播做擦除/百叶窗）
     // Fade transition: manual switch requests are held until the display has
     // faded to black, then released to the control FSM at the frame boundary.
     // The bypass branch (FADE_FRAMES=0) wires next_event straight through so
@@ -183,6 +208,7 @@ module media_video_pipeline #(
         else
             raw_vs_q <= raw_vs;
     end
+    // 帧起始：VS 的下降沿，所有"需要整帧一致"的更新都在这一拍做
     assign frame_start = raw_vs_q && !raw_vs;
 
     // rgb_video_adapter registers hs/vs/de/rgb by one pixel. Register x in
@@ -197,6 +223,7 @@ module media_video_pipeline #(
     end
     assign video_x = video_x_q;
 
+    // 第3级：播放控制状态机（当前图号/待切图号/自动轮播计时/帧边界提交）
     media_player_control #(
         .DEFAULT_PERIOD_CYCLES(DEFAULT_PERIOD_CYCLES),
         .MIN_PERIOD_CYCLES(MIN_PERIOD_CYCLES),
@@ -218,6 +245,7 @@ module media_video_pipeline #(
         .active_index(active_index), .index_commit(index_commit)
     );
 
+    // 第4级：帧读取器（40MHz域），缩略图模式下把地址平移到第5页
     // 缩略图合成缓存位于四个原图 bank 之后，仍沿用同一个 burst reader。
     wire [20:0] reader_address;
     wire thumb_mem;
@@ -244,6 +272,7 @@ module media_video_pipeline #(
         .burst_grant(burst_grant),.burst_request(burst_request),.read_urgent(read_urgent)
     );
 
+    // 第5级：转场合成。淡出淡入用 alpha 乘像素；自动轮播用"移动的边界"逐列揭示新图。
     // Fade multiplies the selected frame by the ramp alpha; an automatic
     // slideshow switch instead reveals the new frame left-to-right: pixels
     // right of the moving boundary stay black, the rest show full colour.
@@ -297,6 +326,7 @@ module media_video_pipeline #(
         if(!pix_rst_n) diag_pixel_q<=0;
         else diag_pixel_q<=reader_pixel_valid?reader_rgb:24'hff0080;
     wire [23:0] diag_aligned_rgb=ENABLE_COLOR_ADJUST?diag_pixel_q:reader_rgb;
+    // 第6级：输出寄存，HS/VS/DE/RGB/坐标同拍送出（给HDMI编码用）
     rgb_video_adapter u_video_adapter (
         .pclk(pix_clk), .rst_n(pix_rst_n), .hs_in(color_hs),
         .vs_in(color_vs), .de_in(color_de),
@@ -305,6 +335,7 @@ module media_video_pipeline #(
         .video_de(video_de), .video_rgb(video_rgb)
     );
 
+    // 错误上报优先级：读取器错误 > 显示欠载(63) > 控制状态机错误
     assign video_error = reader_error_pix2 != 0 ? reader_error_pix2 :
                          reader_underflow ? 8'h63 : control_error_pix2;
 endmodule

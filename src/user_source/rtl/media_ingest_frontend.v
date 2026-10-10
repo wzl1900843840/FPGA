@@ -1,5 +1,24 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 装载前端：把"读卡"和"解析文件"两层接起来（50MHz 系统域）
+//
+// 两个子模块：
+//   sd_sector_replay_buffer：扇区重放。读卡是串行慢的，但 FAT32 扫描和 BMP 解码
+//     经常要回头重读同一个扇区（例如目录项、簇链）。重放缓冲把刚读过的扇区
+//     缓起来，命中就不用再麻烦卡，减少读卡次数，也让上层逻辑简单。
+//   media_ingest_pipeline：真正干活的——扫分区/根目录找 PIC1~PIC4、
+//     按簇链取文件、BMP24 解码（含 1280×960 的 2×2 平均缩小）、
+//     交给 media_frame_loader 写进 SDRAM。
+//
+// 对外信号：
+//   start 启动一次装载；busy/done 是进度；ingest_error 是主错误码、
+//   ingest_detail_error 是细分码（顶层 OSD 上的 D xx 就来自它）；
+//   resource_valid/image_complete 是四张图各自的"找到文件/已写完整"；
+//   image_ready 是"这张图现在可以给显示用"（配合 EARLY_DISPLAY 提前显示）；
+//   image_scale_2x 表示这张图是 1280×960 需要缩小显示。
+//   reader_* 一组是向 SD 服务要扇区的握手，app_wr_* 是写 SDRAM 的通路。
+// -----------------------------------------------------------------------------
 module media_ingest_frontend #(
     parameter integer IMAGE_WIDTH = 640,
     parameter integer IMAGE_HEIGHT = 480,

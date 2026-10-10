@@ -40,8 +40,8 @@ always @(posedge mc)begin
  if(rv && !(vreturn || creturn))$fatal(1,"unrouted SDRAM return");
  if(awe)begin
   pos=cache_words;x=pos%640;y=pos/640;expected=0;
-  if(x<320 && y<240)begin bank=(y/120)*2+x/160;
-   if(bank!=1)expected=bank*307200+(y%120)*4*640+(x%160)*4;end
+  if(x>=160 && x<480 && y>=120 && y<360)begin bank=((y-120)/120)*2+(x-160)/160;
+   if(bank!=1)expected=bank*307200+((y-120)%120)*4*640+((x-160)%160)*4;end
   if(cwa!==1228800+cache_words || cwd!==expected)$fatal(1,"cache pixel %d got%h expected%h",pos,cwd,expected);
   cache_words=cache_words+1;
  end

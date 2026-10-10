@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1]
 out=root/'tests/results';out.mkdir(parents=True,exist_ok=True)
 rtl=root/'src/user_source/rtl'
 cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_controller'],'fade':['video_fade_transition'],'uart':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],'bmp':['bmp24_decoder'],'pixels':['brightness_contrast_adjust'],'thumbnail':['thumbnail_controller'],
-'cache':['thumbnail_cache_builder'],'wav':['wav_stream_player'],
+'seg7':['seg7_panel'],'thumbnail_layout':['thumbnail_layout'],'cache':['thumbnail_cache_builder'],'wav':['wav_stream_player'],
 'sd_delay':['sd_spi_init','sd_spi_byte_engine','sd_spi_command'],
 'fat32':['fat32_volume_scanner'],'streamer':['fat32_file_streamer'],'cdc':['frame_config_cdc'],
 'flash':['player_config_persistence','w25q64_preflight_reader','config_flash_journal','config_journal','w25q64_record_store','spi_byte_engine'],

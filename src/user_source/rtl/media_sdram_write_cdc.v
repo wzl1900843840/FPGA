@@ -1,5 +1,35 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 图片写入的跨时钟域搬运（50MHz 系统域 → 40MHz 内存域）
+//
+// 为什么要"按块"搬：
+//   上游（BMP解码）在 50MHz 域每解码一个像素就写一个字，节奏不均匀；
+//   下游 SDRAM 控制器希望连续写整块（这里 128 字一笔）效率最高。
+//   所以先用 FIFO 把字攒起来，攒满 128 字（或本帧已结束、剩余不足128）才发一笔。
+//
+// 两块计数器（关键设计）：
+//   src_block_gray：源域每写满128字就把"已满块数"加1，并用Gray码发给目的域；
+//   dst_block_gray：目的域每写完一笔也加1。
+//   两者不相等(block_pending)说明还有攒好的块没搬完 —— 这样目的域不用去数FIFO
+//   里有多少字，只看"块计数差"就知道还有没有活干，跨域判断简单可靠。
+//   用Gray码是因为它每次只变一位，打两拍同步时不会出现中间态错值。
+//
+// 为什么要先预取一个字（prefetch）：
+//   目的域决定"开始写"和控制器真正能收第一个字之间隔了好几个周期，
+//   这段时间里刷新(refresh)可能刚好开始。如果提前几个周期就定了"要发"，
+//   等真正发的时候状态已经过期。所以先读出一个字拿在手上，等
+//   controller_busy/refresh_active（以及共享总线的 burst_grant）都允许，
+//   才把第一个字发出去；剩下的字随后连续发完，保证一笔写不被打断。
+//
+// 对外接口：src_full 反压上游，src_overflow 表示上游没理反压（数据丢了）；
+//           dst_idle 表示这一路彻底空干净（顶层用它判断写入是否排空）；
+//           burst_request/grant 是向顶层仲裁器申请总线。
+//
+// 文件里还包含一个自制的异步FIFO（async_command_fifo）：
+//   存储 [地址+mask+数据] 的整条写命令；读写指针各自转Gray码后打两拍过域，
+//   空满判断用标准Gray比较法，rd_level 用Gray转二进制相减得到。
+// -----------------------------------------------------------------------------
 module media_sdram_write_cdc #(
     parameter integer ADDR_WIDTH = 21,
     parameter integer FIFO_ADDR_WIDTH = 9,
@@ -48,12 +78,13 @@ module media_sdram_write_cdc #(
     reg [BLOCK_PTR_WIDTH-1:0] dst_block_binary;
     reg [BLOCK_PTR_WIDTH-1:0] dst_block_gray;
     wire src_accept = src_wr_en && !src_full;
-    wire block_pending = src_block_gray_sync2 != dst_block_gray;
+    wire block_pending = src_block_gray_sync2 != dst_block_gray;   // 还有整块没搬完
     // Prefetch one word, then hold it until the controller can accept the
     // FIRST word. A registered start decision several cycles earlier is stale
     // when refresh begins during FIFO latency. Remaining words stay continuous.
     wire prefetch_request = !burst_active && !prefetch_pending && block_pending;
-    assign burst_request=burst_active && burst_first;
+    assign burst_request=burst_active && burst_first;   // 第一拍才向仲裁器要总线
+    // 第一个字要等控制器空闲、不在刷新、并且拿到总线授权；后续字直接连续发
     assign dst_app_wr_en = burst_active &&
         (!burst_first || (!controller_busy && !refresh_active &&
                          (!SHARED_MEMORY || burst_grant)));
@@ -73,6 +104,7 @@ module media_sdram_write_cdc #(
         .rd_level()
     );
 
+    // 源域：统计已写满的整块数，并转成Gray码发给目的域
     always @(posedge src_clk or negedge src_rst_n) begin
         if (!src_rst_n) begin
             src_overflow <= 1'b0;
@@ -95,6 +127,7 @@ module media_sdram_write_cdc #(
         end
     end
 
+    // 目的域：把攒好的块一笔笔写进 SDRAM，每写完一笔块计数加1
     always @(posedge dst_clk or negedge dst_rst_n) begin
         if (!dst_rst_n) begin
             prefetch_pending <= 1'b0;
@@ -130,13 +163,24 @@ module media_sdram_write_cdc #(
         end
     end
 
+    // FIFO 里一条命令 = 地址(21位) + mask(4位) + 数据(32位)
     assign dst_app_wr_addr = fifo_rd_data[COMMAND_WIDTH-1:36];
     assign dst_app_wr_mask = fifo_rd_data[35:32];
     assign dst_app_wr_data = fifo_rd_data[31:0];
+    // 彻底空闲：FIFO空、没有待搬的块、没有突发在跑、也没有预取的字在手
     assign dst_idle = fifo_empty && !block_pending &&
                       !burst_active && !prefetch_pending && !fifo_rd_valid;
 endmodule
 
+// -----------------------------------------------------------------------------
+// 自制的异步命令FIFO（本文件内部使用）
+// 读写在两个时钟域，指针各自转 Gray 码后打两拍过域：
+//   - 写满判断：写指针的"下一Gray值"等于读指针Gray最高两位取反——这是标准做法，
+//     保证不会把未读数据覆盖掉；
+//   - 读空判断：读指针Gray值等于同步过来的写指针Gray值；
+//   - rd_level：把同步过来的写指针Gray还原成二进制，减去读指针，得到当前可读个数。
+// Gray码的意义：每次只变一位，跨域采样时最多错一拍，不会读出乱指针。
+// -----------------------------------------------------------------------------
 module async_command_fifo #(
     parameter integer DATA_WIDTH = 57,
     parameter integer ADDR_WIDTH = 9
@@ -181,6 +225,7 @@ module async_command_fifo #(
          rd_gray_sync2[PTR_WIDTH-3:0]};
     wire rd_empty_next = rd_gray_next == wr_gray_sync2;
 
+    // Gray → 二进制：最高位照抄，其余各位从高位往低位逐个异或还原
     function [PTR_WIDTH-1:0] gray_to_binary;
         input [PTR_WIDTH-1:0] value;
         integer bit_index;

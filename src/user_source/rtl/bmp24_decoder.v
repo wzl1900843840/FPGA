@@ -1,5 +1,10 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// 行缓冲（BMP 解码器内部使用）
+//   存"上一行"的像素，每格 27 位 = 3 个 9 位分量，便于和当前行相加取平均。
+//   用 BRAM 实现（force_ram/ram_style 属性），深度按一行像素数给。
+// -----------------------------------------------------------------------------
 module promax_scale_line_buffer #(
     parameter integer DEPTH = 640,
     parameter integer ADDRESS_WIDTH = 10
@@ -22,6 +27,28 @@ module promax_scale_line_buffer #(
     end
 endmodule
 
+// -----------------------------------------------------------------------------
+// BMP 24位解码器（含 1280×960 → 640×480 的 2×2 平均缩小）
+//
+// 输入：文件字节流（file_byte + file_byte_offset + file_valid），
+// 输出：逐像素的 pixel_rgb + pixel_x/y，以及 frame_commit（整帧解码完成）。
+//
+// 为什么要用行缓冲（promax_scale_line_buffer）：
+//   正常 640×480 图只要顺序解码即可；但 1280×960 的图要做 2×2 平均缩小，
+//   必须同时拿到相邻两行、相邻两列的4个像素才能算出1个输出像素。
+//   所以把上一行的数据存在行缓冲里（宽 640、每格 27 位存 R+G+B），
+//   当前行到来时和缓冲里的上一行配对相加再取平均。
+//
+// 解码流程：
+//   1) 先收 54 字节文件头，校验 'BM' 签名、DIB 头、位深必须 24、压缩必须为0，
+//      读出宽/高/像素数据偏移/行跨度；高度为负表示 top_down（顶行在前）；
+//   2) 跳过文件头到像素数据起点，之后按 BGR 顺序每 3 字节组成一个像素；
+//   3) 每行末尾有对齐填充（行跨度按 4 字节对齐），解码时按 row_stride 跳过；
+//   4) 收满整帧后置 frame_commit，交给 media_frame_loader 写 SDRAM。
+//
+// 错误码：31=签名错 32=尺寸不对 33=平面数错 34=位深不是24 35=用了压缩
+//        36=像素偏移不对 37=文件被截断 38=上游报错。
+// -----------------------------------------------------------------------------
 module bmp24_decoder #(
     parameter integer EXPECTED_WIDTH = 640,
     parameter integer EXPECTED_HEIGHT = 480,
@@ -49,6 +76,7 @@ module bmp24_decoder #(
     output reg  [31:0] row_stride,
     output wire        source_scale_2x
 );
+    // 头校验失败/文件截断等错误码（OSD 上会以 ERR xx 显示）
     localparam ERR_NONE        = 8'h00;
     localparam ERR_SIGNATURE   = 8'h31;
     localparam ERR_DIMENSIONS  = 8'h32;

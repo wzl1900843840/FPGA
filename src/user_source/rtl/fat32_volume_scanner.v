@@ -1,5 +1,25 @@
 `timescale 1ns/1ps
 
+// -----------------------------------------------------------------------------
+// FAT32 卷扫描器：在卡上找到 PIC1~PIC4 四个文件，并给出它们的簇链起点
+//
+// 干什么（一次扫描）：
+//   1) 读 LBA0，看它是不是分区表(MBR)：是就取出第一个分区起始LBA；
+//      不是就直接把 LBA0 当引导扇区（superfloppy 布局的卡，演示镜像就是这种）；
+//   2) 解析引导扇区 BPB：每簇扇区数、保留扇区数、FAT个数/大小、根目录位置等，
+//      并用这些算出 FAT 表起始LBA、数据区起始LBA、最大簇号；
+//   3) 从根目录开始逐条读目录项（每条32字节），按文件名匹配 PIC1.BMP~PIC4.BMP，
+//      记录各自的起始簇号和文件大小；
+//   4) 根目录如果跨了多个扇区/簇，还要顺着 FAT 表找下一个簇继续扫。
+//
+// 关键设计：内部有一个 512 字节的 sector_buffer，把整个扇区先收下来再解析。
+// 这样解析逻辑可以随便回头取任意偏移的字节，不用跟串行到来的字节流抢时序；
+// le16/le32 两个函数就是从缓冲区里按小端序取出16/32位字段。
+//
+// 对外结果：resource_valid[3:0] 表示哪几张图找到了（注意：找到 ≠ 内容正确），
+// resourceN_cluster/size 给后面的读取器用；fs_error 是错误码
+// （10=读扇区失败，20=引导扇区签名不对，21=BPB不支持，22=没找到约定文件）。
+// -----------------------------------------------------------------------------
 module fat32_volume_scanner (
     input  wire        clk,
     input  wire        rst_n,
@@ -31,12 +51,14 @@ module fat32_volume_scanner (
     input  wire [7:0]  sector_error
 );
 
+    // 错误码：10=读扇区失败 20=引导扇区签名错 21=BPB不支持 22=没找到PIC文件
     localparam ERR_NONE            = 8'h00;
     localparam ERR_SECTOR          = 8'h10;
     localparam ERR_BOOT_SIGNATURE  = 8'h20;
     localparam ERR_UNSUPPORTED_BPB = 8'h21;
     localparam ERR_RESOURCE_MISSING= 8'h22;
 
+    // 状态机：先判断分区表/引导扇区，再解析BPB，最后扫根目录找文件
     localparam ST_IDLE       = 4'd0;
     localparam ST_READ0_REQ  = 4'd1;
     localparam ST_READ0_WAIT = 4'd2;
@@ -88,6 +110,7 @@ module fat32_volume_scanner (
 
     assign scan_busy = (state != ST_IDLE);
 
+    // 整个扇区先缓存下来再解析，解析时可以任意回头取偏移，不受字节流时序限制
     function [15:0] le16;
         input integer offset;
         begin

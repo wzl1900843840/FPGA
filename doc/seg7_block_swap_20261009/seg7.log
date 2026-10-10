@@ -1,0 +1,2 @@
+PASS seg7: corrected left/right blocks, PIC1..PIC4, VOL 000/255, PRd 30S/55S, disabled panel
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_seg7.v:47: $finish called at 2600000 (1ps)
