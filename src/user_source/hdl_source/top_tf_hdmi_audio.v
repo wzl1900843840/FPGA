@@ -423,11 +423,18 @@ module top #(
     //     player_enable 的判据：诊断FIFO模式直接放行；正常模式下要等本张图
     //     完整校验(complete_pix[active_index])且不在本地图案诊断中。
     //--------------------------------------------------------------------------
+    wire [1:0] media_fault_src={ingest_error!=0,cdc_overflow};
+    wire [1:0] media_fault_pix_bus;
+    frame_config_cdc #(.WIDTH(2),.RESET_VALUE(2'd0)) u_media_fault_commit(
+        .src_clk(clk),.src_rst_n(sys_reset_n),.src_data(media_fault_src),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),
+        .dst_data(media_fault_pix_bus));
+    wire media_fault_pix=media_fault_pix_bus[1] || media_fault_pix_bus[0];
     wire [2:0] elevator_state_code;
     elevator_demo_controller u_elevator_demo(
         .clk(pixel_clk), .rst_n(pix_reset_n), .frame_start(frame_start),
-        .startup_ready(image_complete[3:0] != 4'd0),
-        .media_fault((ingest_error != 0) || cdc_overflow),
+        .startup_ready(complete_pix[3:0] != 4'd0),
+        .media_fault(media_fault_pix),
         .alert_request(elevator_alert_pix),
         .alert_page_available(complete_pix[4]),
         .alert_active(elevator_alert_pix_state),
