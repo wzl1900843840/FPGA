@@ -3,11 +3,11 @@
 ## 打开与下载
 
 - **唯一日常工程入口：** [lab_ex5_i2s_v1.0.al](src/td_project/lab_ex5_i2s_v1.0.al)，顶层 `top`。沿用原工程名称。
-- **当前固件（仿真及布局布线通过，待实板验收）：** [lab_ex5_i2s_v1.0.bit](src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0.bit)。
-- 构建时间：2026-10-09T01:16:44.517940+08:00。SHA256：`634bd3a10b4330d328760cd5555e4e1c4a66873cb8c6a6f4584b198951c0df2e`。
-- [构建记录](src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/validation.json)；[实板通过快照](tests/results/hardware_pass_20260928)。
+- **最终交付候选固件（仿真、综合、布局布线记录通过，待实板复核）：** [lab_ex5_i2s_v1.0_final.bit](release/releases/20261025_final/lab_ex5_i2s_v1.0_final.bit)。
+- 构建时间：2026-10-09T14:25:06+08:00。SHA256：`27bd4ac9988c318495bf6f14542015788d0c896930e4d16976b71cfeafcfa1a5`。
+- [最终包装与答辩方案](doc/最终包装落地目标与答辩方案_20261025.md)；[隔离构建记录](build_out/seg7_block_swap/best_result/validation.json)；[历史实板通过快照](tests/results/hardware_pass_20260928)。
 
-TF 卡根目录使用 PIC1.BMP～PIC4.BMP。当前 PCM 物理范围为 0，音频为 FPGA 合成音调。`release/` 和 `archive/releases/` 中的旧固件不作为当前下载入口。
+TF 卡根目录使用 PIC1.BMP～PIC4.BMP。当前 PCM 物理范围为 0，音频为 FPGA 合成音调。当前下载入口固定为 `release/releases/20261025_final/`，其他 release/archive 固件只作历史参考。
 
 新素材见 [安路实拍素材包](media/photo_pack_anlogic/README.md)：两张城市、两张自然照片，左上角带原始安路 Logo；[完整界面预览](media/photo_pack_anlogic/ui_preview.png)。每次上电/K1 复位音量为 **0**，首次短按 K4 升到 64。周期和自动模式继续从 Flash 恢复；字幕默认关闭，无工作室署名。
 
@@ -24,6 +24,10 @@ TF 卡根目录使用 PIC1.BMP～PIC4.BMP。当前 PCM 物理范围为 0，音�
 | Git 基线、压缩备份与恢复 | [版本基线与备份](doc/版本基线与备份.md) |
 | 首图提前显示、读卡提速、音轨面板及测试 | [快速启动与音轨界面优化](doc/快速启动与音轨界面优化.md) |
 | 照片优先界面、启动静音、实拍素材及新版构建记录 | [照片优先界面与启动静音](doc/照片优先界面与启动静音.md) |
+| 当前资源/时序瓶颈、低功耗方案与比赛应用建议 | [当前项目优化与竞赛应用建议](doc/当前项目优化与竞赛应用建议_20261010.md) |
+| 参考工程代码借鉴与差异对照 | [参考工程借鉴对照](doc/参考工程借鉴对照_20261013.md) |
+| 最终产品定位、官方要求映射、演示脚本与发布门槛 | [最终包装落地目标与答辩方案](doc/最终包装落地目标与答辩方案_20261025.md) |
+| 应急预警终端现实需求、公开采购证据与演示方案 | [应急预警终端场景调研与演示方案](doc/应急预警终端场景调研与演示方案_20261025.md) |
 | 生成物隔离区、隔离构建流程与产物验收 | [隔离构建区](doc/隔离构建区.md) |
 
 ## 当前状态
