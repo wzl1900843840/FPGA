@@ -423,6 +423,7 @@ module top #(
     //     player_enable 的判据：诊断FIFO模式直接放行；正常模式下要等本张图
     //     完整校验(complete_pix[active_index])且不在本地图案诊断中。
     //--------------------------------------------------------------------------
+    wire [2:0] elevator_state_code;
     elevator_demo_controller u_elevator_demo(
         .clk(pixel_clk), .rst_n(pix_reset_n), .frame_start(frame_start),
         .startup_ready(image_complete[3:0] != 4'd0),
@@ -431,7 +432,7 @@ module top #(
         .alert_page_available(complete_pix[4]),
         .alert_active(elevator_alert_pix_state),
         .alert_fallback(elevator_alert_fallback),
-        .alert_page_index(elevator_alert_page), .state_code());
+        .alert_page_index(elevator_alert_page), .state_code(elevator_state_code));
     // 控制逻辑同像素域运行，周期从毫秒换算为25MHz周期；手动/自动统一帧边界提交。
     media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
@@ -465,7 +466,18 @@ module top #(
         .source_x(),.source_y(),.focus_border(focus_border));
     // PIC5 尚未装载时，告警仍保留醒目的逻辑生成页，避免切换到黑屏。
     wire [23:0] alert_fallback_rgb=((x_adjust[5]^y_adjust[5]) ? 24'hb00000 : 24'h5a0000);
+    // In elevator demonstration mode the display must remain informative while
+    // TF/SDRAM is still starting or the media chain reports a fault.  The media
+    // timing generator continues to run even when player_enable is low, so a
+    // small FPGA-generated pattern can be shown without BRAM or a full frame
+    // buffer.  Normal media mode keeps the existing black/diagnostic behavior.
+    wire elevator_startup_page = ELEVATOR_DEMO_MODE &&
+        ((elevator_state_code==3'd0) || (elevator_state_code==3'd4));
+    wire [23:0] startup_page_rgb =
+        ((x_adjust[7:5] ^ y_adjust[7:5]) ? 24'h102a43 : 24'h071521) ^
+        ((x_adjust[5] && !y_adjust[8]) ? 24'h001018 : 24'h000000);
     wire [23:0] focus_rgb=elevator_alert_fallback ? alert_fallback_rgb :
+        elevator_startup_page ? startup_page_rgb :
         ((display_view && focus_border)?24'hffff00:adjusted_rgb);
 
     //--------------------------------------------------------------------------
