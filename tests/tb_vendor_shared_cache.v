@@ -15,7 +15,7 @@ media_frame_reader #(.SHARED_MEMORY(1)) reader(
  .diag_synth_stream(1'b0),.mem_clk(mc),.mem_rst_n(rst),.controller_init_done(init),
  .controller_busy(busy),.refresh_active(refresh),.app_rd_en(vre),.app_rd_addr(va),
  .sdram_rd_valid(rv && vreturn),.sdram_rd_data(rd),.pix_clk(pc),.pix_rst_n(rst),
- .frame_start(fs),.active_index(2'd0),.pixel_consume(consume),.pixel_rgb(rgb),.pixel_valid(valid),
+ .frame_start(fs),.active_index(3'd0),.pixel_consume(consume),.pixel_rgb(rgb),.pixel_valid(valid),
  .underflow(underflow),.reader_error(reader_error),.burst_grant(vgrant),.burst_request(vrequest),.read_urgent(urgent));
 thumbnail_cache_builder #(.SHARED_MEMORY(1)) cache(
  .clk(mc),.rst_n(rst),.start(start),.image_complete(4'b1101),.busy(cache_busy),.done(cache_done),.error(cache_error),
@@ -42,7 +42,7 @@ always @(posedge mc)begin
   pos=cache_words;x=pos%640;y=pos/640;expected=0;
   if(x>=160 && x<480 && y>=120 && y<360)begin bank=((y-120)/120)*2+(x-160)/160;
    if(bank!=1)expected=bank*307200+((y-120)%120)*4*640+((x-160)%160)*4;end
-  if(cwa!==1228800+cache_words || cwd!==expected)$fatal(1,"cache pixel %d got%h expected%h",pos,cwd,expected);
+  if(cwa!==1536000+cache_words || cwd!==expected)$fatal(1,"cache pixel %d got%h expected%h",pos,cwd,expected);
   cache_words=cache_words+1;
  end
 end

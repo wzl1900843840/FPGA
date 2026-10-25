@@ -1,12 +1,13 @@
 `timescale 1ns/1ps
-// 四原图 bank 保持不变，剩余 SDRAM 中预合成一张 640x480 缩略图页。
+// 五原图 bank 保持不变，剩余 SDRAM 中预合成一张 640x480 缩略图页；
+// PIC5 紧急页不参与四格缩略图。
 // 每次读取源图一行的连续 640 字，抽取 x=0,4,...636，组成两个160x120窗口。
 // 所有外部访问均为128字连续 burst；共享模式下由仲裁器调度后台构建。
 //
 // -----------------------------------------------------------------------------
 // 缩略图缓存构建器（40MHz 内存域，只在启动期跑一次）
 //
-// 目标：在 SDRAM 第5页(地址 FRAME_WORDS*4 起)预合成一张 640×480 的"缩略图页"，
+// 目标：在 SDRAM 第6页(地址 FRAME_WORDS*5 起)预合成一张 640×480 的"缩略图页"，
 //       页里左上 320×240 区域按 2×2 排了四格 160×120 的缩小图，
 //       其余区域清成黑色。这样缩略图显示不需要实时缩放，直接当普通图读出来即可。
 //
@@ -109,7 +110,7 @@ module thumbnail_cache_builder #(
             end
             WRITE: if(x[6:0]!=0 || (!controller_busy && !refresh_active && (!SHARED_MEMORY || burst_grant))) begin
                 // 把行缓冲写回缩略图页：目标地址 = 第5页 + 页内行偏移 + 列
-                app_wr_en<=1;app_wr_addr<=FRAME_WORDS*4+y*640+x;
+                app_wr_en<=1;app_wr_addr<=FRAME_WORDS*5+y*640+x;
                 if(x==639) begin x<=0;gap<=WAIT_CYCLES;state<=FINISH;end
                 else begin
                     x<=x+1'b1;

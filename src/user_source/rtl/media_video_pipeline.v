@@ -53,7 +53,7 @@ module media_video_pipeline #(
     input  wire        next_event,
     input  wire        previous_event,
     input  wire        select_valid,
-    input  wire [1:0]  select_index,
+    input  wire [2:0]  select_index,
     input  wire        view_mode,
     input  wire        mode_transition,
     input  wire [1:0]  focus_index,
@@ -65,7 +65,9 @@ module media_video_pipeline #(
     input  wire [31:0] period_cfg_cycles,
     input  wire        auto_cfg_valid,
     input  wire        auto_cfg_enabled,
-    input  wire [3:0]  image_complete,
+    input  wire [4:0]  image_complete,
+    input  wire        emergency_active,
+    input  wire [2:0]  emergency_index,
     input  wire        player_enable,
 
     input  wire        mem_clk,
@@ -89,8 +91,8 @@ module media_video_pipeline #(
     output wire [23:0] video_rgb,
     output wire [9:0]  video_x,
 
-    output wire [1:0]  active_index,
-    output wire [1:0]  pending_index,
+    output wire [2:0]  active_index,
+    output wire [2:0]  pending_index,
     output wire        auto_enabled,
     output wire        frame_start,
     output wire        reader_busy,
@@ -241,7 +243,8 @@ module media_video_pipeline #(
         .active_period_cycles(active_period_cycles),
         .pending_index(pending_index), .control_error(control_error),
         .request_busy(request_busy), .pix_clk(pix_clk),
-        .pix_rst_n(pix_rst_n), .frame_start(frame_start),
+         .pix_rst_n(pix_rst_n), .frame_start(frame_start),
+         .emergency_active(emergency_active), .emergency_index(emergency_index),
         .active_index(active_index), .index_commit(index_commit)
     );
 
@@ -250,7 +253,7 @@ module media_video_pipeline #(
     wire [20:0] reader_address;
     wire thumb_mem;
     sync_2ff u_thumb_mem(.clk(mem_clk),.rst_n(mem_rst_n),.async_in(view_mode),.sync_out(thumb_mem));
-    assign app_rd_addr=reader_address + (thumb_mem ? IMAGE_WORDS*4 : 0);
+    assign app_rd_addr=reader_address + (thumb_mem ? IMAGE_WORDS*5 : 0);
     media_frame_reader #(
         .ADDR_WIDTH(21), .IMAGE_WORDS(IMAGE_WORDS),
         .FIFO_DEPTH(FIFO_DEPTH), .FIFO_MARGIN(FIFO_MARGIN),
@@ -264,7 +267,7 @@ module media_video_pipeline #(
         .app_rd_en(app_rd_en), .app_rd_addr(reader_address),
         .sdram_rd_valid(sdram_rd_valid), .sdram_rd_data(sdram_rd_data),
         .pix_clk(pix_clk), .pix_rst_n(pix_rst_n),
-        .frame_start(frame_start && player_enable_pix), .active_index(view_mode ? 2'd0 : active_index),
+        .frame_start(frame_start && player_enable_pix), .active_index(view_mode ? 3'd0 : active_index),
         .pixel_consume(raw_de && player_enable_pix), .pixel_rgb(reader_rgb),
         .pixel_valid(reader_pixel_valid), .underflow(reader_underflow),
         .reader_busy(reader_busy), .frame_read_done(reader_done),

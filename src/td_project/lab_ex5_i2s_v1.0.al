@@ -613,6 +613,14 @@
                     <Attr Name="CompileOrder" Val="74"/>
                 </FileInfo>
             </File>
+            <File Path="../user_source/rtl/elevator_demo_controller.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="75"/>
+                </FileInfo>
+            </File>
             <File Path="../user_source/hdl_source/top_tf_hdmi_audio.v">
                 <FileInfo>
                     <Attr Name="UsedInSyn" Val="true"/>

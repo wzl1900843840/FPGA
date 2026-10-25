@@ -19,7 +19,7 @@ media_frame_reader #(.IMAGE_WORDS(128),.SHARED_MEMORY(1)) reader(
  .diag_synth_stream(1'b0),.mem_clk(mc),.mem_rst_n(rst),.controller_init_done(init),
  .controller_busy(busy),.refresh_active(refresh),.app_rd_en(vre),.app_rd_addr(vra),
  .sdram_rd_valid(rv && vreturn),.sdram_rd_data(rd),.pix_clk(pc),.pix_rst_n(rst),
- .frame_start(fs),.active_index(2'd0),.pixel_consume(consume),.pixel_rgb(rgb),.pixel_valid(pvalid),
+ .frame_start(fs),.active_index(3'd0),.pixel_consume(consume),.pixel_rgb(rgb),.pixel_valid(pvalid),
  .underflow(underflow),.reader_busy(rbusy),.reader_error(err),.burst_grant(vgrant),.burst_request(vrq),.read_urgent(urgent));
 reg [2:0] cs=0;reg [7:0] ci=0;reg cw=0,cre=0,cwe=0;reg [20:0] ca=0;reg [31:0] cd=0;
 integer cache_round=0,cache_got=0;

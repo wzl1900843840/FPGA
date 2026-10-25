@@ -35,9 +35,13 @@ module promax_text_overlay #(
     input wire [7:0] contrast,brightness,volume,
     input wire [31:0] period_ms,
     input wire auto_enabled,source_scale_2x,
-    input wire [1:0] active_index,
+    input wire [2:0] active_index,
     input wire loading,
     input wire [7:0] error_code,error_detail,
+    input wire elevator_status_valid,elevator_signal_lost,elevator_floor_basement,
+    input wire [3:0] elevator_floor_tens,elevator_floor_ones,
+    input wire [1:0] elevator_direction,elevator_door,
+    input wire elevator_alert,
     output wire [23:0] rgb_out,
     output wire overlay_active
 );
@@ -50,7 +54,8 @@ module promax_text_overlay #(
     reg vs_q;
     wire frame_start=vs_q && !vsync;
     reg [9:0] scroll_pos;
-    reg [1:0] scroll_div,index_frame;
+    reg [1:0] scroll_div;
+    reg [2:0] index_frame;
     reg auto_frame,loading_frame,scale_frame;
     reg [7:0] error_frame,detail_frame;
     reg [95:0] subtitle_frame;
@@ -182,6 +187,27 @@ module promax_text_overlay #(
                     default:begin end
                 endcase
             end
+        end
+    endfunction
+    function [7:0] elevator_char;
+        input [3:0] n;
+        begin
+            case(n)
+                0: elevator_char="F";
+                1: elevator_char=elevator_status_valid && !elevator_signal_lost ?
+                    (elevator_floor_basement ? "B" : ("0"+elevator_floor_tens)) : "-";
+                2: elevator_char=elevator_status_valid && !elevator_signal_lost ?
+                    ("0"+elevator_floor_ones) : "-";
+                3: elevator_char=elevator_signal_lost ? "!" :
+                    (elevator_direction==2'd1 ? "U" : elevator_direction==2'd2 ? "D" : "S");
+                4: elevator_char=elevator_signal_lost ? "L" :
+                    (elevator_door==2'd1 ? "O" : elevator_door==2'd2 ? "C" : "M");
+                5: elevator_char=elevator_alert ? "!" : " ";
+                6: elevator_char=elevator_alert ? "A" : " ";
+                7: elevator_char=elevator_alert ? "L" : " ";
+                8: elevator_char=elevator_alert ? "T" : " ";
+                default: elevator_char=" ";
+            endcase
         end
     endfunction
     // 参数行：V 音量(3位) B 亮度(3位) C 对比度(3位) P 周期(带小数点和单位 S)，
@@ -328,7 +354,10 @@ module promax_text_overlay #(
             if(sx>=SCROLL_CYCLE) sx=sx-SCROLL_CYCLE;
             // 四个区块的坐标判定：lx/ly 是区块内局部坐标，cell_idx 是第几个字符格，
             // col 是字符格内的横向像素（右移 1 位即 2 倍横向放大）。
-            if(py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
+            if(py>=4 && py<4+CELL_H && px>=16 && px<16+9*CELL_W) begin
+                lx=px-16;ly=py-4;cell_idx=lx/CELL_W;
+                col=(lx-cell_idx*CELL_W)>>1;ch=elevator_char(cell_idx);found=1;
+            end else if(py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
                 lx=px-STATUS_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=status_char(cell_idx);found=1;
             end else if(py>=PARAM_Y && py<PARAM_Y+CELL_H && px>=PARAM_X && px<PARAM_X+PARAM_CHARS*CELL_W) begin

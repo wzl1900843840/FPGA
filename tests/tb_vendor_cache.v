@@ -10,7 +10,7 @@ sdram vendor(.Clk(clk),.Clk_sft(ms),.Rst(!rst),.Sdr_init_done(vi),.Sdr_busy(vbus
 // Independent address-pattern memory. Every source word encodes its own address.
 always @(posedge clk) begin
  if(we) begin
-  if(wa!==1228800+count)$fatal(1,"write address %d %d",wa,count);
+  if(wa!==1536000+count)$fatal(1,"write address %d %d",wa,count);
   pos=count;x=pos%640;y=pos/640;expected=0;
   if(x>=160 && x<480 && y>=120 && y<360)begin bank=((y-120)/120)*2+(x-160)/160;sx=((x-160)%160)*4;sy=((y-120)%120)*4;
    if(bank!=1)expected=bank*307200+sy*640+sx;end

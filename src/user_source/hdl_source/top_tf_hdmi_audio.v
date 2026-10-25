@@ -33,7 +33,9 @@ module top #(
     parameter [31:0] PCM_START_LBA=0,
     parameter [31:0] PCM_TOTAL_SECTORS=0,
     // 置1则上电直接进入"本地图案"诊断模式，完全绕过SD卡与SDRAM读取。
-    parameter integer DIAG_LOCAL_PATTERN=0
+    parameter integer DIAG_LOCAL_PATTERN=0,
+    // 置1时 SW4 作为本地电梯告警开关；默认媒体模式仍保留 SW4 测试音。
+    parameter integer ELEVATOR_DEMO_MODE=0
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
     input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
@@ -85,8 +87,8 @@ module top #(
             if(diag_boot_count!=63) begin          // 只在复位后的固定窗口内采样一次
                 diag_boot_count<=diag_boot_count+1'b1;
                 if(diag_boot_count==62) begin
-                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!diag_key_sync[1] && diag_sw_sync[1]);
-                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
+                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !diag_key_sync[1] && diag_sw_sync[1]);
+                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
                 end
             end
         end
@@ -122,7 +124,9 @@ module top #(
     wire ingest_busy,ingest_done,card_ready;
     wire [2:0] ingest_stage;
     wire [7:0] ingest_error,ingest_detail;
-    wire [3:0] resource_valid,image_complete,image_scale;
+    wire [4:0] resource_valid,image_complete,image_scale;
+    wire elevator_alert_pix,elevator_alert_fallback,elevator_alert_pix_state;
+    wire [2:0] elevator_alert_page;
     wire source_wr;
     wire [20:0] source_addr;
     wire [3:0] source_mask;
@@ -366,17 +370,18 @@ module top #(
     //--------------------------------------------------------------------------
     reg mode_seen;
     wire [1:0] focus_index,selected_index;
+    wire [2:0] selected_media_index={1'b0,selected_index};
     wire thumb_transition,thumbnail_select;
-    wire [3:0] complete_pix;
+    wire [4:0] complete_pix;
     genvar k;
-    generate for(k=0;k<4;k=k+1) begin:g_complete
+    generate for(k=0;k<5;k=k+1) begin:g_complete
         sync_2ff u_sync(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(image_complete[k]),.sync_out(complete_pix[k]));
     end endgenerate
     always @(posedge pixel_clk or negedge pix_reset_n)
         if(!pix_reset_n) mode_seen<=0;else mode_seen<=thumbnail_switch;
     thumbnail_controller u_thumbnail(.clk(pixel_clk),.rst_n(pix_reset_n),
         .key_right(next_pix),.key_left(auto_pix),.key_confirm(confirm_pix),
-        .key_mode((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode)),.image_complete(complete_pix),.frame_start(frame_start),
+        .key_mode((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode)),.image_complete(complete_pix[3:0]),.frame_start(frame_start),
         .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),
         .transition_req(thumb_transition),.selection_committed(thumbnail_select));
 
@@ -389,7 +394,7 @@ module top #(
     wire hs,vs,de;
     wire [23:0] video_rgb;
     wire [9:0] video_x,video_y;
-    wire [1:0] active_index;
+    wire [2:0] active_index;
     wire [7:0] video_error,fade_alpha;
     wire fade_active;
     reg [31:0] last_period;
@@ -418,17 +423,27 @@ module top #(
     //     player_enable 的判据：诊断FIFO模式直接放行；正常模式下要等本张图
     //     完整校验(complete_pix[active_index])且不在本地图案诊断中。
     //--------------------------------------------------------------------------
+    elevator_demo_controller u_elevator_demo(
+        .clk(pixel_clk), .rst_n(pix_reset_n), .frame_start(frame_start),
+        .startup_ready(image_complete[3:0] != 4'd0),
+        .media_fault((ingest_error != 0) || cdc_overflow),
+        .alert_request(elevator_alert_pix),
+        .alert_page_available(complete_pix[4]),
+        .alert_active(elevator_alert_pix_state),
+        .alert_fallback(elevator_alert_fallback),
+        .alert_page_index(elevator_alert_page), .state_code());
     // 控制逻辑同像素域运行，周期从毫秒换算为25MHz周期；手动/自动统一帧边界提交。
     media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
         .diag_fifo_pix(diag_fifo_pix),.diag_fifo_mem(diag_fifo_mem),
         .ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(next_pix && !display_view),
         .previous_event(previous_pix && !display_view),.select_valid(thumbnail_select),
-        .select_index(selected_index),.view_mode(display_view),.mode_transition(display_view!=last_display_view),.focus_index(focus_index),
+        .select_index(selected_media_index),.view_mode(display_view),.mode_transition(display_view!=last_display_view),.focus_index(focus_index),
         .transition_alpha(fade_alpha),.transition_active(fade_active),.video_y(video_y),
         .toggle_auto_event(1'b0),.period_cfg_valid(last_period!=config_pix[31:0]),
         .period_cfg_cycles(config_pix[31:0]*32'd25000),.auto_cfg_valid(display_view || last_display_view!=display_view || last_cfg_mode!=config_pix[56]),.auto_cfg_enabled(config_pix[56] && !display_view),
-        .image_complete(complete_pix),.player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
+        .image_complete(complete_pix),.emergency_active(elevator_alert_pix_state),.emergency_index(elevator_alert_page),
+         .player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
         .controller_init_done(sdram_init && player_mem),.controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .app_rd_en(video_rd),.app_rd_addr(video_rd_addr),.sdram_rd_valid(rd_valid && video_return && !diag_local_mem),.sdram_rd_data(rd_data),
         .burst_grant(video_grant),.burst_request(video_request),.read_urgent(video_urgent),
@@ -446,9 +461,12 @@ module top #(
     wire [9:0] x_adjust=video_x,y_adjust=video_y;
     wire thumb_de,focus_border;
     thumbnail_layout u_layout(.in_de(de_adjust),.pixel_x({2'd0,x_adjust}),.pixel_y({2'd0,y_adjust}),
-        .focus_index(focus_index),.image_complete(complete_pix),.thumb_de(thumb_de),.source_index(),
+        .focus_index(focus_index),.image_complete(complete_pix[3:0]),.thumb_de(thumb_de),.source_index(),
         .source_x(),.source_y(),.focus_border(focus_border));
-    wire [23:0] focus_rgb=(display_view && focus_border)?24'hffff00:adjusted_rgb;
+    // PIC5 尚未装载时，告警仍保留醒目的逻辑生成页，避免切换到黑屏。
+    wire [23:0] alert_fallback_rgb=((x_adjust[5]^y_adjust[5]) ? 24'hb00000 : 24'h5a0000);
+    wire [23:0] focus_rgb=elevator_alert_fallback ? alert_fallback_rgb :
+        ((display_view && focus_border)?24'hffff00:adjusted_rgb);
 
     //--------------------------------------------------------------------------
     // 17. 错误码汇总与跨域提交
@@ -482,6 +500,33 @@ module top #(
     wire [5:0] subtitle_length;
     wire reply_valid,reply_ready,reply_last,subtitle_save;
     wire [7:0] reply_data;
+    wire elev_update_valid,elev_alert_update_valid,alert_command_valid,alert_command_value,elev_alert_value;
+    wire [7:0] elev_floor_value;
+    wire elev_floor_basement;
+    wire [1:0] elev_direction,elev_door;
+    reg elev_alert_sys,elev_status_valid_sys,elev_floor_basement_sys;
+    reg [7:0] elev_floor_sys;
+    reg [3:0] elev_floor_tens_sys,elev_floor_ones_sys;
+    reg [1:0] elev_direction_sys,elev_door_sys;
+    reg elev_signal_lost_sys;
+    reg [25:0] elev_timeout_counter;
+    wire elev_alert_request_sys=elev_alert_sys || (ELEVATOR_DEMO_MODE && sw_sync2[3]);
+    wire [15:0] elev_status_src={elev_alert_request_sys,elev_signal_lost_sys,
+        elev_floor_basement_sys,elev_direction_sys,elev_door_sys,
+        elev_floor_tens_sys,elev_floor_ones_sys,elev_status_valid_sys};
+    wire [15:0] elev_status_pix;
+    frame_config_cdc #(.WIDTH(16),.RESET_VALUE(16'hc001)) u_elevator_status_commit(
+        .src_clk(clk),.src_rst_n(sys_reset_n),.src_data(elev_status_src),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(elev_status_pix));
+    assign elevator_alert_pix=elev_status_pix[15];
+    wire elevator_signal_lost_pix=elev_status_pix[14];
+    wire elevator_floor_basement_pix=elev_status_pix[13];
+    wire [1:0] elevator_direction_pix=elev_status_pix[12:11];
+    wire [1:0] elevator_door_pix=elev_status_pix[10:9];
+    wire [3:0] elevator_floor_tens_pix=elev_status_pix[8:5];
+    wire [3:0] elevator_floor_ones_pix=elev_status_pix[4:1];
+    wire elevator_status_valid_pix=elev_status_pix[0];
+    wire elevator_alert_page_available=complete_pix[4];
     uart_rx_byte u_rx(.clk(clk),.rst_n(sys_reset_n),.rx(uart_rx),.data(rx_data),.valid(rx_valid),.framing_error(rx_error));
     reg [95:0] live_text;
     reg [5:0] live_length;
@@ -489,10 +534,41 @@ module top #(
     always @(posedge clk or negedge sys_reset_n)
         if(!sys_reset_n) begin live_text<=0;live_length<=0;live_subtitle<=0;end
         else if(subtitle_commit) begin live_text<=subtitle_text;live_length<=subtitle_length;live_subtitle<=subtitle_enable;end
+    always @(posedge clk or negedge sys_reset_n) begin
+        if(!sys_reset_n) begin
+            elev_alert_sys<=1'b0; elev_status_valid_sys<=1'b0;
+            elev_floor_basement_sys<=1'b0; elev_floor_sys<=8'd0;
+            elev_floor_tens_sys<=4'd0; elev_floor_ones_sys<=4'd0;
+            elev_direction_sys<=2'd0; elev_door_sys<=2'd0;
+            elev_signal_lost_sys<=1'b1; elev_timeout_counter<=26'd0;
+        end else begin
+            if (elev_update_valid) begin
+                elev_alert_sys<=elev_alert_value;
+                elev_status_valid_sys<=1'b1;
+                elev_floor_basement_sys<=elev_floor_basement;
+                elev_floor_sys<=elev_floor_value;
+                elev_floor_tens_sys<=elev_floor_value/10;
+                elev_floor_ones_sys<=elev_floor_value%10;
+                elev_direction_sys<=elev_direction;
+                elev_door_sys<=elev_door;
+                elev_signal_lost_sys<=1'b0;
+                elev_timeout_counter<=26'd0;
+            end else if (elev_timeout_counter==26'd49_999_999) begin
+                elev_signal_lost_sys<=1'b1;
+            end else begin
+                elev_timeout_counter<=elev_timeout_counter+1'b1;
+            end
+            if (elev_alert_update_valid) elev_alert_sys<=elev_alert_value;
+            if (alert_command_valid) elev_alert_sys<=alert_command_value;
+        end
+    end
     subtitle_uart_controller u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
         .rx_framing_error(rx_error),.service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
         .request_dropped(1'b0),.live_text(live_text),.live_length(live_length),.live_enable(live_subtitle),
         .cfg_update_valid(subtitle_commit),.cfg_text(subtitle_text),.cfg_length(subtitle_length),.cfg_enable(subtitle_enable),
+        .elev_update_valid(elev_update_valid),.elev_floor_value(elev_floor_value),.elev_floor_basement(elev_floor_basement),
+        .elev_direction(elev_direction),.elev_door(elev_door),.elev_alert_value(elev_alert_value),
+        .elev_alert_update_valid(elev_alert_update_valid),.alert_command_valid(alert_command_valid),.alert_command_value(alert_command_value),
         .save_request(subtitle_save),.reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready));
     wire [102:0] subtitle_pix;
     frame_config_cdc #(.WIDTH(103),.RESET_VALUE(103'd0)) u_subtitle_frame_commit(
@@ -508,7 +584,12 @@ module top #(
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
         .contrast(contrast_pix),.volume(volume_pix),.period_ms(config_pix[31:0]),.auto_enabled(auto_enabled),
         .source_scale_2x(image_scale[active_index]),.active_index(active_index),
-        .loading(complete_pix!=4'hf || !cache_ready_pix),.error_code(error_pix),.error_detail(detail_pix),.rgb_out(text_rgb),.overlay_active());
+        .loading(complete_pix[3:0]!=4'hf || !cache_ready_pix),.error_code(error_pix),.error_detail(detail_pix),
+        .elevator_status_valid(elevator_status_valid_pix),.elevator_signal_lost(elevator_signal_lost_pix),
+        .elevator_floor_basement(elevator_floor_basement_pix),.elevator_floor_tens(elevator_floor_tens_pix),
+        .elevator_floor_ones(elevator_floor_ones_pix),.elevator_direction(elevator_direction_pix),
+        .elevator_door(elevator_door_pix),.elevator_alert(elevator_alert_pix_state),
+        .rgb_out(text_rgb),.overlay_active());
 
     //--------------------------------------------------------------------------
     // 20. 流水线级：文字查找与波形合成之间

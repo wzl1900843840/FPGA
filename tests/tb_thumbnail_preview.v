@@ -23,7 +23,7 @@ always @(posedge clk)begin
  if(re)rd<={8'd0,photo[ra]};
 end
 always @(negedge clk)if(we)begin
- if(wa!==1228800+count)$fatal(1,"nonsequential cache write");
+ if(wa!==1536000+count)$fatal(1,"nonsequential cache write");
  pos=count;x=pos%640;y=pos/640;expected=0;
  if(x>=160 && x<480 && y>=120 && y<360)begin
   b=((y-120)/120)*2+(x-160)/160;

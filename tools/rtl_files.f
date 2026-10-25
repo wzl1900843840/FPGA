@@ -6,6 +6,7 @@ src/user_source/rtl/brightness_contrast_adjust.v
 src/user_source/rtl/config_flash_journal.v
 src/user_source/rtl/config_journal.v
 src/user_source/rtl/dual_key_chord_router.v
+src/user_source/rtl/elevator_demo_controller.v
 src/user_source/rtl/dual_key_long_hold_guard.v
 src/user_source/rtl/fast_boot_gate.v
 src/user_source/rtl/fat32_file_streamer.v
