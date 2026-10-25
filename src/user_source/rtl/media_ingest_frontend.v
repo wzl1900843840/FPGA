@@ -26,7 +26,8 @@ module media_ingest_frontend #(
     parameter integer FIFO_DEPTH = 512,
     parameter integer STALL_TIMEOUT = 65535,
     parameter integer ALLOW_2X_SOURCE = 0,
-    parameter integer EARLY_DISPLAY = 0
+    parameter integer EARLY_DISPLAY = 0,
+    parameter integer PRIORITIZE_EMERGENCY = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -84,7 +85,8 @@ module media_ingest_frontend #(
     media_ingest_pipeline #(
         .IMAGE_WIDTH(IMAGE_WIDTH), .IMAGE_HEIGHT(IMAGE_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH), .FIFO_DEPTH(FIFO_DEPTH),
-        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE), .EARLY_DISPLAY(EARLY_DISPLAY)
+        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE), .EARLY_DISPLAY(EARLY_DISPLAY),
+        .PRIORITIZE_EMERGENCY(PRIORITIZE_EMERGENCY)
     ) u_ingest_pipeline (
         .clk(clk), .rst_n(rst_n), .start(start), .busy(ingest_busy), .done(done),
         .ingest_error(ingest_error), .ingest_detail_error(ingest_detail_error),

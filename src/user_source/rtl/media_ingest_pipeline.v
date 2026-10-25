@@ -29,7 +29,8 @@ module media_ingest_pipeline #(
     parameter integer FIFO_DEPTH = 512,
     parameter integer STALL_TIMEOUT = 65535,
     parameter integer ALLOW_2X_SOURCE = 0,
-    parameter integer EARLY_DISPLAY = 0
+    parameter integer EARLY_DISPLAY = 0,
+    parameter integer PRIORITIZE_EMERGENCY = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -79,6 +80,7 @@ module media_ingest_pipeline #(
     localparam ST_DRAIN     = 3'd5;
 
     reg [2:0] state;
+    reg [2:0] sequence_step;
     reg scan_start;
     reg file_start;
     reg load_start;
@@ -86,6 +88,19 @@ module media_ingest_pipeline #(
     reg [4:0] verified_images;
     reg [7:0] drain_count;
     assign image_ready=EARLY_DISPLAY ? verified_images : image_complete;
+
+    // In the elevator demo the emergency page is loaded first so ALERT can
+    // select a complete bank as soon as possible.  The default media mode
+    // retains the original PIC1..PIC5 order.
+    function [2:0] sequence_image;
+        input [2:0] step;
+        begin
+            if (PRIORITIZE_EMERGENCY)
+                sequence_image = (step==3'd0) ? 3'd4 : (step-3'd1);
+            else
+                sequence_image = step;
+        end
+    endfunction
     // 解码/SDRAM写完不等于文件FAT尾链校验完成；两端排空后才开下一文件。
 
     wire scan_busy;
@@ -209,6 +224,7 @@ module media_ingest_pipeline #(
             ingest_error <= ERR_NONE;
             ingest_detail_error <= ERR_NONE;
             current_image <= 3'd0; retry_count<=0;
+            sequence_step <= 3'd0;
             image_scale_2x <= 5'd0;
             verified_images<=0;drain_count<=0;
         end else begin
@@ -233,13 +249,17 @@ module media_ingest_pipeline #(
                         ingest_detail_error <= scan_error;
                         state <= ST_FAIL_WAIT;
                     end else begin
-                        current_image <= 3'd0; retry_count<=0;
+                        sequence_step <= 3'd0;
+                        current_image <= sequence_image(3'd0); retry_count<=0;
                         state <= ST_FILE_START;
                     end
                 end
                 ST_FILE_START: if(!resource_valid[current_image]) begin
-                    if(current_image==4) begin done<=1;state<=ST_IDLE;end
-                    else current_image<=current_image+1'b1;
+                    if(sequence_step==3'd4) begin done<=1;state<=ST_IDLE;end
+                    else begin
+                        sequence_step<=sequence_step+1'b1;
+                        current_image<=sequence_image(sequence_step+1'b1);
+                    end
                 end else begin
                     file_start <= 1'b1;
                     load_start <= 1'b1;
@@ -263,13 +283,14 @@ module media_ingest_pipeline #(
                         // have both finished; never expose a partial frame.
                         image_scale_2x[current_image] <= source_scale_2x;
                         drain_count<=0;state<=ST_DRAIN;
-                    end else if (current_image == 3'd4) begin
+                    end else if (sequence_step == 3'd4) begin
                         image_scale_2x[current_image] <= source_scale_2x;
                         done <= 1'b1;
                         state <= ST_IDLE;
                     end else begin
                         image_scale_2x[current_image] <= source_scale_2x;
-                        current_image <= current_image + 1'b1; retry_count<=0;
+                        sequence_step<=sequence_step+1'b1;
+                        current_image <= sequence_image(sequence_step+1'b1); retry_count<=0;
                         state <= ST_FILE_START;
                     end
                 end
@@ -277,14 +298,20 @@ module media_ingest_pipeline #(
                     // 文件读取排空后有限重试；坏图跳过，已完成 bank 不受影响。
                     if(ingest_error==ERR_SCAN) begin done<=1;state<=ST_IDLE;end
                     else if(retry_count<1) begin retry_count<=retry_count+1'b1;state<=ST_FILE_START;end
-                    else if(current_image==4) begin done<=1;state<=ST_IDLE;end
-                    else begin current_image<=current_image+1'b1;retry_count<=0;state<=ST_FILE_START;end
+                    else if(sequence_step==3'd4) begin done<=1;state<=ST_IDLE;end
+                    else begin
+                        sequence_step<=sequence_step+1'b1;
+                        current_image<=sequence_image(sequence_step+1'b1);retry_count<=0;state<=ST_FILE_START;
+                    end
                 end
                 ST_DRAIN: if(write_drain_idle) begin
                     if(drain_count==255) begin
                         verified_images[current_image]<=1'b1;retry_count<=0;
-                         if(current_image==4) begin done<=1;state<=ST_IDLE;end
-                        else begin current_image<=current_image+1'b1;state<=ST_FILE_START;end
+                         if(sequence_step==3'd4) begin done<=1;state<=ST_IDLE;end
+                        else begin
+                            sequence_step<=sequence_step+1'b1;
+                            current_image<=sequence_image(sequence_step+1'b1);state<=ST_FILE_START;
+                        end
                     end else drain_count<=drain_count+1'b1;
                 end else drain_count<=0;
                 default: state <= ST_IDLE;

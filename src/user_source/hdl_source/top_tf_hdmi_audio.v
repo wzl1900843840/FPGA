@@ -149,7 +149,8 @@ module top #(
     wire [31:0] audio_lba;
     wire [7:0] audio_byte,audio_error;
     wire [8:0] audio_byte_index;
-    media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1)) u_storage(
+    media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1),
+        .PRIORITIZE_EMERGENCY(ELEVATOR_DEMO_MODE)) u_storage(
         .clk(clk),.rst_n(sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
         .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),

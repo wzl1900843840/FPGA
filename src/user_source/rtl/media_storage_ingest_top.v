@@ -9,7 +9,8 @@ module media_storage_ingest_top #(
     parameter integer STALL_TIMEOUT = 65535,
     parameter integer ALLOW_2X_SOURCE = 0,
     parameter integer INIT_STARTUP_DELAY_CYCLES = 4000000,
-    parameter integer EARLY_DISPLAY = 0
+    parameter integer EARLY_DISPLAY = 0,
+    parameter integer PRIORITIZE_EMERGENCY = 0
 ) (
     input  wire                  clk,
     input  wire                  rst_n,
@@ -94,7 +95,8 @@ module media_storage_ingest_top #(
     media_ingest_frontend #(
         .IMAGE_WIDTH(IMAGE_WIDTH), .IMAGE_HEIGHT(IMAGE_HEIGHT),
         .ADDR_WIDTH(ADDR_WIDTH), .FIFO_DEPTH(FIFO_DEPTH),
-        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE), .EARLY_DISPLAY(EARLY_DISPLAY)
+        .STALL_TIMEOUT(STALL_TIMEOUT), .ALLOW_2X_SOURCE(ALLOW_2X_SOURCE), .EARLY_DISPLAY(EARLY_DISPLAY),
+        .PRIORITIZE_EMERGENCY(PRIORITIZE_EMERGENCY)
     ) u_ingest_frontend (
         .clk(clk), .rst_n(rst_n), .start(ingest_start), .busy(),
         .done(ingest_done), .ingest_error(ingest_error),
