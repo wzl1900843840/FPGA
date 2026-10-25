@@ -39,6 +39,17 @@ module subtitle_uart_controller (
     output reg  [5:0]   cfg_length,
     output reg          cfg_enable,
     output reg          save_request,
+    // Elevator-demo status/alert sideband. These signals share the same
+    // line parser with SUB= commands so a command is consumed only once.
+    output reg          elev_update_valid,
+    output reg  [7:0]   elev_floor_value,
+    output reg          elev_floor_basement,
+    output reg  [1:0]   elev_direction,
+    output reg  [1:0]   elev_door,
+    output reg          elev_alert_value,
+    output reg          elev_alert_update_valid,
+    output reg          alert_command_valid,
+    output reg          alert_command_value,
     output wire         reply_valid,
     output wire [7:0]   reply_data,
     output wire         reply_last,
@@ -62,6 +73,9 @@ module subtitle_uart_controller (
     localparam [3:0] R_BUSY    = 4'd8;
     localparam [3:0] R_FRAME   = 4'd9;
     localparam [3:0] R_SAVEERR = 4'd10;
+    localparam [3:0] R_OK_ELEV = 4'd11;
+    localparam [3:0] R_ERR_ELEV = 4'd12;
+    localparam [3:0] R_ELEV_QUERY = 4'd13;
 
     reg [8*MAX_LINE-1:0] line_buffer;
     reg [5:0] line_length;
@@ -134,6 +148,39 @@ module subtitle_uart_controller (
                     0:reply_char="E";1:reply_char="R";2:reply_char="R";
                     3:reply_char=8'h0d;default:reply_char=8'h0a;
                 endcase
+                R_OK_ELEV: begin
+                    case(index)
+                        0:reply_char="O"; 1:reply_char="K";
+                        2:reply_char=8'h0d; default:reply_char=8'h0a;
+                    endcase
+                end
+                R_ERR_ELEV: begin
+                    case(index)
+                        0:reply_char="E"; 1:reply_char="R"; 2:reply_char="R";
+                        3:reply_char=" "; 4:reply_char="E"; 5:reply_char="L";
+                        6:reply_char="E"; 7:reply_char="V"; 8:reply_char=8'h0d;
+                        default:reply_char=8'h0a;
+                    endcase
+                end
+                R_ELEV_QUERY: begin
+                    // ELEV=F05,D=U,DO=C,A=0\r\n (23 bytes)
+                    case(index)
+                        0:reply_char="E"; 1:reply_char="L"; 2:reply_char="E";
+                        3:reply_char="V"; 4:reply_char="="; 5:reply_char="F";
+                        6:reply_char = elev_floor_basement ? "B" : (8'h30 + (elev_floor_value / 10));
+                        7:reply_char = 8'h30 + (elev_floor_value % 10);
+                        8:reply_char=","; 9:reply_char="D"; 10:reply_char="=";
+                        11:reply_char = elev_direction==2'd1 ? "U" :
+                                         (elev_direction==2'd2 ? "D" : "S");
+                        12:reply_char=","; 13:reply_char="D"; 14:reply_char="O";
+                        15:reply_char="=";
+                        16:reply_char = elev_door==2'd1 ? "O" :
+                                         (elev_door==2'd2 ? "C" : "M");
+                        17:reply_char=","; 18:reply_char="A"; 19:reply_char="=";
+                        20:reply_char=elev_alert_value ? "1" : "0";
+                        21:reply_char=8'h0d; default:reply_char=8'h0a;
+                    endcase
+                end
                 R_QUERY: begin
                     if (index < 4) begin
                         case(index) 0:reply_char="S";1:reply_char="U";2:reply_char="B";default:reply_char="=";endcase
@@ -161,8 +208,9 @@ module subtitle_uart_controller (
         input [6:0] length;
         reg [6:0] actual_length;
         begin
-            actual_length = kind == R_QUERY ? length :
-                            (kind <= R_OK_SAVE ? 7'd4 : 7'd5);
+            actual_length = (kind == R_QUERY || kind == R_ELEV_QUERY) ? length :
+                            ((kind <= R_OK_SAVE || kind == R_OK_ELEV) ? 7'd4 :
+                             (kind == R_ERR_ELEV ? 7'd10 : 7'd5));
             if (reply_active) begin
                 if (!pending_reply) begin
                     pending_reply <= 1'b1;
@@ -211,9 +259,21 @@ module subtitle_uart_controller (
             cfg_length <= 0;
             cfg_enable <= 0;
             save_request <= 0;
+            elev_update_valid <= 1'b0;
+            elev_floor_value <= 8'd0;
+            elev_floor_basement <= 1'b0;
+            elev_direction <= 2'd0;
+            elev_door <= 2'd0;
+            elev_alert_value <= 1'b0;
+            elev_alert_update_valid <= 1'b0;
+            alert_command_valid <= 1'b0;
+            alert_command_value <= 1'b0;
         end else begin
             cfg_update_valid <= 1'b0;
             save_request <= 1'b0;
+            elev_update_valid <= 1'b0;
+            elev_alert_update_valid <= 1'b0;
+            alert_command_valid <= 1'b0;
 
             if (reply_active && reply_ready) begin
                 if (reply_last) begin
@@ -256,6 +316,63 @@ module subtitle_uart_controller (
                     if (!reply_active && !waiting_save && line_length != 0) begin
                         if (line_overflow) begin
                             start_reply(R_LONG,10);
+                        end else if (line_length == 5 &&
+                                     line_char(0)=="E" && line_char(1)=="L" &&
+                                     line_char(2)=="E" && line_char(3)=="V" &&
+                                     line_char(4)=="?") begin
+                            start_reply(R_ELEV_QUERY,23);
+                        end else if (line_length == 8 &&
+                                     line_char(0)=="A" && line_char(1)=="L" &&
+                                     line_char(2)=="E" && line_char(3)=="R" &&
+                                     line_char(4)=="T" && line_char(5)=="=" &&
+                                     line_char(6)=="O" && line_char(7)=="N") begin
+                            alert_command_valid <= 1'b1;
+                            alert_command_value <= 1'b1;
+                            start_reply(R_OK_ELEV,8);
+                        end else if (line_length == 9 &&
+                                     line_char(0)=="A" && line_char(1)=="L" &&
+                                     line_char(2)=="E" && line_char(3)=="R" &&
+                                     line_char(4)=="T" && line_char(5)=="=" &&
+                                     line_char(6)=="O" && line_char(7)=="F" &&
+                                     line_char(8)=="F") begin
+                            alert_command_valid <= 1'b1;
+                            alert_command_value <= 1'b0;
+                            start_reply(R_OK_ELEV,8);
+                        end else if (line_length >= 5 &&
+                                     line_char(0)=="E" && line_char(1)=="L" &&
+                                     line_char(2)=="E" && line_char(3)=="V" &&
+                                     line_char(4)=="=") begin
+                            // Fixed-width ASCII frame: F05 or FB1, U/D/S, O/C/M, 0/1.
+                            if (line_length == 21 && line_char(5)=="F" &&
+                                line_char(8)=="," && line_char(9)=="D" &&
+                                line_char(10)=="=" && line_char(12)=="," &&
+                                line_char(13)=="D" && line_char(14)=="O" &&
+                                line_char(15)=="=" && line_char(17)=="," &&
+                                line_char(18)=="A" && line_char(19)=="=" &&
+                                (((line_char(6)>="0" && line_char(6)<="9") &&
+                                 (line_char(7)>="0" && line_char(7)<="9")) ||
+                                 (line_char(6)=="B" && line_char(7)>="1" && line_char(7)<="9"))) begin
+                                if ((line_char(11)=="U" || line_char(11)=="D" || line_char(11)=="S") &&
+                                    (line_char(16)=="O" || line_char(16)=="C" || line_char(16)=="M") &&
+                                    (line_char(20)=="0" || line_char(20)=="1")) begin
+                                    elev_floor_basement <= line_char(6)=="B";
+                                    elev_floor_value <= line_char(6)=="B" ?
+                                        (line_char(7)-8'h30) :
+                                        ((line_char(6)-8'h30)*8'd10 + (line_char(7)-8'h30));
+                                    elev_direction <= line_char(11)=="U" ? 2'd1 :
+                                                      (line_char(11)=="D" ? 2'd2 : 2'd0);
+                                    elev_door <= line_char(16)=="O" ? 2'd1 :
+                                                 (line_char(16)=="C" ? 2'd2 : 2'd0);
+                                    elev_alert_value <= line_char(20)=="1";
+                                    elev_update_valid <= 1'b1;
+                                    elev_alert_update_valid <= 1'b1;
+                                    start_reply(R_OK_ELEV,8);
+                                end else begin
+                                    start_reply(R_ERR_ELEV,10);
+                                end
+                            end else begin
+                                start_reply(R_ERR_ELEV,10);
+                            end
                         end else if (line_length == 4 && line_char(0)=="S" && line_char(1)=="U" && line_char(2)=="B" && line_char(3)=="?") begin
                             reply_text <= live_text;
                             reply_text_length <= live_length;
