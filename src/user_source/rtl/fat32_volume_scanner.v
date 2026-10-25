@@ -1,14 +1,15 @@
 `timescale 1ns/1ps
 
 // -----------------------------------------------------------------------------
-// FAT32 卷扫描器：在卡上找到 PIC1~PIC4 四个文件，并给出它们的簇链起点
+// FAT32 卷扫描器：在卡上找到 PIC1~PIC5 五个文件，并给出它们的簇链起点。
+// PIC5 是可选的紧急页面；PIC1~PIC4 仍是正常播放所需的资源。
 //
 // 干什么（一次扫描）：
 //   1) 读 LBA0，看它是不是分区表(MBR)：是就取出第一个分区起始LBA；
 //      不是就直接把 LBA0 当引导扇区（superfloppy 布局的卡，演示镜像就是这种）；
 //   2) 解析引导扇区 BPB：每簇扇区数、保留扇区数、FAT个数/大小、根目录位置等，
 //      并用这些算出 FAT 表起始LBA、数据区起始LBA、最大簇号；
-//   3) 从根目录开始逐条读目录项（每条32字节），按文件名匹配 PIC1.BMP~PIC4.BMP，
+//   3) 从根目录开始逐条读目录项（每条32字节），按文件名匹配 PIC1.BMP~PIC5.BMP，
 //      记录各自的起始簇号和文件大小；
 //   4) 根目录如果跨了多个扇区/簇，还要顺着 FAT 表找下一个簇继续扫。
 //
@@ -16,7 +17,7 @@
 // 这样解析逻辑可以随便回头取任意偏移的字节，不用跟串行到来的字节流抢时序；
 // le16/le32 两个函数就是从缓冲区里按小端序取出16/32位字段。
 //
-// 对外结果：resource_valid[3:0] 表示哪几张图找到了（注意：找到 ≠ 内容正确），
+// 对外结果：resource_valid[4:0] 表示哪几张图找到了（注意：找到 ≠ 内容正确），
 // resourceN_cluster/size 给后面的读取器用；fs_error 是错误码
 // （10=读扇区失败，20=引导扇区签名不对，21=BPB不支持，22=没找到约定文件）。
 // -----------------------------------------------------------------------------
@@ -32,15 +33,17 @@ module fat32_volume_scanner (
     output reg  [31:0] fat_start_lba,
     output reg  [31:0] data_start_lba,
     output reg  [31:0] max_cluster,
-    output reg  [3:0]  resource_valid,
+    output reg  [4:0]  resource_valid,
     output reg  [31:0] resource0_cluster,
     output reg  [31:0] resource1_cluster,
     output reg  [31:0] resource2_cluster,
     output reg  [31:0] resource3_cluster,
+    output reg  [31:0] resource4_cluster,
     output reg  [31:0] resource0_size,
     output reg  [31:0] resource1_size,
     output reg  [31:0] resource2_size,
     output reg  [31:0] resource3_size,
+    output reg  [31:0] resource4_size,
     output reg         sector_req,
     output reg  [31:0] sector_lba,
     input  wire        sector_busy,
@@ -103,7 +106,7 @@ module fat32_volume_scanner (
     reg [7:0] dir_name9;
     reg [7:0] dir_name10;
     reg       dir_entry_match;
-    reg [1:0] dir_resource_index;
+    reg [2:0] dir_resource_index;
     reg [15:0] dir_cluster_high;
     reg [15:0] dir_cluster_low;
     reg [31:0] dir_file_size;
@@ -168,26 +171,36 @@ module fat32_volume_scanner (
             end
     end
 
-    function [1:0] matching_resource;
+    function [2:0] matching_resource;
         input integer base;
         begin
             if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
                 sector_buffer[base+2] == "C" && sector_buffer[base+3] == "1" &&
                 sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
                 sector_buffer[base+10] == "P")
-                matching_resource = 2'd0;
+                matching_resource = 3'd0;
             else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
                      sector_buffer[base+2] == "C" && sector_buffer[base+3] == "2" &&
                      sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
                      sector_buffer[base+10] == "P")
-                matching_resource = 2'd1;
+                matching_resource = 3'd1;
             else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
                      sector_buffer[base+2] == "C" && sector_buffer[base+3] == "3" &&
                      sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
                      sector_buffer[base+10] == "P")
-                matching_resource = 2'd2;
+                matching_resource = 3'd2;
+            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
+                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "4" &&
+                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
+                     sector_buffer[base+10] == "P")
+                matching_resource = 3'd3;
+            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
+                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "5" &&
+                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
+                     sector_buffer[base+10] == "P")
+                matching_resource = 3'd4;
             else
-                matching_resource = 2'd3;
+                matching_resource = 3'd7;
         end
     endfunction
 
@@ -201,7 +214,7 @@ module fat32_volume_scanner (
 
     task accept_directory_entry;
         input integer base;
-        reg [1:0] resource_index;
+        reg [2:0] resource_index;
         reg [31:0] first_cluster;
         reg [31:0] file_size;
         begin
@@ -210,26 +223,32 @@ module fat32_volume_scanner (
                              sector_buffer[base+27], sector_buffer[base+26]};
             file_size = le32(base+28);
             case (resource_index)
-                2'd0: begin
+                3'd0: begin
                     resource0_cluster <= first_cluster;
                     resource0_size <= file_size;
                     resource_valid[0] <= 1'b1;
                 end
-                2'd1: begin
+                3'd1: begin
                     resource1_cluster <= first_cluster;
                     resource1_size <= file_size;
                     resource_valid[1] <= 1'b1;
                 end
-                2'd2: begin
+                3'd2: begin
                     resource2_cluster <= first_cluster;
                     resource2_size <= file_size;
                     resource_valid[2] <= 1'b1;
                 end
-                default: begin
+                3'd3: begin
                     resource3_cluster <= first_cluster;
                     resource3_size <= file_size;
                     resource_valid[3] <= 1'b1;
                 end
+                3'd4: begin
+                    resource4_cluster <= first_cluster;
+                    resource4_size <= file_size;
+                    resource_valid[4] <= 1'b1;
+                end
+                default: begin end
             endcase
         end
     endtask
@@ -245,15 +264,17 @@ module fat32_volume_scanner (
             fat_start_lba <= 32'd0;
             data_start_lba <= 32'd0;
             max_cluster <= 32'd0;
-            resource_valid <= 4'd0;
+            resource_valid <= 5'd0;
             resource0_cluster <= 32'd0;
             resource1_cluster <= 32'd0;
             resource2_cluster <= 32'd0;
             resource3_cluster <= 32'd0;
+            resource4_cluster <= 32'd0;
             resource0_size <= 32'd0;
             resource1_size <= 32'd0;
             resource2_size <= 32'd0;
             resource3_size <= 32'd0;
+            resource4_size <= 32'd0;
             sector_req <= 1'b0;
             sector_lba <= 32'd0;
             directory_entry_index <= 5'd0;
@@ -278,7 +299,7 @@ module fat32_volume_scanner (
             dir_name9 <= 8'd0;
             dir_name10 <= 8'd0;
             dir_entry_match <= 1'b0;
-            dir_resource_index <= 2'd3;
+            dir_resource_index <= 3'd7;
             dir_cluster_high <= 16'd0;
             dir_cluster_low <= 16'd0;
             dir_file_size <= 32'd0;
@@ -316,7 +337,7 @@ module fat32_volume_scanner (
                         if (!root_end && (sector_byte & 8'h18)==0 &&
                             dir_name0 == "P" && dir_name1 == "I" &&
                             dir_name2 == "C" && dir_name3 >= "1" &&
-                            dir_name3 <= "4" && dir_name4 == " " &&
+                            dir_name3 <= "5" && dir_name4 == " " &&
                             dir_name5 == " " && dir_name6 == " " &&
                             dir_name7 == " " && dir_name8 == "B" &&
                             dir_name9 == "M" && dir_name10 == "P") begin
@@ -336,26 +357,32 @@ module fat32_volume_scanner (
                         if (dir_entry_match && {dir_cluster_high,dir_cluster_low}>=2 &&
                             {dir_cluster_high,dir_cluster_low}<=max_cluster && {sector_byte,dir_file_size[23:0]}!=0) begin
                             case (dir_resource_index)
-                                2'd0: begin
+                                3'd0: begin
                                     resource0_cluster <= {dir_cluster_high, dir_cluster_low};
                                     resource0_size <= {sector_byte, dir_file_size[23:0]};
                                     resource_valid[0] <= 1'b1;
                                 end
-                                2'd1: begin
+                                3'd1: begin
                                     resource1_cluster <= {dir_cluster_high, dir_cluster_low};
                                     resource1_size <= {sector_byte, dir_file_size[23:0]};
                                     resource_valid[1] <= 1'b1;
                                 end
-                                2'd2: begin
+                                3'd2: begin
                                     resource2_cluster <= {dir_cluster_high, dir_cluster_low};
                                     resource2_size <= {sector_byte, dir_file_size[23:0]};
                                     resource_valid[2] <= 1'b1;
                                 end
-                                default: begin
+                                3'd3: begin
                                     resource3_cluster <= {dir_cluster_high, dir_cluster_low};
                                     resource3_size <= {sector_byte, dir_file_size[23:0]};
                                     resource_valid[3] <= 1'b1;
                                 end
+                                3'd4: begin
+                                    resource4_cluster <= {dir_cluster_high, dir_cluster_low};
+                                    resource4_size <= {sector_byte, dir_file_size[23:0]};
+                                    resource_valid[4] <= 1'b1;
+                                end
+                                default: begin end
                             endcase
                         end
                     end
@@ -367,7 +394,7 @@ module fat32_volume_scanner (
                 ST_IDLE: if (scan_start) begin
                     fs_error <= ERR_NONE;
                     partition_lba <= 32'd0;
-                    resource_valid <= 4'd0;
+                    resource_valid <= 5'd0;
                     state <= ST_READ0_REQ; root_sector_offset<=0;root_cluster_count<=0;root_end<=0;
                 end
                 ST_READ0_REQ: if (!sector_busy) begin
@@ -449,9 +476,15 @@ module fat32_volume_scanner (
                     end
                 end
                 ST_DIR_SCAN: begin
-                    if (resource_valid == 4'hf)
+                    // 优先继续扫描以捕获可选 PIC5；到目录尾时 PIC1~PIC4 找齐即可成功。
+                    if (resource_valid == 5'h1f)
                         state <= ST_FINISH;
-                    else if(root_end) finish_with_error(ERR_RESOURCE_MISSING);
+                    else if(root_end) begin
+                        if (resource_valid[3:0] == 4'hf)
+                            state <= ST_FINISH;
+                        else
+                            finish_with_error(ERR_RESOURCE_MISSING);
+                    end
                     else if(root_sector_offset+1<sectors_per_cluster) begin
                         root_sector_offset<=root_sector_offset+1'b1;
                         sector_lba<=root_lba+root_sector_offset+1'b1;
