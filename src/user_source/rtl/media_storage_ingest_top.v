@@ -21,9 +21,9 @@ module media_storage_ingest_top #(
     output reg  [7:0]            error_detail,
     output wire                  card_ready,
     output wire                  card_high_capacity,
-    output wire [3:0]            resource_valid,
-    output wire [3:0]            image_complete,
-    output wire [3:0]            image_scale_2x,
+    output wire [4:0]            resource_valid,
+    output wire [4:0]            image_complete,
+    output wire [4:0]            image_scale_2x,
     input  wire                  controller_init_done,
     input  wire                  controller_busy,
     input  wire                  refresh_active,
@@ -42,7 +42,7 @@ module media_storage_ingest_top #(
     output wire [7:0]           audio_byte, audio_error,
     output wire [8:0]           audio_byte_index,
     input  wire                write_drain_idle,
-    output wire [3:0]          image_ready
+    output wire [4:0]          image_ready
 );
     localparam ST_IDLE = 2'd0;
     localparam ST_INIT = 2'd1;

@@ -52,7 +52,7 @@ module media_frame_reader #(
     input  wire                  pix_clk,
     input  wire                  pix_rst_n,
     input  wire                  frame_start,
-    input  wire [1:0]            active_index,
+    input  wire [2:0]            active_index,
     input  wire                  pixel_consume,
     output wire [23:0]           pixel_rgb,
     output wire                  pixel_valid,
@@ -60,7 +60,7 @@ module media_frame_reader #(
 
     output reg                   reader_busy,
     output reg                   frame_read_done,
-    output reg  [1:0]            reader_index,
+    output reg  [2:0]            reader_index,
     output reg  [7:0]            reader_error,
     input  wire                 burst_grant,
     output wire                 burst_request,
@@ -84,17 +84,17 @@ module media_frame_reader #(
 
     reg request_pending_pix;
     reg request_toggle_pix;
-    reg [1:0] request_index_pix;
+    reg [2:0] request_index_pix;
     reg frame_armed_pix;
     reg [ADDR_WIDTH:0] consumed_count_pix;
 
     reg request_sync1_mem;
     reg request_sync2_mem;
     reg request_seen_mem;
-    reg [1:0] index_sync1_mem;
-    reg [1:0] index_sync2_mem;
+    reg [2:0] index_sync1_mem;
+    reg [2:0] index_sync2_mem;
     reg reload_pending_mem;
-    reg [1:0] reload_index_mem;
+    reg [2:0] reload_index_mem;
     reg [2:0] fifo_reset_count_mem;
     reg [ADDR_WIDTH:0] issued_count_mem;
     reg [ADDR_WIDTH:0] returned_count_mem;
@@ -193,15 +193,16 @@ module media_frame_reader #(
             diag_rgb_mem = 24'h000000;
     end
 
-    // SDRAM 里四张图各占 IMAGE_WORDS 个32位字，图号 → 起始地址
+    // SDRAM 里五张图各占 IMAGE_WORDS 个32位字，图号 → 起始地址；第5张是紧急页面
     function [ADDR_WIDTH-1:0] bank_base;
-        input [1:0] index;
+        input [2:0] index;
         begin
             case (index)
-                2'd0: bank_base = {ADDR_WIDTH{1'b0}};
-                2'd1: bank_base = IMAGE_WORDS;
-                2'd2: bank_base = IMAGE_WORDS * 2;
-                default: bank_base = IMAGE_WORDS * 3;
+                3'd0: bank_base = {ADDR_WIDTH{1'b0}};
+                3'd1: bank_base = IMAGE_WORDS;
+                3'd2: bank_base = IMAGE_WORDS * 2;
+                3'd3: bank_base = IMAGE_WORDS * 3;
+                default: bank_base = IMAGE_WORDS * 4;
             endcase
         end
     endfunction
@@ -213,7 +214,7 @@ module media_frame_reader #(
         if (!pix_rst_n) begin
             request_pending_pix <= 1'b0;
             request_toggle_pix <= 1'b0;
-            request_index_pix <= 2'd0;
+            request_index_pix <= 3'd0;
             frame_armed_pix <= 1'b0;
             consumed_count_pix <= 0;
             underflow <= 1'b0;
@@ -251,10 +252,10 @@ module media_frame_reader #(
             request_sync1_mem <= 1'b0;
             request_sync2_mem <= 1'b0;
             request_seen_mem <= 1'b0;
-            index_sync1_mem <= 2'd0;
-            index_sync2_mem <= 2'd0;
+            index_sync1_mem <= 3'd0;
+            index_sync2_mem <= 3'd0;
             reload_pending_mem <= 1'b0;
-            reload_index_mem <= 2'd0;
+            reload_index_mem <= 3'd0;
             fifo_reset_count_mem <= 3'd0;
             issued_count_mem <= 0;
             returned_count_mem <= 0;
@@ -274,7 +275,7 @@ module media_frame_reader #(
             app_rd_addr <= 0;
             reader_busy <= 1'b0;
             frame_read_done <= 1'b0;
-            reader_index <= 2'd0;
+            reader_index <= 3'd0;
             reader_error <= ERR_NONE;
         end else begin
             if (fifo_reset_request)

@@ -32,7 +32,7 @@ module media_frame_loader #(
     input  wire                  clk,
     input  wire                  rst_n,
     input  wire                  load_start,
-    input  wire [1:0]            image_index,
+    input  wire [2:0]            image_index,
     input  wire                  pixel_valid,
     input  wire [23:0]           pixel_rgb,
     input wire source_top_down,
@@ -40,7 +40,7 @@ module media_frame_loader #(
     input  wire [7:0]            decode_error,
     output wire                  load_busy,
     output reg                   load_done,
-    output reg  [3:0]            image_complete,
+    output reg  [4:0]            image_complete,
     output reg  [7:0]            memory_error,
     input  wire                  controller_init_done,
     input  wire                  controller_busy,
@@ -66,11 +66,12 @@ module media_frame_loader #(
     localparam [ADDR_WIDTH-1:0] BANK1_BASE = IMAGE_WORDS;
     localparam [ADDR_WIDTH-1:0] BANK2_BASE = IMAGE_WORDS * 2;
     localparam [ADDR_WIDTH-1:0] BANK3_BASE = IMAGE_WORDS * 3;
+    localparam [ADDR_WIDTH-1:0] BANK4_BASE = IMAGE_WORDS * 4;
 
     reg [9:0] write_column;
     reg [8:0] write_row;
     reg active;
-    reg [1:0] active_image;
+    reg [2:0] active_image;
     reg commit_seen;
     reg [31:0] pixels_received;
     reg [31:0] pixels_written;
@@ -106,13 +107,14 @@ module media_frame_loader #(
                           (fifo_count < FIFO_DEPTH || pop_allowed);
 
     function [ADDR_WIDTH-1:0] bank_base;
-        input [1:0] index;
+        input [2:0] index;
         begin
             case (index)
-                2'd0: bank_base = BANK0_BASE;
-                2'd1: bank_base = BANK1_BASE;
-                2'd2: bank_base = BANK2_BASE;
-                default: bank_base = BANK3_BASE;
+                3'd0: bank_base = BANK0_BASE;
+                3'd1: bank_base = BANK1_BASE;
+                3'd2: bank_base = BANK2_BASE;
+                3'd3: bank_base = BANK3_BASE;
+                default: bank_base = BANK4_BASE;
             endcase
         end
     endfunction
@@ -147,7 +149,7 @@ module media_frame_loader #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             active <= 1'b0;
-            active_image <= 2'd0;
+            active_image <= 3'd0;
             commit_seen <= 1'b0;
             pixels_received <= 32'd0;
             pixels_written <= 32'd0;
@@ -160,7 +162,7 @@ module media_frame_loader #(
             burst_remaining <= 0;
             pending_error <= 0;
             load_done <= 1'b0;
-            image_complete <= 4'd0;
+            image_complete <= 5'd0;
             memory_error <= ERR_NONE;
             app_wr_en <= 1'b0;
             app_wr_addr <= {ADDR_WIDTH{1'b0}};
@@ -186,10 +188,11 @@ module media_frame_loader #(
                 pending_error <= 0;
                 memory_error <= ERR_NONE;
                 case (image_index)
-                    2'd0: image_complete[0] <= 1'b0;
-                    2'd1: image_complete[1] <= 1'b0;
-                    2'd2: image_complete[2] <= 1'b0;
-                    default: image_complete[3] <= 1'b0;
+                    3'd0: image_complete[0] <= 1'b0;
+                    3'd1: image_complete[1] <= 1'b0;
+                    3'd2: image_complete[2] <= 1'b0;
+                    3'd3: image_complete[3] <= 1'b0;
+                    default: image_complete[4] <= 1'b0;
                 endcase
             end
 
@@ -275,10 +278,11 @@ module media_frame_loader #(
                         end else begin
                             // 数量正确才置"该图可用"，显示侧只认这个完成位
                             case (active_image)
-                                2'd0: image_complete[0] <= 1'b1;
-                                2'd1: image_complete[1] <= 1'b1;
-                                2'd2: image_complete[2] <= 1'b1;
-                                default: image_complete[3] <= 1'b1;
+                                3'd0: image_complete[0] <= 1'b1;
+                                3'd1: image_complete[1] <= 1'b1;
+                                3'd2: image_complete[2] <= 1'b1;
+                                3'd3: image_complete[3] <= 1'b1;
+                                default: image_complete[4] <= 1'b1;
                             endcase
                             active <= 1'b0;
                             load_done <= 1'b1;

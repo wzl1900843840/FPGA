@@ -4,7 +4,7 @@
 // 装载主管线：从"扫卡"到"图片进SDRAM"的完整流程控制（50MHz 系统域）
 //
 // 一次 start 做的事（状态机顺序）：
-//   ST_SCAN      → 调 fat32_volume_scanner 扫 FAT32，找到 PIC1~PIC4 的位置；
+//   ST_SCAN      → 调 fat32_volume_scanner 扫 FAT32，找到 PIC1~PIC5 的位置；
 //   ST_FILE_START→ 选中下一张要装的图（跳过已经装好的）；
 //   ST_FILE      → 调 fat32_file_streamer 顺着簇链把文件字节流吐出来，
 //                  字节流同时喂给 bmp24_decoder 解码，解出的像素交给
@@ -38,10 +38,10 @@ module media_ingest_pipeline #(
     output reg                   done,
     output reg  [7:0]            ingest_error,
     output reg  [7:0]            ingest_detail_error,
-    output reg  [1:0]            current_image,
-    output wire [3:0]            resource_valid,
-    output wire [3:0]            image_complete,
-    output reg  [3:0]            image_scale_2x,
+    output reg  [2:0]            current_image,
+    output wire [4:0]            resource_valid,
+    output wire [4:0]            image_complete,
+    output reg  [4:0]            image_scale_2x,
 
     output wire                  sector_req,
     output wire [31:0]           sector_lba,
@@ -60,7 +60,7 @@ module media_ingest_pipeline #(
     output wire [3:0]            app_wr_mask,
     output wire [31:0]           app_wr_data,
     input  wire                 write_drain_idle,
-    output wire [3:0]           image_ready
+    output wire [4:0]           image_ready
 );
     localparam integer IMAGE_WORDS = IMAGE_WIDTH * IMAGE_HEIGHT;
     // 主错误码：80=扫卡失败 82=读文件失败 83=BMP校验失败 84=写SDRAM失败
@@ -83,7 +83,7 @@ module media_ingest_pipeline #(
     reg file_start;
     reg load_start;
     reg load_finished;
-    reg [3:0] verified_images;
+    reg [4:0] verified_images;
     reg [7:0] drain_count;
     assign image_ready=EARLY_DISPLAY ? verified_images : image_complete;
     // 解码/SDRAM写完不等于文件FAT尾链校验完成；两端排空后才开下一文件。
@@ -96,9 +96,9 @@ module media_ingest_pipeline #(
     wire [31:0] data_start_lba;
     wire [31:0] max_cluster;
     wire [31:0] resource0_cluster, resource1_cluster;
-    wire [31:0] resource2_cluster, resource3_cluster;
+    wire [31:0] resource2_cluster, resource3_cluster, resource4_cluster;
     wire [31:0] resource0_size, resource1_size;
-    wire [31:0] resource2_size, resource3_size;
+    wire [31:0] resource2_size, resource3_size, resource4_size;
     wire scan_sector_req;
     wire [31:0] scan_sector_lba;
 
@@ -133,12 +133,14 @@ module media_ingest_pipeline #(
     assign sector_req = scan_sector_req | file_sector_req;
     assign sector_lba = scan_sector_req ? scan_sector_lba : file_sector_lba;
 
-    assign selected_cluster = current_image == 2'd0 ? resource0_cluster :
-                              current_image == 2'd1 ? resource1_cluster :
-                              current_image == 2'd2 ? resource2_cluster : resource3_cluster;
-    assign selected_size = current_image == 2'd0 ? resource0_size :
-                           current_image == 2'd1 ? resource1_size :
-                           current_image == 2'd2 ? resource2_size : resource3_size;
+    assign selected_cluster = current_image == 3'd0 ? resource0_cluster :
+                              current_image == 3'd1 ? resource1_cluster :
+                              current_image == 3'd2 ? resource2_cluster :
+                              current_image == 3'd3 ? resource3_cluster : resource4_cluster;
+    assign selected_size = current_image == 3'd0 ? resource0_size :
+                           current_image == 3'd1 ? resource1_size :
+                           current_image == 3'd2 ? resource2_size :
+                           current_image == 3'd3 ? resource3_size : resource4_size;
 
     fat32_volume_scanner u_volume_scanner (
         .clk(clk), .rst_n(rst_n), .scan_start(scan_start), .scan_busy(scan_busy),
@@ -148,8 +150,10 @@ module media_ingest_pipeline #(
         .resource_valid(resource_valid),
         .resource0_cluster(resource0_cluster), .resource1_cluster(resource1_cluster),
         .resource2_cluster(resource2_cluster), .resource3_cluster(resource3_cluster),
+        .resource4_cluster(resource4_cluster),
         .resource0_size(resource0_size), .resource1_size(resource1_size),
         .resource2_size(resource2_size), .resource3_size(resource3_size),
+        .resource4_size(resource4_size),
         .sector_req(scan_sector_req), .sector_lba(scan_sector_lba),
         .sector_busy(sector_busy), .sector_valid(sector_valid), .sector_byte(sector_byte),
         .sector_byte_index(sector_byte_index), .sector_done(sector_done),
@@ -204,8 +208,8 @@ module media_ingest_pipeline #(
             done <= 1'b0;
             ingest_error <= ERR_NONE;
             ingest_detail_error <= ERR_NONE;
-            current_image <= 2'd0; retry_count<=0;
-            image_scale_2x <= 4'd0;
+            current_image <= 3'd0; retry_count<=0;
+            image_scale_2x <= 5'd0;
             verified_images<=0;drain_count<=0;
         end else begin
             scan_start <= 1'b0;
@@ -217,8 +221,8 @@ module media_ingest_pipeline #(
                 ST_IDLE: if (start) begin
                     ingest_error <= ERR_NONE;
                     ingest_detail_error <= ERR_NONE;
-                    current_image <= 2'd0; retry_count<=0;
-                    image_scale_2x <= 4'd0;
+                    current_image <= 3'd0; retry_count<=0;
+                    image_scale_2x <= 5'd0;
                     verified_images<=0;drain_count<=0;
                     scan_start <= 1'b1;
                     state <= ST_SCAN;
@@ -229,12 +233,12 @@ module media_ingest_pipeline #(
                         ingest_detail_error <= scan_error;
                         state <= ST_FAIL_WAIT;
                     end else begin
-                        current_image <= 2'd0; retry_count<=0;
+                        current_image <= 3'd0; retry_count<=0;
                         state <= ST_FILE_START;
                     end
                 end
                 ST_FILE_START: if(!resource_valid[current_image]) begin
-                    if(current_image==3) begin done<=1;state<=ST_IDLE;end
+                    if(current_image==4) begin done<=1;state<=ST_IDLE;end
                     else current_image<=current_image+1'b1;
                 end else begin
                     file_start <= 1'b1;
@@ -259,7 +263,7 @@ module media_ingest_pipeline #(
                         // have both finished; never expose a partial frame.
                         image_scale_2x[current_image] <= source_scale_2x;
                         drain_count<=0;state<=ST_DRAIN;
-                    end else if (current_image == 2'd3) begin
+                    end else if (current_image == 3'd4) begin
                         image_scale_2x[current_image] <= source_scale_2x;
                         done <= 1'b1;
                         state <= ST_IDLE;
@@ -273,13 +277,13 @@ module media_ingest_pipeline #(
                     // 文件读取排空后有限重试；坏图跳过，已完成 bank 不受影响。
                     if(ingest_error==ERR_SCAN) begin done<=1;state<=ST_IDLE;end
                     else if(retry_count<1) begin retry_count<=retry_count+1'b1;state<=ST_FILE_START;end
-                    else if(current_image==3) begin done<=1;state<=ST_IDLE;end
+                    else if(current_image==4) begin done<=1;state<=ST_IDLE;end
                     else begin current_image<=current_image+1'b1;retry_count<=0;state<=ST_FILE_START;end
                 end
                 ST_DRAIN: if(write_drain_idle) begin
                     if(drain_count==255) begin
                         verified_images[current_image]<=1'b1;retry_count<=0;
-                        if(current_image==3) begin done<=1;state<=ST_IDLE;end
+                         if(current_image==4) begin done<=1;state<=ST_IDLE;end
                         else begin current_image<=current_image+1'b1;state<=ST_FILE_START;end
                     end else drain_count<=drain_count+1'b1;
                 end else drain_count<=0;
