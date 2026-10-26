@@ -1,7 +1,7 @@
 """Create a regular FAT32 .img and matched PCM extent; never access physical drives.
 
 Default: reproducible four-image + ten-second audio demo for the shipped bitstream.
-Custom: --pictures a.bmp b.bmp c.bmp d.bmp --wav music.wav
+Custom: --pictures a.bmp b.bmp c.bmp d.bmp [e.bmp] --wav music.wav
 If custom audio length differs, use --configure-rtl and rebuild before programming.
 """
 from pathlib import Path
@@ -26,16 +26,19 @@ def demo_picture(n):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, default=ROOT/'media/demo_tf.img')
-    p.add_argument('--pictures', type=Path, nargs=4)
+    p.add_argument('--pictures', type=Path, nargs='+')
     p.add_argument('--wav', type=Path)
     p.add_argument('--configure-rtl', action='store_true', help='Update top PCM parameters to match this image; rebuild required')
     a = p.parse_args()
     path = a.output.resolve()
     if path.suffix.lower() != '.img' or str(path).startswith('\\\\') or path.is_dir():
         raise ValueError('Output must be a regular local .img file, never a drive/device')
+    if a.pictures is not None and len(a.pictures) not in (4, 5):
+        raise ValueError('--pictures requires four daily files or four daily files plus PIC5 emergency file')
+    picture_paths = a.pictures if a.pictures is not None else [None] * 4
     pictures = []
-    for n in range(4):
-        im = Image.open(a.pictures[n]).convert('RGB') if a.pictures else demo_picture(n)
+    for n, picture_path in enumerate(picture_paths):
+        im = Image.open(picture_path).convert('RGB') if picture_path else demo_picture(n)
         if im.size not in ((640,480),(1280,960)):
             raise ValueError(f'PIC{n+1}: expected 640x480 or 1280x960, got {im.size}')
         b = io.BytesIO(); im.save(b, format='BMP'); pictures.append(b.getvalue())
