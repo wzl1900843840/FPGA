@@ -38,11 +38,7 @@ module top #(
     parameter integer DIAG_LOCAL_PATTERN=0,
     // 置1时固定进入电梯演示；运行时也可用 SW2=0、SW3=1 进入电梯演示。
     // 电梯演示下 SW4 是独立告警开关；普通媒体模式下 SW4 保持测试音。
-    parameter integer ELEVATOR_DEMO_MODE=0,
-    // SD normal-read divider. 2 gives about 12.5 MHz from the 50 MHz system clock.
-    parameter integer SD_SPI_CLK_DIV=2,
-    // 50 ms default power-ramp wait. Use 5000000 for conservative 100 ms cards.
-    parameter integer SD_INIT_STARTUP_DELAY_CYCLES=2500000
+    parameter integer ELEVATOR_DEMO_MODE=0
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
     input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
@@ -159,7 +155,7 @@ module top #(
     wire [31:0] audio_lba;
     wire [7:0] audio_byte,audio_error;
     wire [8:0] audio_byte_index;
-    media_storage_ingest_top #(.SPI_CLK_DIV(SD_SPI_CLK_DIV),.INIT_STARTUP_DELAY_CYCLES(SD_INIT_STARTUP_DELAY_CYCLES),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1),
+    media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1),
         .PRIORITIZE_EMERGENCY(ELEVATOR_DEMO_MODE)) u_storage(
         .clk(clk),.rst_n(sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
