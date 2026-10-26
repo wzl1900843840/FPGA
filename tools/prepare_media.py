@@ -11,7 +11,10 @@ from PIL import Image, ImageDraw
 from make_audio_corpus import convert
 
 ROOT = Path(__file__).resolve().parents[1]
+# A larger cluster reduces FAT lookups during sequential BMP/PCM reads.  Keep
+# this a power of two because the RTL uses the corresponding cluster shift.
 SECTORS, FAT_SECTORS, DATA_LBA, AUDIO_LBA = 131072, 1024, 2080, 32768
+SECTORS_PER_CLUSTER = 8
 def u16(buf, off, value): struct.pack_into('<H', buf, off, value)
 def u32(buf, off, value): struct.pack_into('<I', buf, off, value)
 def demo_picture(n):
@@ -55,20 +58,28 @@ def main():
         raise ValueError('PCM too large for this 64 MiB image')
     files=[]; cluster=3
     for n, data in enumerate(pictures):
-        count=(len(data)+511)//512
-        files.append((f'PIC{n+1}    BMP',cluster,data,count));cluster+=count
-    audio_cluster=AUDIO_LBA-DATA_LBA+2
-    if cluster>audio_cluster: raise ValueError('Pictures overlap reserved PCM extent')
-    files.append(('AUDIO   PCM',audio_cluster,pcm,audio_sectors))
+        sector_count=(len(data)+511)//512
+        cluster_count=(sector_count+SECTORS_PER_CLUSTER-1)//SECTORS_PER_CLUSTER
+        files.append((f'PIC{n+1}    BMP',cluster,data,sector_count,cluster_count))
+        cluster+=cluster_count
+    audio_delta=AUDIO_LBA-DATA_LBA
+    if audio_delta % SECTORS_PER_CLUSTER:
+        raise ValueError('AUDIO_LBA must align to the cluster size')
+    audio_cluster=audio_delta//SECTORS_PER_CLUSTER+2
+    audio_cluster_count=(audio_sectors+SECTORS_PER_CLUSTER-1)//SECTORS_PER_CLUSTER
+    if cluster+audio_cluster_count>audio_cluster:
+        raise ValueError('Pictures overlap reserved PCM extent')
+    files.append(('AUDIO   PCM',audio_cluster,pcm,audio_sectors,audio_cluster_count))
     fat=bytearray(FAT_SECTORS*512)
     u32(fat,0,0x0ffffff8);u32(fat,4,0xffffffff);u32(fat,8,0x0fffffff)
     directory=bytearray(512)
-    for n,(name,first,data,count) in enumerate(files):
-        for c in range(first,first+count): u32(fat,c*4,c+1 if c+1<first+count else 0x0fffffff)
+    for n,(name,first,data,sector_count,cluster_count) in enumerate(files):
+        for c in range(first,first+cluster_count):
+            u32(fat,c*4,c+1 if c+1<first+cluster_count else 0x0fffffff)
         off=n*32;directory[off:off+11]=name.encode('ascii');directory[off+11]=0x20
         u16(directory,off+20,first>>16);u16(directory,off+26,first&65535);u32(directory,off+28,len(data))
     boot=bytearray(512);boot[0:3]=b'\xeb\x58\x90';boot[3:11]=b'MICUDEMO'
-    u16(boot,11,512);boot[13]=1;u16(boot,14,32);boot[16]=2;boot[21]=0xf8
+    u16(boot,11,512);boot[13]=SECTORS_PER_CLUSTER;u16(boot,14,32);boot[16]=2;boot[21]=0xf8
     u16(boot,24,63);u16(boot,26,255);u32(boot,32,SECTORS);u32(boot,36,FAT_SECTORS)
     u32(boot,44,2);u16(boot,48,1);u16(boot,50,6);boot[64]=0x80;boot[66]=0x29
     u32(boot,67,0x4d494355);boot[71:82]=b'MICU MEDIA ';boot[82:90]=b'FAT32   ';boot[510:]=b'\x55\xaa'
@@ -79,8 +90,8 @@ def main():
         f.truncate(SECTORS*512)
         for lba,data in [(0,boot),(1,info),(6,boot),(7,info),(32,fat),(32+FAT_SECTORS,fat),(DATA_LBA,directory)]:
             f.seek(lba*512);f.write(data)
-        for name,first,data,count in files:
-            f.seek((DATA_LBA+first-2)*512);f.write(data)
+        for name,first,data,sector_count,cluster_count in files:
+            f.seek((DATA_LBA+(first-2)*SECTORS_PER_CLUSTER)*512);f.write(data)
             (path.parent/(name[:8].strip()+'.'+name[8:])).write_bytes(data)
     top=ROOT/'src/user_source/hdl_source/top_tf_hdmi_audio.v'
     if a.configure_rtl:
@@ -94,14 +105,17 @@ def main():
         sdc.write_text(configure_text(sdc.read_text(encoding='utf-8'),True),encoding='utf-8')
     # Re-read stored FAT and bytes, checking all file chains/extent, not just metadata.
     with path.open('rb') as f:
-        for name,first,data,count in files:
-            for c in range(first,first+count):
+        for name,first,data,sector_count,cluster_count in files:
+            for c in range(first,first+cluster_count):
                 f.seek(32*512+c*4)
-                assert struct.unpack('<I',f.read(4))[0]==(c+1 if c+1<first+count else 0x0fffffff)
-            f.seek((DATA_LBA+first-2)*512);assert f.read(len(data))==data
+                assert struct.unpack('<I',f.read(4))[0]==(c+1 if c+1<first+cluster_count else 0x0fffffff)
+            f.seek((DATA_LBA+(first-2)*SECTORS_PER_CLUSTER)*512);assert f.read(len(data))==data
     report={'image':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+            'sectors_per_cluster':SECTORS_PER_CLUSTER,
             'pcm_start_lba':AUDIO_LBA,'pcm_total_sectors':audio_sectors,'pcm_seconds':len(pcm)/96000,
-            'rtl_configured':a.configure_rtl,'files':[dict(name=n,first_cluster=c,bytes=len(d),sectors=s) for n,c,d,s in files]}
+            'rtl_configured':a.configure_rtl,
+            'files':[dict(name=n,first_cluster=c,bytes=len(d),sectors=s,clusters=k)
+                     for n,c,d,s,k in files]}
     path.with_suffix('.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps(report,indent=2))
 if __name__=='__main__': main()
