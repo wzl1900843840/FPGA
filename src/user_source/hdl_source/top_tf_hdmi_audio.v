@@ -41,8 +41,9 @@ module top #(
     parameter integer ELEVATOR_DEMO_MODE=0,
     // SD normal-read divider. 2 gives about 12.5 MHz from the 50 MHz system clock.
     parameter integer SD_SPI_CLK_DIV=2,
-    // 50 ms default power-ramp wait. Use 5000000 for conservative 100 ms cards.
-    parameter integer SD_INIT_STARTUP_DELAY_CYCLES=2500000
+    // Keep the conservative 100 ms default. A validated card-specific build
+    // may override this to 2500000 (50 ms) without changing the RTL hierarchy.
+    parameter integer SD_INIT_STARTUP_DELAY_CYCLES=5000000
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
     input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
