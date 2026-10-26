@@ -58,13 +58,17 @@ module media_player_control #(
         reg [2:0] candidate;
         begin
             next_available = 4'd0;
-            for (step = 1; step <= 5; step = step + 1) begin
+            // PIC5 is reserved for the emergency page.  Normal manual and
+            // automatic rotation must wrap across the four daily banks only;
+            // the emergency branch below is the sole path that may request
+            // bank 4.
+            for (step = 1; step <= 4; step = step + 1) begin
                 if (previous_event) begin
                     candidate_int = current - step;
-                    if (candidate_int < 0) candidate_int = candidate_int + 5;
+                    if (candidate_int < 0) candidate_int = candidate_int + 4;
                 end else begin
                     candidate_int = current + step;
-                    if (candidate_int >= 5) candidate_int = candidate_int - 5;
+                    if (candidate_int >= 4) candidate_int = candidate_int - 4;
                 end
                 candidate = candidate_int[2:0];
                 if (!next_available[3] && complete[candidate])
