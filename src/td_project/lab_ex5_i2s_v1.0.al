@@ -618,7 +618,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="75"/>
+                    <Attr Name="CompileOrder" Val="76"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/top_tf_hdmi_audio.v">
@@ -634,7 +634,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="76"/>
+                    <Attr Name="CompileOrder" Val="77"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/lane_lvds_10_1.v">
@@ -642,7 +642,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="77"/>
+                    <Attr Name="CompileOrder" Val="78"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/SD/sdram.v">
@@ -650,7 +650,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="78"/>
+                    <Attr Name="CompileOrder" Val="79"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/include/sdr_as_ram.enc.v">
@@ -658,7 +658,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="79"/>
+                    <Attr Name="CompileOrder" Val="80"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/include/sdr_init_ref.enc.v">
@@ -666,7 +666,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="80"/>
+                    <Attr Name="CompileOrder" Val="81"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/hdl_source/include/sdr_wrrd.enc.v">
@@ -674,7 +674,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="81"/>
+                    <Attr Name="CompileOrder" Val="82"/>
                 </FileInfo>
             </File>
             <File Path="../user_source/rtl/media_sdram_arbiter.v">
@@ -682,7 +682,7 @@
                     <Attr Name="UsedInSyn" Val="true"/>
                     <Attr Name="UsedInP&R" Val="true"/>
                     <Attr Name="BelongTo" Val="design_1"/>
-                    <Attr Name="CompileOrder" Val="82"/>
+                    <Attr Name="CompileOrder" Val="83"/>
                 </FileInfo>
             </File>
         </Verilog>

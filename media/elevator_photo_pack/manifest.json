@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-26T14:29:32.518445+08:00",
+  "created_at": "2026-10-26T21:45:23.741678+08:00",
   "generator": {
-    "tool": "micu-image",
+    "tool": "micu-image + Pillow exact layout",
     "model": "gpt-image-2.5-flare",
     "requested_size": "1536x1024",
     "quality": "high"
@@ -9,7 +9,6 @@
   "target": {
     "input_for_fpga": "PIC4=1280x960; PIC1/PIC2/PIC3/PIC5=640x480",
     "bmp": "24-bit RGB, BI_RGB, uncompressed",
-    "pixel_offset": 54,
     "orientation": "bottom-up, no manual flip",
     "decoder_path": "ALLOW_2X_SOURCE=1; PIC4 uses 2x2 average downsample to 640x480"
   },
@@ -22,14 +21,12 @@
     "position": [
       16,
       16
-    ],
-    "note": "User-provided Anlogic logo with transparent white matte removed."
+    ]
   },
   "scenes": [
     {
       "file": "PIC1.BMP",
       "theme": "住宅电梯厅日常宣传",
-      "description": "现代住宅电梯厅，白天",
       "source_png": "sources/scene_1.png",
       "source_sha256": "5ac67c371af961008deeb040b668cb517ff74ede18ac3b82562f11ea6b3917f5",
       "source_size": [
@@ -40,23 +37,12 @@
         85,
         0,
         1450,
-        1024
+        1023
       ],
       "output_size": [
         640,
         480
       ],
-      "logo": {
-        "file": "anlogic_logo.png",
-        "position": [
-          16,
-          16
-        ],
-        "size": [
-          63,
-          41
-        ]
-      },
       "format": {
         "signature": "BM",
         "file_size": 921654,
@@ -69,42 +55,41 @@
         "bits_per_pixel": 24,
         "compression": 0
       },
-      "bmp_sha256": "b943c5272bab6c91f10bd06f39ee670f37fe257b305526f5a59a9181f611c685",
-      "processing": "center crop 4:3, Lanczos resize to 1280x960, transparent Anlogic logo overlay",
+      "logo": {
+        "file": "anlogic_logo.png",
+        "position": [
+          16,
+          16
+        ],
+        "size": [
+          63,
+          41
+        ]
+      },
+      "bmp_sha256": "706d8edf70a35c65fce38c779ace47c1e8db9ac1b7eadb61f3d2e3934a0340b0",
+      "processing": "center crop 4:3; exact Chinese page rendering where applicable; transparent Anlogic logo overlay",
       "orientation": "standard bottom-up BMP; no additional flip",
       "pixel_round_trip": true
     },
     {
       "file": "PIC2.BMP",
-      "theme": "办公园区日常宣传",
-      "description": "办公园区电梯入口，白天",
-      "source_png": "sources/scene_2.png",
-      "source_sha256": "a8c30b8c2cd7b43cb77f50d01b2715ee2301baa7efd8cb388aa80a84a33175c2",
+      "theme": "安全乘梯须知页",
+      "source_png": "sources/safety_background.png",
+      "source_sha256": "d191afc725b04b63bc213ceaacd324a1a2f5db3141bb790fef88f3a6eb71d5d1",
       "source_size": [
-        1536,
-        1024
+        1448,
+        1086
       ],
       "crop_box_source": [
-        85,
         0,
-        1450,
-        1024
+        0,
+        1448,
+        1086
       ],
       "output_size": [
         640,
         480
       ],
-      "logo": {
-        "file": "anlogic_logo.png",
-        "position": [
-          16,
-          16
-        ],
-        "size": [
-          63,
-          41
-        ]
-      },
       "format": {
         "signature": "BM",
         "file_size": 921654,
@@ -117,15 +102,72 @@
         "bits_per_pixel": 24,
         "compression": 0
       },
-      "bmp_sha256": "b7f0c8772840ef12396c752a006c8ed15a6db5d3d73368972d3bd90a869b74ae",
-      "processing": "center crop 4:3, Lanczos resize to 1280x960, transparent Anlogic logo overlay",
+      "logo": {
+        "file": "anlogic_logo.png",
+        "position": [
+          16,
+          16
+        ],
+        "size": [
+          63,
+          41
+        ]
+      },
+      "bmp_sha256": "1feb8e221fb3d2ddfd59f034d9242bb0f9f6bad7ca578a6ff7ff6d016e7f8681",
+      "processing": "center crop 4:3; exact Chinese page rendering where applicable; transparent Anlogic logo overlay",
       "orientation": "standard bottom-up BMP; no additional flip",
       "pixel_round_trip": true
     },
     {
       "file": "PIC3.BMP",
+      "theme": "楼层索引与便民信息页",
+      "source_png": "sources/floor_background.png",
+      "source_sha256": "246bbe620161cc57d4aaf0db88d8628233880bc4d3e7fe389ba8b3aa91eccb27",
+      "source_size": [
+        1448,
+        1086
+      ],
+      "crop_box_source": [
+        0,
+        0,
+        1448,
+        1086
+      ],
+      "output_size": [
+        640,
+        480
+      ],
+      "format": {
+        "signature": "BM",
+        "file_size": 921654,
+        "actual_bytes": 921654,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 640,
+        "height": 480,
+        "planes": 1,
+        "bits_per_pixel": 24,
+        "compression": 0
+      },
+      "logo": {
+        "file": "anlogic_logo.png",
+        "position": [
+          16,
+          16
+        ],
+        "size": [
+          63,
+          41
+        ]
+      },
+      "bmp_sha256": "b98383e0ff82b89425070e8596181bc70bb21e5a36d371a0a1ce625b8002cb4f",
+      "processing": "center crop 4:3; exact Chinese page rendering where applicable; transparent Anlogic logo overlay",
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC4.BMP",
       "theme": "社区生活日常宣传",
-      "description": "社区花园与电梯厅，白天",
       "source_png": "sources/scene_3.png",
       "source_sha256": "97427209c4641beec9d0afcb7637eb8c5c3f285cfdb19e2ae0d23b18787e6ab6",
       "source_size": [
@@ -136,71 +178,12 @@
         85,
         0,
         1450,
-        1024
-      ],
-      "output_size": [
-        640,
-        480
-      ],
-      "logo": {
-        "file": "anlogic_logo.png",
-        "position": [
-          16,
-          16
-        ],
-        "size": [
-          63,
-          41
-        ]
-      },
-      "format": {
-        "signature": "BM",
-        "file_size": 921654,
-        "actual_bytes": 921654,
-        "pixel_offset": 54,
-        "dib_size": 40,
-        "width": 640,
-        "height": 480,
-        "planes": 1,
-        "bits_per_pixel": 24,
-        "compression": 0
-      },
-      "bmp_sha256": "12ff7084f151b600398d0cda3ed82a8d52976695a8df908a4bfdf821e9413a8d",
-      "processing": "center crop 4:3, Lanczos resize to 1280x960, transparent Anlogic logo overlay",
-      "orientation": "standard bottom-up BMP; no additional flip",
-      "pixel_round_trip": true
-    },
-    {
-      "file": "PIC4.BMP",
-      "theme": "城市夜景日常宣传",
-      "description": "城市建筑与电梯厅，蓝调时刻",
-      "source_png": "sources/scene_4.png",
-      "source_sha256": "077bea0fa3909791fd2aeec7f3b2ac02acdc3892ae15a736331165881b657e23",
-      "source_size": [
-        1536,
-        1024
-      ],
-      "crop_box_source": [
-        85,
-        0,
-        1450,
-        1024
+        1023
       ],
       "output_size": [
         1280,
         960
       ],
-      "logo": {
-        "file": "anlogic_logo.png",
-        "position": [
-          16,
-          16
-        ],
-        "size": [
-          63,
-          41
-        ]
-      },
       "format": {
         "signature": "BM",
         "file_size": 3686454,
@@ -213,31 +196,6 @@
         "bits_per_pixel": 24,
         "compression": 0
       },
-      "bmp_sha256": "b11261d92db79f46ae6c4c451704cfe0d1d52678dda8c1c44e0def7e1518413b",
-      "processing": "center crop 4:3, Lanczos resize to 1280x960, transparent Anlogic logo overlay",
-      "orientation": "standard bottom-up BMP; no additional flip",
-      "pixel_round_trip": true
-    },
-    {
-      "file": "PIC5.BMP",
-      "theme": "紧急状态页",
-      "description": "电梯安全告警，红黄警示灯",
-      "source_png": "sources/scene_5.png",
-      "source_sha256": "8863832185ddc1ac10a5655fe9eab6c541c508c0677d1fe676d52afdb8aeabbb",
-      "source_size": [
-        1536,
-        1024
-      ],
-      "crop_box_source": [
-        85,
-        0,
-        1450,
-        1024
-      ],
-      "output_size": [
-        640,
-        480
-      ],
       "logo": {
         "file": "anlogic_logo.png",
         "position": [
@@ -249,6 +207,30 @@
           41
         ]
       },
+      "bmp_sha256": "c9c5b1cb10e96551e59bd426911924caee33f99bedf27096b589c8de5261f7af",
+      "processing": "center crop 4:3; exact Chinese page rendering where applicable; transparent Anlogic logo overlay",
+      "orientation": "standard bottom-up BMP; no additional flip",
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC5.BMP",
+      "theme": "紧急安抚页",
+      "source_png": "sources/alert_background.png",
+      "source_sha256": "d17c50dbda68f0dec2bd2c3c6dc12f2ea6d9e58a8b43d72c126927b03836af16",
+      "source_size": [
+        1448,
+        1086
+      ],
+      "crop_box_source": [
+        0,
+        0,
+        1448,
+        1086
+      ],
+      "output_size": [
+        640,
+        480
+      ],
       "format": {
         "signature": "BM",
         "file_size": 921654,
@@ -261,8 +243,19 @@
         "bits_per_pixel": 24,
         "compression": 0
       },
-      "bmp_sha256": "4a83c4be259b4b7ed12813129fa7246eece5ed018ed04afd919fe75157356def",
-      "processing": "center crop 4:3, Lanczos resize to 1280x960, transparent Anlogic logo overlay",
+      "logo": {
+        "file": "anlogic_logo.png",
+        "position": [
+          16,
+          16
+        ],
+        "size": [
+          63,
+          41
+        ]
+      },
+      "bmp_sha256": "6a4e8d06414fecea5fcc8fe62d383eb05f37159badbfb51c063d31a8140ac1d1",
+      "processing": "center crop 4:3; exact Chinese page rendering where applicable; transparent Anlogic logo overlay",
       "orientation": "standard bottom-up BMP; no additional flip",
       "pixel_round_trip": true
     }

@@ -1,0 +1,52 @@
+{
+  "package": "20261025_final",
+  "product": "基于安路 EG4S20 的照片优先音视频信息发布与交互终端",
+  "target": "EG4S20BG256 / HX4S20C",
+  "bit": "lab_ex5_i2s_v1.0_final.bit",
+  "bit_sha256": "27bd4ac9988c318495bf6f14542015788d0c896930e4d16976b71cfeafcfa1a5",
+  "build_time": "2026-10-09T14:25:06+08:00",
+  "hardware_tested": false,
+  "media_source": "media/photo_pack_anlogic",
+  "files": [
+    {
+      "path": "lab_ex5_i2s_v1.0_final.bit",
+      "bytes": 637772,
+      "sha256": "27bd4ac9988c318495bf6f14542015788d0c896930e4d16976b71cfeafcfa1a5"
+    },
+    {
+      "path": "PIC1.BMP",
+      "bytes": 921654,
+      "sha256": "2434d0ba45deeca5f5b3686bc61fb969a396c0abe471260bbd16a9aee90a9203"
+    },
+    {
+      "path": "PIC2.BMP",
+      "bytes": 921654,
+      "sha256": "4286be00a4120bf972087e88c680b96eddad3f7cbde3dc8597b14da1e2197113"
+    },
+    {
+      "path": "PIC3.BMP",
+      "bytes": 921654,
+      "sha256": "8622f94a64fa0553fdedee085b13b5670ed78521ba4354230400035b3a8d5c1e"
+    },
+    {
+      "path": "PIC4.BMP",
+      "bytes": 921654,
+      "sha256": "baf86e3a150eed71626aa69440a3f11b18d5e7ca07bfaa7b8d1dbb6a99ec6c38"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 21309,
+      "sha256": "ce350ce3110828bb58addc3697c3b38622089c2472d88b727576146a9e96d414"
+    },
+    {
+      "path": "final_timing.rpt",
+      "bytes": 1125410,
+      "sha256": "6b82760aae5181dd08922155769e6e8776e10fb871c21062e7c99b059ea1c2ab"
+    },
+    {
+      "path": "lab_ex5_i2s_v1.0_phy.area",
+      "bytes": 29683,
+      "sha256": "17b995515cad25738014b43a0a66abc50f9d3e0d6006da9884c8030c201369d5"
+    }
+  ]
+}
