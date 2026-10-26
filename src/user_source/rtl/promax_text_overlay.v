@@ -23,13 +23,13 @@
 //      （chinese_glyph_row）；阴影就是把同一查表按 (x−1, y−1) 再查一次，
 //      只在"笔画存在"的位置画深色，背景像素保持原照片不变。
 module promax_text_overlay #(
-    parameter integer PARAM_X=96, PARAM_Y=40, STATUS_X=96, STATUS_Y=16,
+    parameter integer PARAM_X=96, PARAM_Y=40, STATUS_X=96, STATUS_Y=24,
     parameter integer SUBTITLE_Y=72, H_ACTIVE=640, TIMER_X=564
 )(
     input wire clk,rst_n,vsync,de,
     input wire [23:0] rgb_in,
     input wire [9:0] pixel_x,pixel_y,
-    input wire enable,subtitle_enable,
+    input wire enable,show_info,subtitle_enable,
     input wire [95:0] subtitle_text,
     input wire [5:0] subtitle_length,
     input wire [7:0] contrast,brightness,volume,
@@ -49,13 +49,14 @@ module promax_text_overlay #(
     // vs_q 用于检测 vsync 下降沿；所有 *_frame 寄存器都在这个边沿更新，
     // 保证"一帧内看到的参数是同一个快照"。scroll_pos 是字幕横向滚动位置，
     // 每 3 帧才推进一步（scroll_div 计数），所以滚动速度与帧率无关地保持匀速。
-    localparam integer CELL_W=12, CELL_H=16, PARAM_CHARS=32;
+    localparam integer CELL_W=12, CELL_H=16, PARAM_CHARS=32, FLOOR_X=96;
     localparam integer SUBTITLE_CELL_W=18, SCROLL_CYCLE=H_ACTIVE+128;
     reg vs_q;
     wire frame_start=vs_q && !vsync;
     reg [9:0] scroll_pos;
     reg [1:0] scroll_div;
     reg [2:0] index_frame;
+    reg show_info_frame;
     reg auto_frame,loading_frame,scale_frame;
     reg [7:0] error_frame,detail_frame;
     reg [95:0] subtitle_frame;
@@ -99,7 +100,7 @@ module promax_text_overlay #(
     // "帧边界搬快照"和"计时器进位"三件事。
     always @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
-            vs_q<=1;scroll_pos<=0;scroll_div<=0;index_frame<=0;
+            vs_q<=1;scroll_pos<=0;scroll_div<=0;index_frame<=0;show_info_frame<=0;
             auto_frame<=0;loading_frame<=1;scale_frame<=0;error_frame<=0;detail_frame<=0;
             subtitle_frame<=0;subtitle_length_frame<=0;subtitle_on_frame<=0;
             numeric_seen<=41'h1ffffffffff;convert_busy<=0;convert_step<=0;
@@ -124,7 +125,8 @@ module promax_text_overlay #(
             end
             if(frame_start) begin
                 numbers_frame<=numbers_pending;scale_frame<=numeric_scale_pending;
-                index_frame<=active_index;auto_frame<=auto_enabled;loading_frame<=loading;
+                index_frame<=active_index;show_info_frame<=show_info;
+                auto_frame<=auto_enabled;loading_frame<=loading;
                 error_frame<=error_code;detail_frame<=error_detail;
                 subtitle_frame<=subtitle_text;subtitle_length_frame<=subtitle_length;subtitle_on_frame<=subtitle_enable;
                 if(scroll_div==2) begin
@@ -354,16 +356,16 @@ module promax_text_overlay #(
             if(sx>=SCROLL_CYCLE) sx=sx-SCROLL_CYCLE;
             // 四个区块的坐标判定：lx/ly 是区块内局部坐标，cell_idx 是第几个字符格，
             // col 是字符格内的横向像素（右移 1 位即 2 倍横向放大）。
-            if(py>=4 && py<4+CELL_H && px>=16 && px<16+9*CELL_W) begin
-                lx=px-16;ly=py-4;cell_idx=lx/CELL_W;
+            if(py>=4 && py<4+CELL_H && px>=FLOOR_X && px<FLOOR_X+9*CELL_W) begin
+                lx=px-FLOOR_X;ly=py-4;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=elevator_char(cell_idx);found=1;
-            end else if(py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
+            end else if(show_info_frame && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
                 lx=px-STATUS_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=status_char(cell_idx);found=1;
-            end else if(py>=PARAM_Y && py<PARAM_Y+CELL_H && px>=PARAM_X && px<PARAM_X+PARAM_CHARS*CELL_W) begin
+            end else if(show_info_frame && py>=PARAM_Y && py<PARAM_Y+CELL_H && px>=PARAM_X && px<PARAM_X+PARAM_CHARS*CELL_W) begin
                 lx=px-PARAM_X;ly=py-PARAM_Y;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=param_char(cell_idx);found=1;
-            end else if(py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=TIMER_X && px<TIMER_X+5*CELL_W) begin
+            end else if(show_info_frame && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=TIMER_X && px<TIMER_X+5*CELL_W) begin
                 lx=px-TIMER_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;found=1;
                 case(cell_idx)

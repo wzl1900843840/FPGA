@@ -13,7 +13,7 @@ module tb_photo_ui;
     wire [23:0] text_rgb,final_rgb;
     wire ink_active,wave_active;
     promax_text_overlay text_layer(.clk(clk),.rst_n(rst),.vsync(vs),.de(de),.rgb_in(rgb_in),
-        .pixel_x(x),.pixel_y(y),.enable(1'b1),.subtitle_enable(subtitle_on),
+        .pixel_x(x),.pixel_y(y),.enable(1'b1),.show_info(1'b1),.subtitle_enable(subtitle_on),
         .subtitle_text(96'h202020888786858483828180),.subtitle_length(6'd9),
         .contrast(contrast),.brightness(brightness),.volume(volume),.period_ms(period),
         .auto_enabled(auto_mode),.source_scale_2x(scale),.active_index(index),

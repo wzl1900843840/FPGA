@@ -25,7 +25,9 @@
 //   （PCM_START_LBA=0 时不读卡，音频来自 pcm_media_tone 合成音调）
 //
 // 板上操作：K1复位 / K2下一张 / K3手动自动+长按上一张 / K4音量+长按周期 /
-//           K2+K3同时按3秒保存参数；SW1缩略图 / SW2参数调节 / SW3选对比度 / SW4强制1kHz测试音
+//           K2+K3同时按3秒保存参数。
+//           SW1缩略图；SW2参数服务界面；SW2=0时SW3进入电梯演示、SW4触发告警；
+//           SW2=1时SW3选择亮度/对比度，SW4不再触发告警；普通媒体模式SW4仍为测试音。
 //==============================================================================
 module top #(
     // 音频PCM在卡上的物理起始LBA与总扇区数。两个都为0表示"不读卡音频"，
@@ -34,7 +36,8 @@ module top #(
     parameter [31:0] PCM_TOTAL_SECTORS=0,
     // 置1则上电直接进入"本地图案"诊断模式，完全绕过SD卡与SDRAM读取。
     parameter integer DIAG_LOCAL_PATTERN=0,
-    // 置1时 SW4 作为本地电梯告警开关；默认媒体模式仍保留 SW4 测试音。
+    // 置1时固定进入电梯演示；运行时也可用 SW2=0、SW3=1 进入电梯演示。
+    // 电梯演示下 SW4 是独立告警开关；普通媒体模式下 SW4 保持测试音。
     parameter integer ELEVATOR_DEMO_MODE=0
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
@@ -87,8 +90,11 @@ module top #(
             if(diag_boot_count!=63) begin          // 只在复位后的固定窗口内采样一次
                 diag_boot_count<=diag_boot_count+1'b1;
                 if(diag_boot_count==62) begin
-                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !diag_key_sync[1] && diag_sw_sync[1]);
-                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
+                    // SW4 is an alert control in elevator mode.  Keep the legacy
+                    // reset-time diagnostic entry available only in normal media
+                    // mode so a demo setup cannot accidentally enter diagnostics.
+                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !sw[1] && !sw[2] && !diag_key_sync[1] && diag_sw_sync[1]);
+                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !sw[1] && !sw[2] && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
                 end
             end
         end
@@ -274,7 +280,8 @@ module top #(
     // 10. 按键、菜单、拨码与参数持久化（系统域）
     //     dual_key_chord_router：K2/K3 短按、K3长按1秒、K2+K3同时按3秒保存；
     //     param_menu_controller：K4 短按改音量、长按1秒改周期；
-    //     sw[1]=1 时拨码进入参数调节，sw[2] 选亮度或对比度；
+    //     sw[1]=1 时进入参数服务界面，sw[2] 选亮度或对比度；
+    //     sw[1]=0 且 sw[2]=1 时进入独立电梯演示模式；
     //     player_config_persistence：把周期/音量/自动模式存进U33用户Flash。
     //     注意：本版 DEFAULT_VOLUME=0 且 RESTORE_VOLUME_ON_BOOT=0，
     //     即上电和K1复位后音量一定为0，但周期与自动模式仍从Flash恢复。
@@ -301,11 +308,17 @@ module top #(
     sync_2ff u_auto_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(auto_enabled),.sync_out(auto_status_sys));
     reg [3:0] sw_sync1,sw_sync2;
     reg [7:0] brightness,contrast;
+    // SW3 is deliberately mode-dependent: it selects the parameter field
+    // while SW2 is on, and becomes the elevator-demo enable while SW2 is off.
+    // This keeps the four physical switches useful without sharing an active
+    // control between the public demo and the service menu.
+    wire elevator_demo_switch_sys=!sw_sync2[1] && sw_sync2[2];
+    wire elevator_demo_active_sys=ELEVATOR_DEMO_MODE || elevator_demo_switch_sys;
     always @(posedge clk or negedge sys_reset_n)
         if(!sys_reset_n) begin sw_sync1<=0;sw_sync2<=0;brightness<=255;contrast<=128;end
         else begin
             sw_sync1<=sw;sw_sync2<=sw_sync1;   // 拨码两级同步
-            // sw[1]=1 进入参数调节：sw[2]=1 调对比度，否则调亮度；K2加16、K3短按减16
+            // SW2=1 进入参数调节：SW3=1 调对比度，否则调亮度；K2加16、K3短按减16。
             if(sw_sync2[1]) begin
                 if(sw_sync2[2]) begin
                     if(next_sys) contrast<=contrast>239?255:contrast+16;
@@ -335,7 +348,7 @@ module top #(
     // 11. 系统域 → 像素域的单拍事件
     //     按键/菜单事件在50MHz产生，显示逻辑在25MHz消费，
     //     用 pulse_toggle_sync 转成像素域单拍脉冲。
-    //     sw[1]=1 时按键用于调参数，所以不产生切图事件。
+    //     SW2=1 时按键用于调参数，所以不产生切图事件。
     //--------------------------------------------------------------------------
     wire frame_start,next_pix,auto_pix,previous_pix,confirm_pix;
     pulse_toggle_sync u_next(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(next_sys && !sw_sync2[1]),
@@ -358,11 +371,19 @@ module top #(
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(config_pix));
     wire [7:0] contrast_pix=config_pix[55:48],bright_pix=config_pix[47:40],volume_pix=config_pix[39:32];
     wire [3:0] switches_pix=config_pix[63:60];
+    // The mode select is committed with the rest of the switch snapshot so
+    // the public demo cannot change halfway through a video frame.
+    wire elevator_demo_active_pix=ELEVATOR_DEMO_MODE || (!switches_pix[1] && switches_pix[2]);
+    // SW2 is the service-menu/display switch.  The public viewer sees only
+    // the floor/alert line unless this switch is intentionally enabled.
+    wire show_info_pix=switches_pix[1];
     wire cache_ready_pix;
     sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
         .async_in(cache_ready),.sync_out(cache_ready_pix));
-    // SW1(switches_pix[0]) 且缩略图缓存已就绪，才允许进入缩略图模式
-    wire thumbnail_switch=switches_pix[0] && cache_ready_pix;
+    // SW1 enters thumbnails only in normal media mode.  SW2 (service menu)
+    // and the elevator demo have priority, so the controls never overlap.
+    wire thumbnail_switch=switches_pix[0] && !switches_pix[1] &&
+        !elevator_demo_active_pix && cache_ready_pix;
 
     //--------------------------------------------------------------------------
     // 13. 缩略图模式控制（像素域）
@@ -479,7 +500,7 @@ module top #(
     // timing generator continues to run even when player_enable is low, so a
     // small FPGA-generated pattern can be shown without BRAM or a full frame
     // buffer.  Normal media mode keeps the existing black/diagnostic behavior.
-    wire elevator_startup_page = ELEVATOR_DEMO_MODE &&
+    wire elevator_startup_page = elevator_demo_active_pix &&
         ((elevator_state_code==3'd0) || (elevator_state_code==3'd4));
     wire [23:0] startup_page_rgb =
         ((x_adjust[7:5] ^ y_adjust[7:5]) ? 24'h102a43 : 24'h071521) ^
@@ -529,8 +550,10 @@ module top #(
     reg [3:0] elev_floor_tens_sys,elev_floor_ones_sys;
     reg [1:0] elev_direction_sys,elev_door_sys;
     reg elev_signal_lost_sys;
-    reg [25:0] elev_timeout_counter;
-    wire elev_alert_request_sys=elev_alert_sys || (ELEVATOR_DEMO_MODE && sw_sync2[3]);
+    // In elevator demo mode SW4 is the local, independent alert switch.
+    // Outside that mode SW4 remains the audio test switch and cannot assert
+    // an emergency page by accident.
+    wire elev_alert_request_sys=elev_alert_sys || (elevator_demo_active_sys && sw_sync2[3]);
     wire [15:0] elev_status_src={elev_alert_request_sys,elev_signal_lost_sys,
         elev_floor_basement_sys,elev_direction_sys,elev_door_sys,
         elev_floor_tens_sys,elev_floor_ones_sys,elev_status_valid_sys};
@@ -560,7 +583,7 @@ module top #(
             elev_floor_basement_sys<=1'b0; elev_floor_sys<=8'd0;
             elev_floor_tens_sys<=4'd0; elev_floor_ones_sys<=4'd0;
             elev_direction_sys<=2'd0; elev_door_sys<=2'd0;
-            elev_signal_lost_sys<=1'b1; elev_timeout_counter<=26'd0;
+            elev_signal_lost_sys<=1'b1;
         end else begin
             if (elev_update_valid) begin
                 elev_alert_sys<=elev_alert_value;
@@ -571,12 +594,11 @@ module top #(
                 elev_floor_ones_sys<=elev_floor_value%10;
                 elev_direction_sys<=elev_direction;
                 elev_door_sys<=elev_door;
+                // A valid UART frame latches the last known floor.  It is
+                // intentionally held until the next valid frame or reset;
+                // an absent heartbeat must not make a visible floor flicker
+                // back to F-- after one second.
                 elev_signal_lost_sys<=1'b0;
-                elev_timeout_counter<=26'd0;
-            end else if (elev_timeout_counter==26'd49_999_999) begin
-                elev_signal_lost_sys<=1'b1;
-            end else begin
-                elev_timeout_counter<=elev_timeout_counter+1'b1;
             end
             if (elev_alert_update_valid) elev_alert_sys<=elev_alert_value;
             if (alert_command_valid) elev_alert_sys<=alert_command_value;
@@ -600,7 +622,7 @@ module top #(
     //     输入是已经过焦点框的像素，输出带文字阴影的RGB。
     //--------------------------------------------------------------------------
     promax_text_overlay u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.subtitle_enable(subtitle_pix[102]),
+        .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.show_info(show_info_pix),.subtitle_enable(subtitle_pix[102]),
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
         .contrast(contrast_pix),.volume(volume_pix),.period_ms(config_pix[31:0]),.auto_enabled(auto_enabled),
         .source_scale_2x(image_scale[active_index]),.active_index(active_index),
@@ -722,7 +744,7 @@ module top #(
     media_hdmi_audio_bridge u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
         .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
         .media_id(active_index),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
-        .force_test(switches_pix[3]),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
+        .force_test(switches_pix[3] && !elevator_demo_active_pix),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),
         .sequence_error(),.tone_overflow(),.pcm_contract_error(),.blip_active(),
         .pcm_tap_valid(pcm_tap_valid),.pcm_tap_left(pcm_tap_left));
