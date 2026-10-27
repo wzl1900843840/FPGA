@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 module tb_fat32;
 reg clk=0;always #5 clk=~clk;reg rst=0,start=0;
-wire done,req;wire[31:0]lba,part,fat,data,maxcl,c0,c1,c2,c3,z0,z1,z2,z3;wire[7:0]spc,err;wire[3:0]valid;
+wire done,req;wire[31:0]lba,part,fat,data,maxcl,c0,c1,c2,c3,z0,z1,z2,z3;wire[7:0]spc,err;wire[4:0]valid;
 reg busy=0,sv=0,sd=0;reg[7:0]byte_in=0;reg[8:0]bi=0;
 fat32_volume_scanner dut(.clk(clk),.rst_n(rst),.scan_start(start),.scan_done(done),.fs_error(err),
 .partition_lba(part),.sectors_per_cluster(spc),.fat_start_lba(fat),.data_start_lba(data),.max_cluster(maxcl),

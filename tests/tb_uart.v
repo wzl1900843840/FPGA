@@ -19,6 +19,8 @@ always @(posedge clk)if(update)begin live_text<=text;live_len<=len;live_en<=en;e
 always @(posedge clk)if(alert_command)begin alert_seen<=1'b1;alert_seen_value<=alert_command_value;end
 uart_status_reporter #(.CLKS_PER_BIT(8)) report(.clk(clk),.rst_n(rst),.enable(1'b0),.media_id(2'd0),.volume(8'd255),.period_ms(32'd5000),
 .auto_enabled(1'b0),.switch_event(1'b0),.menu_event(1'b0),.menu_kind(2'd0),.error_code(8'd0),.bright_event(1'b0),.bright_value(8'd255),
+.alert_request(1'b0),.alert_sources(2'd0),.floor_valid(1'b0),.floor_basement(1'b0),
+.floor_tens(4'd0),.floor_ones(4'd0),.direction(2'd0),.door(2'd0),.rescue_overflow(),
 .reply_valid(reply_valid),.reply_data(reply_byte),.reply_last(reply_last),.reply_ready(reply_ready),.uart_tx(tx));
 uart_rx_byte #(.CLKS_PER_BIT(8)) monitor(clk,rst,tx,byte_out,ov,oe);
 string response="";

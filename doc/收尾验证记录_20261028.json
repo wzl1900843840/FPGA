@@ -1,0 +1,153 @@
+{
+  "date": "2026-10-28",
+  "baseline_commit": "67c8c12",
+  "backup_tag": "backup/pre-rescue-20261028_011019",
+  "rtl_tests": [
+    {
+      "test": "keys",
+      "passed": true,
+      "seconds": 0.19
+    },
+    {
+      "test": "fade",
+      "passed": true,
+      "seconds": 0.16
+    },
+    {
+      "test": "uart",
+      "passed": true,
+      "seconds": 0.87
+    },
+    {
+      "test": "bmp",
+      "passed": true,
+      "seconds": 0.2
+    },
+    {
+      "test": "pixels",
+      "passed": true,
+      "seconds": 0.24
+    },
+    {
+      "test": "thumbnail",
+      "passed": true,
+      "seconds": 0.14
+    },
+    {
+      "test": "seg7",
+      "passed": true,
+      "seconds": 0.15
+    },
+    {
+      "test": "thumbnail_layout",
+      "passed": true,
+      "seconds": 5.32
+    },
+    {
+      "test": "cache",
+      "passed": true,
+      "seconds": 3.19
+    },
+    {
+      "test": "wav",
+      "passed": true,
+      "seconds": 0.23
+    },
+    {
+      "test": "sd_delay",
+      "passed": true,
+      "seconds": 10.31
+    },
+    {
+      "test": "fat32",
+      "passed": true,
+      "seconds": 0.21
+    },
+    {
+      "test": "streamer",
+      "passed": true,
+      "seconds": 0.15
+    },
+    {
+      "test": "cdc",
+      "passed": true,
+      "seconds": 0.14
+    },
+    {
+      "test": "flash",
+      "passed": true,
+      "seconds": 0.27
+    },
+    {
+      "test": "player",
+      "passed": true,
+      "seconds": 0.13
+    },
+    {
+      "test": "elevator",
+      "passed": true,
+      "seconds": 0.12
+    },
+    {
+      "test": "rescue",
+      "passed": true,
+      "seconds": 0.54
+    },
+    {
+      "test": "rescue_queue",
+      "passed": true,
+      "seconds": 0.34
+    },
+    {
+      "test": "pic5_address",
+      "passed": true,
+      "seconds": 0.15
+    },
+    {
+      "test": "sd_protocol",
+      "passed": true,
+      "seconds": 0.35
+    }
+  ],
+  "rescue_production_divisor_434_passed": true,
+  "isolated_sources_match_current": {
+    "src/user_source/hdl_source/top_tf_hdmi_audio.v": true,
+    "src/user_source/rtl/uart_status_reporter.v": true
+  },
+  "timing_ns": {
+    "SWNS": -0.466,
+    "STNS": -10.389,
+    "HWNS": -0.062,
+    "HTNS": -0.116
+  },
+  "timing_closed": false,
+  "physical_implementation_completed": true,
+  "published": false,
+  "hardware_tested": false,
+  "power_measured": false,
+  "resources": {
+    "lut": 16772,
+    "reg": 8633,
+    "bram9k": 15,
+    "dsp": 18
+  },
+  "build_root": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\build_out\\rescue_cdc_20261028",
+  "source_sha256": {
+    "src/user_source/hdl_source/top_tf_hdmi_audio.v": "ad1697669b13be82f67271d5732b6cec9585f5c8e482da927781ab834f47c281",
+    "src/user_source/rtl/uart_status_reporter.v": "08765ea707d437cbb9eb44c5bd1c6394de17d047220268287830d6f53962f7a2",
+    "tests/tb_rescue.v": "2ac2a2919b837e13388c77df4596081fd2a5806274599c224696d5ad9de1e831",
+    "tests/tb_rescue_queue.v": "a8a07fe995b052b62a6412f5a70fb65b8689d7ccb473313bc15602629d42fa61",
+    "tests/tb_uart.v": "778e825c9271605b97fd8cd0976ba7cad159ee963ec29e19cc798678267ea507",
+    "tests/tb_fat32.v": "1f339f4711e26e3510eff7ff275404dd2f885f15de3ce27b81f369bea090606a",
+    "tools/run_tests.py": "50bf0e218cf585248b41eb1b7a71e193cfc1b4203fa12c155a8f2d51f2849187"
+  },
+  "notes": [
+    "Timing failure blocks release. Old published bitstream retained.",
+    "Initial rescue-only snapshot excluded because sources changed before its publish gate."
+  ],
+  "all_active_source_files_compared": 116,
+  "all_active_source_files_match": true,
+  "backup_archive_crc_verified": true,
+  "backup_archive_entries": 574,
+  "serial_port_discovered": "COM18 (CH340); no commands sent and no board flashed"
+}

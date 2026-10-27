@@ -23,6 +23,16 @@ module uart_status_reporter #(
     input  wire [7:0]  error_code,
     input  wire        bright_event,
     input  wire [7:0]  bright_value,
+    // Effective system-domain alarm, independent of the video/media state.
+    input  wire        alert_request,
+    input  wire [1:0]  alert_sources, // bit0 UART, bit1 local switch
+    input  wire        floor_valid,
+    input  wire        floor_basement,
+    input  wire [3:0]  floor_tens,
+    input  wire [3:0]  floor_ones,
+    input  wire [1:0]  direction,
+    input  wire [1:0]  door,
+    output reg         rescue_overflow,
     input  wire        reply_valid,
     input  wire [7:0]  reply_data,
     input  wire        reply_last,
@@ -38,14 +48,15 @@ module uart_status_reporter #(
     localparam [2:0] K_PRD    = 3'd3;
     localparam [2:0] K_ERR    = 3'd4;
     localparam [2:0] K_BRT    = 3'd5;
+    localparam [2:0] K_RESCUE = 3'd6;
 
     reg [2:0] kind_q;
     reg [1:0] pic_id_q;
     reg pic_auto_q;
     reg [7:0] val8_q;
     reg [31:0] val32_q;
-    reg [4:0] msg_len;
-    reg [4:0] send_index;
+    reg [5:0] msg_len;
+    reg [5:0] send_index;
     reg tx_start_r;
     reg [1:0] state;
     localparam [1:0] ST_IDLE = 2'd0;
@@ -64,6 +75,62 @@ module uart_status_reporter #(
     reg [1:0] menu_kind_q;
     reg bright_pending;
     reg [7:0] bright_val_q;
+
+    // Four pending event snapshots plus the in-flight frame. Short pulses are
+    // retained while capacity remains; complete output lines stay atomic.
+    // Overflow is sticky until reset; it is exposed to the top-level error OSD.
+    reg alert_seen;
+    reg [1:0] last_alert_sources;
+    reg [15:0] rescue_sequence;
+    reg [40:0] rescue_fifo [0:3];
+    reg [1:0] rescue_wr, rescue_rd;
+    reg [2:0] rescue_count;
+    reg [40:0] rescue_snapshot;
+    wire rescue_pop = state == ST_IDLE && rescue_count != 0;
+    wire rescue_edge = alert_request != alert_seen;
+    wire rescue_push = rescue_edge && (rescue_count < 4 || rescue_pop);
+    wire [15:0] report_id;
+    wire report_alert, report_floor_valid, report_basement;
+    wire [3:0] report_tens, report_ones;
+    wire [1:0] report_direction, report_door, report_sources;
+    wire [7:0] report_error;
+    assign {report_id, report_alert, report_floor_valid, report_basement,
+            report_tens, report_ones, report_direction, report_door,
+            report_sources, report_error} = rescue_snapshot;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            alert_seen <= 1'b0;
+            last_alert_sources <= 2'd0;
+            rescue_sequence <= 16'd1;
+            rescue_wr <= 2'd0; rescue_rd <= 2'd0; rescue_count <= 3'd0;
+            rescue_snapshot <= 41'd0;
+            rescue_overflow <= 1'b0;
+        end else begin
+            alert_seen <= alert_request;
+            if (alert_request) last_alert_sources <= alert_sources;
+            if (rescue_edge) begin
+                rescue_sequence <= rescue_sequence + 1'b1;
+                if (!rescue_push) rescue_overflow <= 1'b1;
+            end
+            if (rescue_push) begin
+                rescue_fifo[rescue_wr] <= {rescue_sequence, alert_request,
+                    floor_valid, floor_basement, floor_tens, floor_ones,
+                    direction, door,
+                    alert_request ? alert_sources : last_alert_sources, error_code};
+                rescue_wr <= rescue_wr + 1'b1;
+            end
+            if (rescue_pop) begin
+                rescue_snapshot <= rescue_fifo[rescue_rd];
+                rescue_rd <= rescue_rd + 1'b1;
+            end
+            case ({rescue_push, rescue_pop})
+                2'b10: rescue_count <= rescue_count + 1'b1;
+                2'b01: rescue_count <= rescue_count - 1'b1;
+                default: ;
+            endcase
+        end
+    end
 
     wire tx_busy;
     wire tx_done;
@@ -84,7 +151,7 @@ module uart_status_reporter #(
 
     function [7:0] msg_char;
         input [2:0] kind;
-        input [4:0] idx;
+        input [5:0] idx;
         begin
             case (kind)
             K_BANNER: case (idx)
@@ -141,6 +208,32 @@ module uart_status_reporter #(
                 6: msg_char = CR; 7: msg_char = LF;
                 default: msg_char = 8'h00;
             endcase
+            K_RESCUE: case (idx)
+                0:msg_char="R"; 1:msg_char="E"; 2:msg_char="S";
+                3:msg_char="C"; 4:msg_char="U"; 5:msg_char="E";
+                6:msg_char=","; 7:msg_char="I"; 8:msg_char="D"; 9:msg_char="=";
+                10:msg_char=hex_digit(report_id[15:12]);
+                11:msg_char=hex_digit(report_id[11:8]);
+                12:msg_char=hex_digit(report_id[7:4]);
+                13:msg_char=hex_digit(report_id[3:0]);
+                14:msg_char=","; 15:msg_char="A"; 16:msg_char="=";
+                17:msg_char=report_alert ? "1" : "0";
+                18:msg_char=","; 19:msg_char="F"; 20:msg_char="=";
+                21:msg_char=!report_floor_valid ? "-" :
+                    (report_basement ? "B" : hex_digit(report_tens));
+                22:msg_char=!report_floor_valid ? "-" : hex_digit(report_ones);
+                23:msg_char=","; 24:msg_char="D"; 25:msg_char="=";
+                26:msg_char=report_direction==1 ? "U" : (report_direction==2 ? "D" : "S");
+                27:msg_char=","; 28:msg_char="D"; 29:msg_char="O"; 30:msg_char="=";
+                31:msg_char=report_door==1 ? "O" : (report_door==2 ? "C" : "M");
+                32:msg_char=","; 33:msg_char="S"; 34:msg_char="=";
+                35:msg_char=report_sources==2 ? "L" : (report_sources==3 ? "B" : "U");
+                36:msg_char=","; 37:msg_char="E"; 38:msg_char="=";
+                39:msg_char=hex_digit(report_error[7:4]);
+                40:msg_char=hex_digit(report_error[3:0]);
+                41:msg_char=CR; 42:msg_char=LF;
+                default:msg_char=8'h00;
+            endcase
             default: msg_char = 8'h00;
             endcase
         end
@@ -190,7 +283,11 @@ module uart_status_reporter #(
                 tx_start_r <= 1'b0;
                 send_index <= 5'd0;
                 // 上一字节的 ready 为寄存脉冲，给解析器一拍撤销 last。
-                if (reply_valid && !reply_ready) begin
+                if (rescue_pop) begin
+                    kind_q <= K_RESCUE;
+                    msg_len <= 6'd43;
+                    state <= ST_SEND;
+                end else if (reply_valid && !reply_ready) begin
                     tx_data_r <= reply_data;
                     reply_last_q <= reply_last;
                     reply_wait <= 1'b0;

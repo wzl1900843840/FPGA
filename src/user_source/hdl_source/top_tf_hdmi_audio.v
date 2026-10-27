@@ -330,7 +330,9 @@ module top #(
             end
         end
     wire view_sys,view_mode;
-    sync_2ff u_view_sys(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(view_mode),.sync_out(view_sys));
+    // view_sys is consumed by the 50 MHz configuration logic: synchronize
+    // into that destination, never back into the source pixel clock.
+    sync_2ff u_view_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(view_mode),.sync_out(view_sys));
     // 参数调节模式下 K3 短按改的是"自动/手动"开关，而不是减亮度
     wire mode_update=auto_sys && !sw_sync2[1] && !view_sys;
     player_config_persistence #(.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(.clk(clk),.rst_n(sys_reset_n),
@@ -516,7 +518,8 @@ module top #(
     //     错误码和细分码都要从系统域搬到像素域显示，同样走帧边界提交。
     //--------------------------------------------------------------------------
     wire [23:0] text_rgb,final_rgb;
-    wire [7:0] system_error=cdc_overflow?8'h86:cache_failed_sys?8'h85:
+    wire rescue_queue_overflow;
+    wire [7:0] system_error=rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
     wire [7:0] system_error_pix;
     frame_config_cdc #(.WIDTH(8)) u_error_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
@@ -558,7 +561,8 @@ module top #(
         elev_floor_basement_sys,elev_direction_sys,elev_door_sys,
         elev_floor_tens_sys,elev_floor_ones_sys,elev_status_valid_sys};
     wire [15:0] elev_status_pix;
-    frame_config_cdc #(.WIDTH(16),.RESET_VALUE(16'hc001)) u_elevator_status_commit(
+    // Reset means no alarm, unknown floor, signal lost; no phantom boot alarm.
+    frame_config_cdc #(.WIDTH(16),.RESET_VALUE(16'h4000)) u_elevator_status_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data(elev_status_src),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(elev_status_pix));
     assign elevator_alert_pix=elev_status_pix[15];
@@ -782,5 +786,10 @@ module top #(
         .volume(volume),.period_ms(period_ms),.auto_enabled(auto_status_sys),.switch_event(next_sys),
         .menu_event(menu_event),.menu_kind(menu_kind),.error_code(system_error),
         .bright_event(sw_sync2[1] && (next_sys || auto_sys)),.bright_value(brightness),
+        .alert_request(elev_alert_request_sys),
+        .alert_sources({elevator_demo_active_sys && sw_sync2[3],elev_alert_sys}),
+        .floor_valid(elev_status_valid_sys),.floor_basement(elev_floor_basement_sys),
+        .floor_tens(elev_floor_tens_sys),.floor_ones(elev_floor_ones_sys),
+        .direction(elev_direction_sys),.door(elev_door_sys),.rescue_overflow(rescue_queue_overflow),
         .reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready),.uart_tx(uart_tx));
 endmodule

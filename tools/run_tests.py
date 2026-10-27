@@ -11,6 +11,8 @@ cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_co
 'flash':['player_config_persistence','w25q64_preflight_reader','config_flash_journal','config_journal','w25q64_record_store','spi_byte_engine'],
 'player':['media_player_control'],
 'elevator':['elevator_demo_controller'],
+'rescue':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],
+'rescue_queue':['uart_rx_byte','uart_tx_byte','uart_status_reporter'],
 'pic5_address':['media_frame_loader'],
 'sd_protocol':['sd_media_service','sd_spi_init','sd_spi_command','sd_spi_byte_engine','sd_spi_sector_reader']}
 results=[]
