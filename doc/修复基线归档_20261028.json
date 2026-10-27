@@ -1,0 +1,10 @@
+{
+  "commit": "779cb9bae1339cfedfc7d65acb438f6b3ba21623",
+  "tag": "backup/repair-start-20261028_014625",
+  "archive": "D:\\FPGA\\anlu\\example_code111\\backups\\lab_ex4_tf_repair_20261028_014625.zip",
+  "archive_sha256": "aa34c97d0607ce4cabf3ffb722a4963f3ec553048ba497e16d0749bf6f9f090a",
+  "bundle": "D:\\FPGA\\anlu\\example_code111\\backups\\lab_ex4_tf_repair_20261028_014625.bundle",
+  "bundle_sha256": "86bcf36689c08ab32404f7234c97f802dee9954f487c335d593f3863b85ad957",
+  "file_count": 524,
+  "member_hashes_verified": true
+}
