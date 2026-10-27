@@ -23,8 +23,20 @@ def source_files(root):
     return files
 
 
-def run_flow(td_root, workdir, log):
-    flow = td_root / 'doc/scripts/DefaultFlow.tcl'
+def snapshot_hashes(out):
+    """Hash the actual build inputs; reject a stale copy before invoking TD."""
+    hashes = {}
+    for source in sorted(source_files(ROOT)):
+        relative = source.relative_to(ROOT / 'src/user_source')
+        snapshot = out / 'user_source' / relative
+        if not snapshot.is_file() or digest(snapshot) != digest(source):
+            raise SystemExit('isolated source is stale: ' + str(relative))
+        hashes[str(source.relative_to(ROOT))] = digest(snapshot)
+    return hashes
+
+
+def run_flow(td_root, workdir, log, flow=None):
+    flow = flow or td_root / 'doc/scripts/DefaultFlow.tcl'
     exe = td_root / 'bin/td_commands_prompt.exe'
     for path in (exe, flow):
         if not path.is_file():
@@ -34,7 +46,8 @@ def run_flow(td_root, workdir, log):
         result = subprocess.run([str(exe), flow.as_posix()], cwd=str(workdir),
                                 stdout=handle, stderr=subprocess.STDOUT)
     text = log.read_text(encoding='utf-8', errors='replace')
-    if result.returncode or re.search(r'\b(?:ERROR|FATAL)\s*:', text) or "couldn't read file" in text:
+    if (result.returncode or re.search(r'\b(?:ERROR|FATAL)\s*:', text)
+            or "couldn't read file" in text or 'invalid command name' in text):
         raise SystemExit(f'TD failed in {workdir.name}; inspect {log}')
     critical = [line for line in text.splitlines()
                 if 'CRITICAL-WARNING' in line and not reviewed_warning(line, text)]
@@ -79,6 +92,9 @@ def publish(out, runs, values, hashes, warnings):
                  'place_clock_utilization.txt', 'route_clock_utilization.txt'):
         if (phy / name).is_file():
             shutil.copy2(phy / name, best / name)
+    for name in ('timing_checks.rpt', 'hold_parameters.txt', 'hold_repair.log'):
+        if (phy / name).is_file():
+            shutil.copy2(phy / name, best / name)
     (best / 'readMe.txt').write_text('The implemented result of phy_1 is saved as best result.\n',
                                      encoding='utf-8')
     report = {
@@ -87,6 +103,13 @@ def publish(out, runs, values, hashes, warnings):
         'bit_sha256': digest(bit),
         'timing_ns': values,
         'sources': hashes,
+        'build_inputs': {
+            str(p.relative_to(ROOT)): digest(p) for p in
+            [ROOT / 'src/td_project' / (NAME + '.al'),
+             ROOT / 'tools/build_isolated.py', ROOT / 'tools/setup_isolated_build.py',
+             ROOT / 'tools/repair_routed_hold.tcl',
+             runs / 'syn_1/settings.cfg', runs / 'phy_1/settings.cfg']
+        },
         'warnings': warnings,
         'hardware_tested': False,
         'note': 'Built in the isolated build_out tree; src/ was read-only during this run.',
@@ -108,7 +131,7 @@ def main():
     args = parser.parse_args()
     out = args.out.resolve()
     runs = check_tree(out)
-    hashes = {str(p.relative_to(ROOT)): digest(p) for p in sorted(source_files(ROOT))}
+    hashes = snapshot_hashes(out)
     warnings = []
     if not args.collect:
         for stage in (('phy_1',) if args.physical_only else ('syn_1', 'phy_1')):
@@ -116,12 +139,37 @@ def main():
             if not (stage_dir / 'settings.cfg').is_file():
                 raise SystemExit(f'missing run scaffolding for {stage}: {stage_dir}')
             warnings += run_flow(args.td_root, stage_dir, stage_dir / 'isolated_build.log')
+        # Explicit native post-route hold repair is necessary for RAM address
+        # paths which TD's ordinary route pass can leave slightly negative.
+        phy = runs / 'phy_1'
+        warnings += run_flow(args.td_root, phy, phy / 'hold_repair.log',
+                             ROOT / 'tools/repair_routed_hold.tcl')
+    else:
+        for stage, name in (('syn_1', 'isolated_build.log'),
+                            ('phy_1', 'isolated_build.log'), ('phy_1', 'hold_repair.log')):
+            log = (runs / stage / name).read_text(encoding='utf-8', errors='replace')
+            if re.search(r'\b(?:ERROR|FATAL)\s*:', log):
+                raise SystemExit('error in collected build log: ' + name)
+            if any('CRITICAL-WARNING' in line and not reviewed_warning(line, log)
+                   for line in log.splitlines()):
+                raise SystemExit('unreviewed critical warning in: ' + name)
+            warnings += [line for line in log.splitlines() if 'WARNING' in line]
     for name, value in hashes.items():
         if digest(ROOT / name) != value:
             raise SystemExit('source changed during the build: ' + name)
     values = timing_values(runs / 'phy_1' / (NAME + '_pr.timing'))
     if min(values.values()) < 0:
         raise SystemExit('routed timing failed: ' + str(values))
+    checks = (runs / 'phy_1/timing_checks.rpt').read_text(errors='replace')
+    for section in ('no clock', 'clock definition', 'invalid constraint',
+                    'combinational loops', 'no path constraints'):
+        match = re.search(r'checking ' + section + r'\((\d+)\)', checks)
+        if match is None or int(match[1]):
+            raise SystemExit('unresolved timing check: ' + section)
+    # This section's heading counts inspected PLL instances, not violations.
+    pll_checks = re.findall(r'There are (\d+) (?:clock pins that have no clock constraints|clocks whose clock frequency do not match the PLL setting)', checks)
+    if len(pll_checks) < 2 or any(int(n) for n in pll_checks):
+        raise SystemExit('unresolved PLL clock constraints')
     publish(out, runs, values, hashes, warnings)
     return 0
 

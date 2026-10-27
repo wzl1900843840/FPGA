@@ -1,0 +1,13 @@
+{
+  "timing": {
+    "SWNS": 0.748,
+    "STNS": 0.0,
+    "HWNS": 0.025,
+    "HTNS": 0.0
+  },
+  "bit_sha256": "521f374dbbefb01ed1aca1341112bdb4e2531d8edbdf091191205c8d93139f1c",
+  "archive": "D:\\FPGA\\anlu\\example_code111\\backups\\repair_stage2_timing_closed_20261028.zip",
+  "archive_sha256": "730659cbb263aec8cfead5a833d129d75f40b6359dd5838c02dcc6fda37fd40c",
+  "verified_members": 157,
+  "hardware_tested": false
+}

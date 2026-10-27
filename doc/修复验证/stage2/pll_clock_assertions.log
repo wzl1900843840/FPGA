@@ -1,0 +1,33 @@
+# vsim -c -onfinish exit -lib D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work tb_pll_clocks -l D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\tb_pll_clocks.log -do "run -all; quit -f" 
+# Start time: 02:30:43 on Oct 28,2026
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.tb_pll_clocks
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.sys_pll_promax_40
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.EG_LOGIC_BUFG
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.EG_PHY_PLL
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.eg_dphase_sel
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.prediv_mux
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.eg_pll_div2
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.eg_clko_premux
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.eg_pll_div128
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\vendor_checks\work.eg_clko_ctrl
+# ** Warning: (vsim-3015) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/sys_pll_promax_40.v(88): [PCDPC] - Port size (5) does not match connection size (1) for port 'load_reg'. The port definition is at: E:/Anlogic/TD_6.2.1_Engineer_6.2.168.116/sim_release/eg4/eg_phy_pll.v(25).
+# 
+#         Region: /tb_pll_clocks/dut/pll_inst
+# run -all
+# ******************** : The Attribute            REFCLK_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to           2.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             FBCLK_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to          40.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             CLKC0_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to           8.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             CLKC1_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to          25.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             CLKC2_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to          25.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             CLKC3_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to          40.  Legal values for this attribute are           1 to         128.
+# ******************** : The Attribute             CLKC4_DIV on pll instance tb_pll_clocks.dut.pll_inst.para_int_range_chk is set to           8.  Legal values for this attribute are           1 to         128.
+# serial period=8.000000 ns
+# shift period=25.000000 ns; offset since mem=10.000000 ns
+# mem period=25.000000 ns
+# pixel period=40.000000 ns
+# locked=1 counts        7970        7970        4981       24907
+# PASS PLL: 40/40/25/125 MHz and 10 ns SDRAM shift
+# ** Note: $finish    : D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_pll_clocks.v(16)
+#    Time: 200200 ns  Iteration: 0  Instance: /tb_pll_clocks
+# End time: 02:30:50 on Oct 28,2026, Elapsed time: 0:00:07
+# Errors: 0, Warnings: 1

@@ -23,10 +23,10 @@ module fifo_prefetch_2 #(
     wire pop = consume && (count != 0);
     wire [2:0] reserved = {1'b0, count} + {1'b0, outstanding};
 
-    assign raw_read_en = !raw_empty &&
+    assign raw_read_en = !rst && !raw_empty &&
                          ((reserved < 3'd2) || (pop && (reserved == 3'd2)));
-    assign out_valid = (count != 0);
-    assign out_empty = (count == 0);
+    assign out_valid = !rst && (count != 0);
+    assign out_empty = rst || (count == 0);
     assign out_data  = slot0;
 
     always @(posedge clk or posedge rst) begin

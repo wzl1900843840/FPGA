@@ -29,10 +29,10 @@ module sys_pll_promax_40 (
   wire clk3_buf;
   wire clk4_buf;
 
-  EG_LOGIC_BUFG bufg_feedback (
-    .i(clk0_buf),
-    .o(clk0_out)
-  );
+  // TD 6.2 rejects CLKC0_INT (RUN-8419). Use its supported default
+  // VCO_PHASE_0 feedback: 50 MHz /2 *40 = 1000 MHz. Output dividers,
+  // phases and NORMAL compensation mode are retained.
+  assign clk0_out = clk0_buf;
 
   EG_LOGIC_BUFG bufg_memory (
     .i(clk1_buf),
@@ -54,7 +54,7 @@ module sys_pll_promax_40 (
     .DYNCFG("DISABLE"),
     .FIN("50.000000"),
     .FEEDBK_MODE("NORMAL"),
-    .FEEDBK_PATH("CLKC0_EXT"),
+    .FEEDBK_PATH("VCO_PHASE_0"),
     .STDBY_ENABLE("DISABLE"),
     .PLLRST_ENA("ENABLE"),
     .SYNC_ENABLE("DISABLE"),
@@ -64,7 +64,7 @@ module sys_pll_promax_40 (
     .LPF_CAPACITOR(1),
     .LPF_RESISTOR(4),
     .REFCLK_DIV(2),
-    .FBCLK_DIV(5),
+    .FBCLK_DIV(40),
     .CLKC0_ENABLE("ENABLE"),
     .CLKC0_DIV(8),
     .CLKC0_CPHASE(7),
@@ -102,7 +102,7 @@ module sys_pll_promax_40 (
     .di(8'b00000000),
     .daddr(6'b000000),
     .do({open, open, open, open, open, open, open, open}),
-    .fbclk(clk0_out),
+    .fbclk(1'b0),
     .clkc({clk4_buf, clk3_buf, clk2_out, clk1_buf, clk0_buf})
   );
 

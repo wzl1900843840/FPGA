@@ -1,0 +1,2 @@
+PASS rescue: commands/local alarm, OR arbitration, floor context, fault independence, recovery, atomic replies
+tests/tb_rescue.v:101: $finish called at 23134030000 (1ps)

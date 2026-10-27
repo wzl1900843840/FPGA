@@ -116,6 +116,14 @@ module media_frame_reader #(
     wire fifo_reset = fifo_reset_request ||
                       !fifo_release_mem[1] || !fifo_release_pix[1];
     reg [1:0] fifo_ready_mem;
+    (* async_reg = "true" *) reg [1:0] prefetch_release_pix;
+    wire prefetch_reset_pix = !prefetch_release_pix[1];
+    // A common FIFO flush is required on both sides, but ordinary pixel
+    // registers must only leave reset on their own clock. Keep the FIFO read
+    // port quiet until its internal two-stage reset release has also finished.
+    always @(posedge pix_clk or posedge fifo_reset)
+        if (fifo_reset) prefetch_release_pix <= 2'b00;
+        else prefetch_release_pix <= {prefetch_release_pix[0], 1'b1};
     // FIFO 公共复位异步拉低就绪；只在写时钟域同步释放后发出突发。
     always @(posedge mem_clk or posedge fifo_reset)
         if(fifo_reset) fifo_ready_mem<=0;
@@ -416,7 +424,7 @@ module media_frame_reader #(
 
     // 预取一级：像素域提前把FIFO里的下一个像素取出来，这样 pixel_valid 不会临时才有效
     fifo_prefetch_2 #(.DATA_WIDTH(32)) u_prefetch (
-        .clk(pix_clk), .rst(fifo_reset), .raw_empty(fifo_empty),
+        .clk(pix_clk), .rst(prefetch_reset_pix), .raw_empty(fifo_empty),
         .raw_valid(fifo_raw_valid), .raw_data(fifo_raw_data),
         .raw_read_en(fifo_raw_read_en), .consume(pixel_pop),
         .out_valid(prefetch_valid), .out_empty(), .out_data(prefetch_data)
