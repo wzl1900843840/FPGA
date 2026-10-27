@@ -134,7 +134,8 @@ module top #(
     //    （含FAT32扫描、BMP24解码、2×2缩小、帧完成提交）和写入数据源。
     //    start 由下面的启动状态机给出；done/error_stage/error_code 回报结果。
     //--------------------------------------------------------------------------
-    wire ingest_busy,ingest_done,card_ready;
+    wire ingest_busy,ingest_done,card_ready,scan_complete;
+    wire first_tf_pixel;
     wire [2:0] ingest_stage;
     wire [7:0] ingest_error,ingest_detail;
     wire [4:0] resource_valid,image_complete,image_scale;
@@ -163,10 +164,10 @@ module top #(
     wire [7:0] audio_byte,audio_error;
     wire [8:0] audio_byte_index;
     media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1),
-        .PRIORITIZE_EMERGENCY(ELEVATOR_DEMO_MODE)) u_storage(
+        .PRIORITIZE_EMERGENCY(1)) u_storage(
         .clk(clk),.rst_n(sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
-        .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),
+        .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),.scan_complete(scan_complete),
         .image_complete(),.image_ready(image_complete),.image_scale_2x(image_scale),
         // 写入排空判据：CDC 空闲 + 已排空 + 源域当前没有新的写请求
         .write_drain_idle(cdc_idle_sys && write_drained_sys && !source_wr),
@@ -503,7 +504,7 @@ module top #(
         .burst_grant(video_grant),.burst_request(video_request),.read_urgent(video_urgent),
         .brightness(bright_pix),.contrast(contrast_pix),.pix_clk(pixel_clk),.pix_rst_n(pix_reset_n),.video_clk(),.video_hs(hs),.video_vs(vs),
         .video_de(de),.video_rgb(video_rgb),.video_x(video_x),.active_index(active_index),.pending_index(),
-        .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error));
+        .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error),.first_tf_pixel(first_tf_pixel));
 
     //--------------------------------------------------------------------------
     // 16. 叠加层第一级：缩略图焦点框
@@ -631,6 +632,7 @@ module top #(
             if (alert_command_valid) elev_alert_sys<=alert_command_value;
         end
     end
+    wire [84:0] boot_metrics;
     subtitle_uart_controller #(.APPLIED_STATUS_INPUTS(1)) u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
         .rx_framing_error(rx_error),.service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
         .request_dropped(1'b0),.live_text(live_text),.live_length(live_length),.live_enable(live_subtitle),
@@ -642,8 +644,35 @@ module top #(
         .rescue_ack_valid(rescue_ack_valid),.rescue_ack_id(rescue_ack_id),
         .rescue_event_id(rescue_event_id),.rescue_comm_state(rescue_comm_state),.applied_alert(elev_alert_request_sys),
         .applied_floor_basement(elev_floor_basement_sys),.applied_floor_tens(elev_floor_tens_sys),.applied_floor_ones(elev_floor_ones_sys),
-        .applied_direction(elev_direction_sys),.applied_door(elev_door_sys));
+        .applied_direction(elev_direction_sys),.applied_door(elev_door_sys),.boot_metrics(boot_metrics));
     wire [102:0] subtitle_pix;
+    // Milliseconds from system reset release, saturating at 65535 ms.
+    // Valid bits distinguish absent events from a real zero timestamp.
+    reg [15:0] boot_ms_div,boot_elapsed_ms;
+    reg [4:0] boot_milestone_valid;
+    reg [15:0] boot_sd_ms,boot_scan_ms,boot_pic1_ms,boot_tf_ms,boot_pic5_ms;
+    reg first_tf_seen_pix;
+    wire first_tf_seen_sys;
+    always @(posedge pixel_clk or negedge pix_reset_n)
+        if(!pix_reset_n) first_tf_seen_pix<=0;
+        else if(first_tf_pixel) first_tf_seen_pix<=1;
+    sync_2ff u_first_tf_sync(.clk(clk),.rst_n(sys_reset_n),.async_in(first_tf_seen_pix),.sync_out(first_tf_seen_sys));
+    always @(posedge clk or negedge sys_reset_n)
+        if(!sys_reset_n) begin
+            boot_ms_div<=0;boot_elapsed_ms<=0;boot_milestone_valid<=0;
+            boot_sd_ms<=0;boot_scan_ms<=0;boot_pic1_ms<=0;boot_tf_ms<=0;boot_pic5_ms<=0;
+        end else begin
+            if(boot_elapsed_ms!=16'hffff && boot_milestone_valid!=31) begin
+                if(boot_ms_div==49999) begin boot_ms_div<=0;boot_elapsed_ms<=boot_elapsed_ms+1'b1;end
+                else boot_ms_div<=boot_ms_div+1'b1;
+            end
+            if(card_ready && !boot_milestone_valid[0]) begin boot_sd_ms<=boot_elapsed_ms;boot_milestone_valid[0]<=1;end
+            if(scan_complete && !boot_milestone_valid[1]) begin boot_scan_ms<=boot_elapsed_ms;boot_milestone_valid[1]<=1;end
+            if(image_complete[0] && !boot_milestone_valid[2]) begin boot_pic1_ms<=boot_elapsed_ms;boot_milestone_valid[2]<=1;end
+            if(first_tf_seen_sys && !boot_milestone_valid[3]) begin boot_tf_ms<=boot_elapsed_ms;boot_milestone_valid[3]<=1;end
+            if(image_complete[4] && !boot_milestone_valid[4]) begin boot_pic5_ms<=boot_elapsed_ms;boot_milestone_valid[4]<=1;end
+        end
+    assign boot_metrics={boot_milestone_valid,boot_sd_ms,boot_scan_ms,boot_pic1_ms,boot_tf_ms,boot_pic5_ms};
     frame_config_cdc #(.WIDTH(103),.RESET_VALUE(103'd0)) u_subtitle_frame_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({live_subtitle,live_length,live_text}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(subtitle_pix));

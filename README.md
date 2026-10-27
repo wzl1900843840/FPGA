@@ -3,11 +3,11 @@
 ## 打开与下载
 
 - **唯一日常工程入口：** [lab_ex5_i2s_v1.0.al](src/td_project/lab_ex5_i2s_v1.0.al)，顶层 `top`。沿用原工程名称。
-- **历史交付候选固件（2026-10-09 版本，仅含此前媒体功能）：** [lab_ex5_i2s_v1.0_final.bit](release/releases/20261025_final/lab_ex5_i2s_v1.0_final.bit)。电梯扩展尚未生成新的可下载 BIT。
+- **历史交付候选固件（2026-10-09 版本，仅含此前媒体功能）：** [lab_ex5_i2s_v1.0_final.bit](release/releases/20261025_final/lab_ex5_i2s_v1.0_final.bit)。该旧BIT不含本轮应急闭环，保留作历史参考。
 - 构建时间：2026-10-09T14:25:06+08:00。SHA256：`27bd4ac9988c318495bf6f14542015788d0c896930e4d16976b71cfeafcfa1a5`。
 - [最终包装与答辩方案](doc/最终包装落地目标与答辩方案_20261025.md)；[隔离构建记录](build_out/seg7_block_swap/best_result/validation.json)；[历史实板通过快照](tests/results/hardware_pass_20260928)。
 
-TF 卡根目录使用 PIC1.BMP～PIC4.BMP；电梯演示模式另外读取可选的 PIC5.BMP 作为紧急页。当前 PCM 物理范围为 0，音频为 FPGA 合成音调。当前下载入口固定为 `release/releases/20261025_final/`，其他 release/archive 固件只作历史参考。
+TF 卡根目录使用 PIC1.BMP～PIC4.BMP；电梯演示模式另外读取可选的 PIC5.BMP 作为紧急页。当前 PCM 物理范围为 0，音频为 FPGA 合成音调。本轮候选入口见下方2026-10-28记录，release/archive旧固件仅作历史参考。
 
 新素材见 [安路实拍素材包](media/photo_pack_anlogic/README.md)：两张城市、两张自然照片，左上角带原始安路 Logo；[完整界面预览](media/photo_pack_anlogic/ui_preview.png)。每次上电/K1 复位音量为 **0**，首次短按 K4 升到 64。周期和自动模式继续从 Flash 恢复；字幕默认关闭，无工作室署名。
 
@@ -32,6 +32,12 @@ TF 卡根目录使用 PIC1.BMP～PIC4.BMP；电梯演示模式另外读取可选
 | 生成物隔离区、隔离构建流程与产物验收 | [隔离构建区](doc/隔离构建区.md) |
 
 ## 当前状态
+
+2026-10-28本轮候选：build_out/repair_stage6_final_20261028/best_result/lab_ex5_i2s_v1.0.bit。BIT SHA256为695120841c89711b7624f093b4708f2eff1530f2544619e61a3092d64189cca1，SWNS=+0.221ns、HWNS=+0.025ns、两个TNS=0，LUT93.07%。已通过26项RTL及扩展回归和完整物理实现；未刷板、未冻结。源码/报告关联见doc/修复验证/stage6，候选标签repair/stage6-startup-candidate-20261028。
+
+本轮新增：应急异常接管/恢复、双来源去抖、RESCUE/ACK/有限重发、中文状态及独立三声提示；首图顺序固定PIC1→PIC5→PIC2→PIC3→PIC4，BOOT?返回五节点计时。接收端为tools/rescue_receiver.py，协议见doc/救援串口协议与接收端.md。电梯素材为media/elevator_photo_pack（PIC4为1280×960缩小输入，其余640×480）。PCM参数仍为0，普通声音为合成音调，波形来自实际HDMI输出PCM抽头；不要宣称本候选从TF读取音乐。
+
+同卡1/8/16簇实测、10次冷启动、100轮闭环、2小时运行及连续录像仍待完成。进度见doc/修复执行清单_20261028.md，实测边界见doc/启动测量与首图优先_20261028.md，操作见doc/实板验收与连续演示_20261028.md。下述10月9日/25日内容为历史记录。
 
 2026-10-09 完成 SD 正常读取 6.25→12.5 MHz、首张有效图片校验并写入排空后提前显示，以及后台图片加载/缩略图构建共享 SDRAM。音轨面板新增平滑连线、渐变包络、背景网格和峰值保持音量柱。初始化仍保留 100 ms 上电等待和 390.625 kHz 慢速时钟。
 

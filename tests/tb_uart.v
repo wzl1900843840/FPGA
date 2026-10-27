@@ -60,6 +60,14 @@ command("ALERT=OFF");
 if(!alert_seen || alert_seen_value || response!="OK\015\012")$fatal(1,"alert off [%s]",response);
 command("ELEV=BAD,D=X,DO=Z,A=2");
 if(response!="ERR ELEV\015\012")$fatal(1,"invalid elevator command [%s]",response);
+command("ELEV=F05,D=U,DO=C,A=0X");
+if(response!="ERR ELEV\015\012" || elev_floor!=1)$fatal(1,"22-byte line accepted [%s]",response);
+command("SUB=ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ");
+if(response!="ERR\015\012" || live_len!=4)$fatal(1,"40-byte length contract [%s]",response);
+command("SUB=ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJK");
+if(response!="ERR\015\012" || live_len!=4)$fatal(1,"41-byte overflow contract [%s]",response);
+command("ELEV=F99,D=S,DO=O,A=0");
+if(response!="OK\015\012" || elev_floor!=99 || elev_basement)$fatal(1,"post-overflow 21-byte recovery [%s]",response);
 $display("PASS uart: subtitle compatibility, elevator ASCII status/query, alert commands and validation");$finish;
 end
 initial begin #2000000000;$fatal(1,"UART watchdog");end

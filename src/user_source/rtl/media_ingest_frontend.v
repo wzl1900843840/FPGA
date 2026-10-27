@@ -56,7 +56,8 @@ module media_ingest_frontend #(
     output wire [3:0]            app_wr_mask,
     output wire [31:0]           app_wr_data,
     input  wire                 write_drain_idle,
-    output wire [4:0]           image_ready
+    output wire [4:0]           image_ready,
+    output wire                scan_complete
 );
     wire replay_busy;
     wire replay_valid;
@@ -100,6 +101,6 @@ module media_ingest_frontend #(
         .controller_init_done(controller_init_done), .controller_busy(controller_busy),
         .refresh_active(refresh_active), .app_wr_en(app_wr_en),
         .app_wr_addr(app_wr_addr), .app_wr_mask(app_wr_mask), .app_wr_data(app_wr_data),
-        .write_drain_idle(write_drain_idle),.image_ready(image_ready)
+        .write_drain_idle(write_drain_idle),.image_ready(image_ready),.scan_complete(scan_complete)
     );
 endmodule

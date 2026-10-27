@@ -1,0 +1,2 @@
+PASS rescue ACK: timer after LF, three attempts, frozen retry/query, wrong/duplicate/late ACK, busy-reply ACK, delayed ACK and clear cancellation
+tests/tb_rescue_ack.v:66: $finish called at 66512400000 (1ps)

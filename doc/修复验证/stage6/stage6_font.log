@@ -1,0 +1,3 @@
+PASS Chinese font equivalence: all 512 addresses including unused ID31
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\font_equivalence\tb_font_equivalence.v:8: $finish called at 0 (1ps)
+

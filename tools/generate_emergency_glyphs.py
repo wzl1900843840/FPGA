@@ -1,5 +1,6 @@
 """Regenerate only the 22 fixed 16x16 emergency glyph constants in the OSD."""
 from pathlib import Path
+import subprocess,sys
 from PIL import Image, ImageDraw, ImageFont
 ROOT=Path(__file__).resolve().parents[1]
 CHARS='正在呼叫请求已接收通信未确认告警解除保持冷静'
@@ -25,6 +26,8 @@ def main():
         case='\n'.join(f"                5'd{i}: glyph_bits = CN_GLYPH_{i};" for i in range(9,31))
         source=source.replace("                default: glyph_bits = 256'b0;",case+"\n                default: glyph_bits = 256'b0;")
     target.write_text(source,encoding='utf-8')
+    # Keep the sparse lookup in step with regenerated bitmap constants.
+    subprocess.run([sys.executable,str(ROOT/'tools/compact_chinese_lookup.py')],check=True)
     print('Generated 22 fixed glyphs; existing subtitle IDs 0..8 preserved')
 
 if __name__=='__main__':main()

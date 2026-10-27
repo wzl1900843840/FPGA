@@ -1,0 +1,43 @@
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:12: warning: Port 10 (image_complete) of module media_ingest_frontend expects 5 bit(s), given 4.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:12:        : Padding 1 high bits of the port.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:12: warning: Port 28 (image_ready) of module media_ingest_frontend expects 5 bit(s), given 4.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:12:        : Padding 1 high bits of the port.
+Running early_valid
+PASS early ingest: verified before final done, CDC/physical drain, bad-tail=0 aborted-burst=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:90: $finish called at 227551000 (1ps)
+Running early_bad_tail
+PASS early ingest: verified before final done, CDC/physical drain, bad-tail=1 aborted-burst=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:90: $finish called at 263831000 (1ps)
+Running early_abort_burst
+PASS early ingest: verified before final done, CDC/physical drain, bad-tail=0 aborted-burst=1
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:90: $finish called at 263751000 (1ps)
+Running sd_fast
+PASS SD fast clocks: 390.625 kHz initialization, 12.5 MHz read, CRC and 512-byte payload
+PASS SD SPI: CMD0/8/55/41/58, SDHC CMD17 address, all 512 bytes, CRC fault
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_sd_protocol.v:37: $finish called at 2420620000 (1ps)
+Running waveform
+PASS waveform: bank isolation, decimation, signed clipping, silence, peak hold/release, panel bounds, rendered RTL
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_waveform.v:72: $finish called at 12780801000 (1ps)
+Running vendor_shared
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/afifo_32_16_256.v(231): [TFMPC] - Missing connection for port 'doa'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/afifo_32_16_256.v(231): [TFMPC] - Missing connection for port 'dib'.
+# 
+# run -all
+# PASS vendor shared: display pixels=       1280, background writes=1152, cache write/read=128, refresh-safe ownership
+# ** Note: $finish    : D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(99)
+#    Time: 3487400 ns  Iteration: 2  Instance: /tb_vendor_shared
+# End time: 04:08:18 on Oct 28,2026, Elapsed time: 0:00:06
+# Errors: 0, Warnings: 6
+Running vendor_shared_cache
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared_cache.v(27): [TFMPC] - Missing connection for port 'write_grant'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared_cache.v(27): [TFMPC] - Missing connection for port 'write_drained'.
+# 
+# run -all
+# PASS vendor shared cache: all 307200 cache words,      844160 display pixels at 25 MHz,        1479 refreshes, no underflow
+# ** Note: $finish    : D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared_cache.v(79)
+#    Time: 49482962500 ps  Iteration: 2  Instance: /tb_vendor_shared_cache
+# End time: 04:10:17 on Oct 28,2026, Elapsed time: 0:01:58
+# Errors: 0, Warnings: 10
+PASS fast boot checks

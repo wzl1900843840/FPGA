@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "addresses": 512,
+  "baseline_commit": "80dcde8",
+  "source_sha256": "70fa308e193a69d59d1f7183c8e26740440209d5b63520211c559ce9a11ee8f9"
+}

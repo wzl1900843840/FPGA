@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 RESCUE = re.compile(r"RESCUE,ID=([0-9A-F]{4}),A=([01]),F=(--|[0-9]{2}|B[1-9]),D=([UDS]),DO=([OCM]),S=([LUB]),E=([0-9A-F]{2})\r\n\Z")
 STATUS = re.compile(r"RESCUE,ID=([0-9A-F]{4}),A=([01]),C=(IDLE|WAIT|ACKED|TIMEOUT)\r\n\Z")
+BOOT_METRICS = re.compile(r"BOOT,SD=([0-9A-F]{4}),SC=([0-9A-F]{4}),P1=([0-9A-F]{4}),TF=([0-9A-F]{4}),P5=([0-9A-F]{4}),V=([0-9A-F]{2})\r\n\Z")
 BOOT = "MEDIA PLAYER READY\r\n"
 
 def parse_rescue(raw: bytes) -> dict:
@@ -62,6 +63,14 @@ class Receiver:
             self.new_session("FPGA启动标志")
             return
         text = raw.decode("ascii", errors="replace")
+        metrics = BOOT_METRICS.fullmatch(text)
+        if metrics:
+            numbers = [int(field,16) for field in metrics.groups()]
+            event = dict(kind="boot_metrics", session=self.session, valid=numbers[-1], raw=text,
+                         **dict(zip(("sd_ms","scan_ms","pic1_ms","tf_ms","pic5_ms"),numbers[:5])))
+            self.journal.write(event)
+            self.notify(event)
+            return
         if text.startswith("RESCUE,") and ",C=" in text:
             match = STATUS.fullmatch(text)
             if match:
@@ -115,7 +124,7 @@ class Receiver:
 
 def export_log(source: Path, destination: Path):
     with source.open(encoding="utf-8") as stream, destination.open("w", encoding="utf-8-sig", newline="") as target:
-        columns = ["timestamp", "session", "kind", "event_id", "active", "floor", "direction", "door", "source", "error", "duplicate", "state", "raw"]
+        columns = ["timestamp", "session", "kind", "event_id", "active", "floor", "direction", "door", "source", "error", "duplicate", "state", "sd_ms", "scan_ms", "pic1_ms", "tf_ms", "pic5_ms", "valid", "raw"]
         writer = csv.DictWriter(target, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         for line in stream:
@@ -198,6 +207,8 @@ class App:
         ttk.Button(bar, text="应用", command=self.settings).pack(side="left", padx=4)
         ttk.Label(root, textvariable=self.state, padding=8).pack(anchor="w")
         ttk.Label(root, textvariable=self.session, padding=8).pack(anchor="w")
+        self.boot_state = tk.StringVar(value="启动计时：未查询；以复位释放为起点，非显示器亮屏时间")
+        ttk.Label(root, textvariable=self.boot_state, padding=8).pack(anchor="w")
         columns = ("event", "floor", "direction", "door", "source", "error", "state", "repeats")
         self.table = ttk.Treeview(root, columns=columns, show="headings", height=10)
         for column, title in zip(columns, ["事件编号", "楼层", "方向", "门状态", "来源", "故障码", "通信状态", "重复接收"]):
@@ -206,7 +217,7 @@ class App:
         self.table.pack(fill="both", expand=True, padx=12)
         bottom = ttk.Frame(root, padding=12)
         bottom.pack(fill="x")
-        for title, command in [("查询救援状态", "RESCUE?"), ("查询楼层", "ELEV?")]:
+        for title, command in [("查询救援状态", "RESCUE?"), ("查询楼层", "ELEV?"), ("查询启动计时", "BOOT?")]:
             ttk.Button(bottom, text=title, command=lambda c=command:self.commands.put(("query", c))).pack(side="left", padx=4)
         ttk.Button(bottom, text="导出日志CSV", command=self.export).pack(side="left", padx=4)
         ttk.Label(bottom, text="确认表示接收端已记录请求；不代表救援已到场。").pack(side="right")
@@ -264,6 +275,12 @@ class App:
             kind = event["kind"]
             if kind == "session":
                 self.session.set("会话："+event["session"]+" · "+event["reason"])
+                self.boot_state.set("启动计时：新会话，待查询")
+            elif kind == "boot_metrics":
+                values=[]
+                for bit,(key,label) in enumerate([("sd_ms","SD就绪"),("scan_ms","扫描"),("pic1_ms","PIC1校验排空"),("tf_ms","内部TF首像素"),("pic5_ms","PIC5就绪")]):
+                    values.append(label+"="+(str(event[key])+"ms" if event["valid"] & (1<<bit) else "未发生"))
+                self.boot_state.set(" · ".join(values))
             elif kind == "connected":
                 self.state.set("已连接 "+event["port"]+" · 115200 8N1")
             elif kind in ("disconnected", "error"):

@@ -1,0 +1,78 @@
+PASS keys: debounce, next, short/long discrimination, one-shot chord save, volume and period menu
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_keys.v:26: $finish called at 3830000 (1ps)
+
+PASS fade: switch only at black, full recovery, all four wipe kinds
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fade.v:22: $finish called at 8870000 (1ps)
+
+PASS uart: subtitle compatibility, elevator ASCII status/query, alert commands and validation
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_uart.v:71: $finish called at 1356230000 (1ps)
+
+PASS bmp: exact 2x box filter in both orientations; invalid planes/bpp/compression/offset/truncation never commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_bmp.v:41: $finish called at 85430000 (1ps)
+
+PASS pixels: 6400 saturation/identity vectors and blanking
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_pixels.v:22: $finish called at 64026000 (1ps)
+
+PASS thumbnail: frame commit, unavailable bank, wrap
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_thumbnail.v:16: $finish called at 310000 (1ps)
+
+PASS seg7: corrected left/right blocks, PIC1..PIC4, VOL 000/255, PRd 30S/55S, disabled panel
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_seg7.v:47: $finish called at 2600000 (1ps)
+
+PASS thumbnail layout: centered grid, all pixels/foci, source coordinates, missing bank, blanking
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_thumbnail_layout.v:34: $finish called at 1228804000 (1ps)
+
+PASS cache: all 307200 pixels, 4 banks, missing bank, 4:1 sampling
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_cache.v:20: $finish called at 10564826000 (1ps)
+
+PASS wav: ten sectors, ring wraps, LE pairing, backpressure, tail drain
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_wav.v:15: $finish called at 208341000 (1ps)
+
+PASS SD: real 5000000-cycle startup delay reaches SPI clocks
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_sd_delay.v:7: $finish called at 10000139000 (1ps)
+
+PASS FAT32: raw BPB, MBR with EB jump and FAT32 in each of four slots, fragmented root chain
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fat32.v:33: $finish called at 149816000 (1ps)
+
+PASS streamer: fragmented 3->7 chain, 700-byte EOF, terminal FAT check
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_streamer.v:12: $finish called at 20656000 (1ps)
+
+PASS CDC: stable bundle, busy coalescing, frame-only commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_cdc.v:10: $finish called at 2102000 (1ps)
+
+PASS Flash: W25X64 SPI ID, default load, dual-slot save/readback, reboot restore, corrupt-slot fallback
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_flash.v:22: $finish called at 144885000 (1ps)
+
+PASS player: normal rotation is PIC1..PIC4; alert selects and recovers PIC5
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_player.v:105: $finish called at 1911000 (1ps)
+
+PASS elevator demo: startup, alert, fallback, recovery and fault states
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_elevator.v:21: $finish called at 170000 (1ps)
+
+PASS emergency: busy, late PIC5, fault/alarm order, fade abort, saved page/auto, invalid page fallback, cancellation, <=2/3 frames
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency.v:54: $finish called at 20780000 (1ps)
+
+PASS rescue: commands/local alarm, OR arbitration, floor context, fault independence, recovery, atomic replies
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_rescue.v:101: $finish called at 549910000 (1ps)
+
+PASS rescue ACK: timer after LF, three attempts, frozen retry/query, wrong/duplicate/late ACK, busy-reply ACK, delayed ACK and clear cancellation
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_rescue_ack.v:66: $finish called at 1249390000 (1ps)
+
+PASS rescue queue: unknown floor, snapshots, short pulses, ordered FIFO, sticky overflow, reset
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_rescue_queue.v:46: $finish called at 417680000 (1ps)
+
+PASS PIC5 address: emergency bank starts at 16 and writes 4 words
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_pic5_address.v:51: $finish called at 126000 (1ps)
+
+PASS reader reset: destination release, read/write isolation, five media banks plus thumbnail bank, stale-pixel flush, manual reset
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_reader_reset.v:66: $finish called at 100080000 (1ps)
+
+PASS reset_sync: async assertion, two-edge rising/falling release across five phases
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_reset_sync.v:28: $finish called at 801000 (1ps)
+
+PASS emergency OSD: WAIT/ACKED/TIMEOUT/clear, frame snapshot, fixed glyphs, fallback-independent status and ID, fault coexistence
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency_osd.v:36: $finish called at 490840000 (1ps)
+
+PASS SD SPI: CMD0/8/55/41/58, SDHC CMD17 address, all 512 bytes, CRC fault
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_sd_protocol.v:37: $finish called at 406800000 (1ps)
+

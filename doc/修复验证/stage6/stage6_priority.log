@@ -1,0 +1,8 @@
+BOOT_SIM first_pic1_cycles=6723 pic5_cycles=4397 total_cycles=13700
+PASS priority ingest: verified before final done, CDC/physical drain, bad-tail=0 aborted-burst=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\priority_boot\legacy_pic5_first.v:95: $finish called at 274051000 (1ps)
+
+BOOT_SIM first_pic1_cycles=4397 pic5_cycles=6723 total_cycles=13700
+PASS priority ingest: verified before final done, CDC/physical drain, bad-tail=0 aborted-burst=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\priority_boot\pic1_first.v:95: $finish called at 274051000 (1ps)
+

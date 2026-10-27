@@ -1,0 +1,20 @@
+{
+  "status": "PENDING_HARDWARE_DATA",
+  "metric": "internal TF first accepted PIC1 pixel, ms since system reset release",
+  "medians_ms": {},
+  "external_complete_image_medians_ms": {},
+  "failures": [],
+  "missing": [
+    "candidate/1: 0/5",
+    "candidate/8: 0/5",
+    "candidate/16: 0/5",
+    "checkpoint/8: 0/5"
+  ],
+  "recommended_cluster_sectors": 8,
+  "counts": {
+    "candidate/1": 0,
+    "candidate/8": 0,
+    "candidate/16": 0,
+    "checkpoint/8": 0
+  }
+}

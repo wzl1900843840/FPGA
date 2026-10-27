@@ -12,6 +12,25 @@ initial begin
  force d.cache_ready_pix=1'b1;force d.player_enable=1'b0;force d.elev_alert_sys=uart_alarm;
  force d.next_pix=right;
  #233;rst=1;repeat(140)@(negedge clk);frame;frame;frame;
+ `ifdef BOOT_METRICS_TEST
+ force d.card_ready=1'b0;force d.scan_complete=1'b0;force d.image_complete=5'd0;force d.first_tf_pixel=1'b0;
+ force d.boot_elapsed_ms=16'd100;@(negedge clk);force d.card_ready=1'b1;repeat(3)@(negedge clk);
+ force d.boot_elapsed_ms=16'd200;force d.scan_complete=1'b1;repeat(3)@(negedge clk);
+ force d.boot_elapsed_ms=16'd300;force d.image_complete=5'd1;repeat(3)@(negedge clk);
+ force d.boot_elapsed_ms=16'd320;force d.first_tf_pixel=1'b1;repeat(12)@(negedge clk);
+ force d.boot_elapsed_ms=16'd600;force d.image_complete=5'd17;repeat(3)@(negedge clk);
+ if(d.boot_metrics!=={5'd31,16'd100,16'd200,16'd300,16'd320,16'd600})$fatal(1,"boot milestone snapshot");
+ force d.boot_elapsed_ms=16'd900;repeat(10)@(negedge clk);
+ if(d.boot_sd_ms!=100 || d.boot_tf_ms!=320)$fatal(1,"milestones overwritten");
+ release d.boot_elapsed_ms;@(negedge clk);
+ if(d.boot_elapsed_ms!=900)$fatal(1,"counter advanced after all captures");
+ force d.boot_milestone_valid=5'd0;force d.boot_ms_div=16'd49999;force d.boot_elapsed_ms=16'd65534;
+ @(negedge clk);release d.boot_elapsed_ms;release d.boot_ms_div;
+ @(negedge clk);
+ if(d.boot_elapsed_ms!=65535 || d.boot_ms_div!=0)$fatal(1,"millisecond carry/saturation");
+ repeat(10)@(negedge clk);if(d.boot_elapsed_ms!=65535)$fatal(1,"elapsed counter wrapped");
+ $display("PASS boot milestones: five sticky timestamps, synchronized first TF pixel, freeze after capture");$finish;
+ `endif
  if(!d.display_view || !d.effective_display_view)$fatal(1,"thumbnail entry failed");
  right=1;@(negedge d.pixel_clk);right=0;frame;saved_focus=d.focus_index;
  uart_alarm=1;repeat(5)@(negedge d.pixel_clk);frame;

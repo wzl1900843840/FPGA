@@ -100,7 +100,8 @@ module media_video_pipeline #(
     output wire [7:0]  video_error,
     input  wire       burst_grant,
     output wire       burst_request,
-    output wire       read_urgent
+    output wire       read_urgent,
+    output wire       first_tf_pixel
 );
     wire raw_hs;
     wire raw_vs;
@@ -130,6 +131,8 @@ module media_video_pipeline #(
     wire [23:0] selected_rgb =
         (player_enable_pix && reader_pixel_valid && reader_error_pix2 == 0) ?
         reader_rgb : 24'h000000;
+    assign first_tf_pixel=raw_de && player_enable_pix && reader_pixel_valid &&
+        reader_error_pix2==0 && !view_mode && active_index==0 && !emergency_active;
 
     sync_2ff u_player_enable_pix (
         .clk(pix_clk), .rst_n(pix_rst_n), .async_in(player_enable),

@@ -61,7 +61,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     input wire         applied_alert,
     input wire         applied_floor_basement,
     input wire [3:0]   applied_floor_tens,applied_floor_ones,
-    input wire [1:0]   applied_direction,applied_door
+    input wire [1:0]   applied_direction,applied_door,
+    input wire [84:0]  boot_metrics
 );
     // ===== 常量与回包种类 =====
     // MAX_LINE 是整行缓冲上限（含 "SUB=" 前缀），MAX_TEXT 是字幕正文上限。
@@ -85,6 +86,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     localparam [3:0] R_ERR_ELEV = 4'd12;
     localparam [3:0] R_ELEV_QUERY = 4'd13;
     localparam [3:0] R_RESCUE_QUERY = 4'd14;
+    localparam [3:0] R_BOOT_QUERY = 4'd15;
     reg [15:0] query_event_id;
     reg [1:0] query_comm_state;
     reg query_alert,query_basement;
@@ -124,6 +126,9 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     reg [6:0] reply_index;
     reg [6:0] reply_length;
     reg [95:0] reply_text;
+    // A BOOT reply and a subtitle reply are mutually exclusive. Reuse the
+    // existing reply snapshot bank instead of adding 85 duplicate registers.
+    wire [84:0] query_boot=reply_text[84:0];
     reg [5:0] reply_text_length;
     reg reply_enable;
     reg pending_reply;
@@ -218,6 +223,21 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                         21:reply_char=8'h0d; default:reply_char=8'h0a;
                     endcase
                 end
+                R_BOOT_QUERY: begin
+                    // BOOT,SD=hhhh,SC=hhhh,P1=hhhh,TF=hhhh,P5=hhhh,V=hh (ms)
+                    case(index)
+                        0:reply_char="B";1:reply_char="O";2:reply_char="O";3:reply_char="T";
+                        4,12,20,28,36,44:reply_char=",";
+                        5:reply_char="S";6:reply_char="D";13:reply_char="S";14:reply_char="C";
+                        21:reply_char="P";22:reply_char="1";29:reply_char="T";30:reply_char="F";
+                        37:reply_char="P";38:reply_char="5";45:reply_char="V";
+                        7,15,23,31,39,46:reply_char="=";
+                        8,9,10,11,16,17,18,19,24,25,26,27,32,33,34,35,40,41,42,43:
+                            reply_char=hex_char(query_boot[79:76]);
+                        47:reply_char=hex_char({3'd0,query_boot[84]});48:reply_char=hex_char(query_boot[83:80]);
+                        49:reply_char=8'h0d;default:reply_char=8'h0a;
+                    endcase
+                end
                 R_RESCUE_QUERY: begin
                     case(index)
                         0:reply_char="R";1:reply_char="E";2:reply_char="S";3:reply_char="C";
@@ -263,7 +283,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
         input [6:0] length;
         reg [6:0] actual_length;
         begin
-            actual_length = (kind == R_QUERY || kind == R_ELEV_QUERY || kind == R_RESCUE_QUERY) ? length :
+            actual_length = (kind == R_QUERY || kind == R_ELEV_QUERY || kind == R_RESCUE_QUERY || kind == R_BOOT_QUERY) ? length :
                             ((kind <= R_OK_SAVE || kind == R_OK_ELEV) ? 7'd4 :
                              (kind == R_ERR_ELEV ? 7'd10 : 7'd5));
             if (reply_active) begin
@@ -335,6 +355,10 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
             rescue_ack_valid<=0;
 
             if (reply_active && reply_ready) begin
+                // Serial nibble shift avoids five wide variable-select trees.
+                // Shift only accepted hex bytes; stalled replies stay stable.
+                if(reply_kind==R_BOOT_QUERY && reply_index>=8 && reply_index<=43 && reply_index[2:0]<4)
+                    reply_text<={11'd0,query_boot[84:80],query_boot[75:0],4'd0};
                 if (reply_last) begin
                     if (pending_reply) begin
                         reply_kind <= pending_reply_kind;
@@ -384,6 +408,9 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                     end else if (!reply_active && !waiting_save && line_length != 0) begin
                         if (line_overflow) begin
                             start_reply(R_LONG,10);
+                        end else if(line_length==5 && line_char(0)=="B" && line_char(1)=="O" &&
+                                    line_char(2)=="O" && line_char(3)=="T" && line_char(4)=="?") begin
+                            reply_text<={11'd0,boot_metrics};start_reply(R_BOOT_QUERY,51);
                         end else if(line_length==7 && line_char(0)=="R" && line_char(1)=="E" &&
                                     line_char(2)=="S" && line_char(3)=="C" && line_char(4)=="U" &&
                                     line_char(5)=="E" && line_char(6)=="?") begin

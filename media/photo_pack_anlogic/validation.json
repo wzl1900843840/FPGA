@@ -3,62 +3,62 @@
     {
       "test": "boot_mute",
       "passed": true,
-      "seconds": 0.19
+      "seconds": 0.21
     },
     {
       "test": "audio_mute",
       "passed": true,
-      "seconds": 23.48
+      "seconds": 25.13
     },
     {
       "test": "decode_pic1",
       "passed": true,
-      "seconds": 11.89
+      "seconds": 11.95
     },
     {
       "test": "ui_pic1",
       "passed": true,
-      "seconds": 15.2
+      "seconds": 14.45
     },
     {
       "test": "decode_pic2",
       "passed": true,
-      "seconds": 13.85
+      "seconds": 11.73
     },
     {
       "test": "ui_pic2",
       "passed": true,
-      "seconds": 13.79
+      "seconds": 13.88
     },
     {
       "test": "decode_pic3",
       "passed": true,
-      "seconds": 12.25
+      "seconds": 12.16
     },
     {
       "test": "ui_pic3",
       "passed": true,
-      "seconds": 14.06
+      "seconds": 14.22
     },
     {
       "test": "decode_pic4",
       "passed": true,
-      "seconds": 12.17
+      "seconds": 13.28
     },
     {
       "test": "ui_pic4",
       "passed": true,
-      "seconds": 14.13
+      "seconds": 15.91
     },
     {
       "test": "ui_startup_muted",
       "passed": true,
-      "seconds": 14.01
+      "seconds": 18.05
     },
     {
       "test": "ui_chinese_optional",
       "passed": true,
-      "seconds": 15.78
+      "seconds": 17.05
     }
   ],
   "sources": {
@@ -66,7 +66,7 @@
     "src\\user_source\\hdl_source\\key_remove_shakes.v": "8832f59e7ba94bfb8cf31e4f5a772ef7177d5257a5a2532d53cbfa1d9b7f5cd9",
     "src\\user_source\\hdl_source\\lane_lvds_10_1.v": "de9529321354f04837e051d0ec1681cf44783d4be3284703a788e081147500bc",
     "src\\user_source\\hdl_source\\startup_pulse.v": "396e1e56febb8028339e646bc2f06b83e07ab11ef840e447422fb941956741c9",
-    "src\\user_source\\hdl_source\\top_tf_hdmi_audio.v": "2d8d6970dec710a66bf735791802ee21eee6c883d8fae6c047a0fc1abfb1038f",
+    "src\\user_source\\hdl_source\\top_tf_hdmi_audio.v": "0a1292915ddb58ca74affa32a7f9baa9c42d1327873d58157988b7b0c67f76cc",
     "src\\user_source\\hdl_source\\video_rgb_to_axis_640x480.v": "1c8fc26c789f87227036bea034f1ab6fc5633f2ab2684be422c54687a290fb96",
     "src\\user_source\\hdl_source\\video_source_test.v": "39cc05c9684a594d4254d11e66e97344053ab75bdb00f3f5a301643fd7aadbfc",
     "src\\user_source\\ip_source\\pll.v": "202799f886f12cfc1d837afa932328b636c6c3dee70167be68c084133647b39c",
@@ -101,15 +101,15 @@
     "src\\user_source\\rtl\\media_frame_loader.v": "c62ab789ce8edcb1b20118759c69464b1807d5914ea2427a1e75ab6cd7e8587f",
     "src\\user_source\\rtl\\media_frame_reader.v": "a5057eb0fd800e2e28c4136a6c2c203c73e3f9492c27a58c15941ce86d9101bb",
     "src\\user_source\\rtl\\media_hdmi_audio_bridge.v": "a28f59520be69dc1b4ecf62a47d2b01cd7319541ce0ed910281bd4badafe8434",
-    "src\\user_source\\rtl\\media_ingest_frontend.v": "1e754662f5c2b89ce052fbcb5f0f17725e8ee7bb68bf48a1ecafd9457fda0092",
-    "src\\user_source\\rtl\\media_ingest_pipeline.v": "cbb4576ba163c4ad791c691fa33ee12b2eae48a258b2d6b1784dbdcb9098ab29",
+    "src\\user_source\\rtl\\media_ingest_frontend.v": "a579e36da77421a99e0575104797dd24b9871d450e85de0694e451f8718e9bdc",
+    "src\\user_source\\rtl\\media_ingest_pipeline.v": "79e2b2b551a6195fb8ee02d1fd8e8f5d074a770ba86c89b21cbc731d332dd3b8",
     "src\\user_source\\rtl\\media_player_control.v": "07b67f492e6ec0be987154082b0434e49c3fcb4bbf161c83cc47a35cea2198b3",
     "src\\user_source\\rtl\\media_policy.v": "e4c123c1073531780c36adc3774c20c68a5ed234ff325702726418c9d516a2f5",
     "src\\user_source\\rtl\\media_recovery_fsm.v": "b959ae8cec711eb0f5b80fa05b2ff54263380a1b8bd87509b32f723a3f3f9207",
     "src\\user_source\\rtl\\media_sdram_arbiter.v": "130ffdc8f9f6f120d0cda80c4f46e49db5c21a56050d84576538573c4b340099",
     "src\\user_source\\rtl\\media_sdram_write_cdc.v": "3a8651a44360c2f3b45139ee9689b3d2a4dc300450d0b2ffe6ca34bcef187753",
-    "src\\user_source\\rtl\\media_storage_ingest_top.v": "11aa56b68d0cb49e2b1d3d3d03a0560240f02a4c42af15a7d66eb6a926ceaebb",
-    "src\\user_source\\rtl\\media_video_pipeline.v": "216cb70e51341a2dbe0798286b9da7fac841f3f4cc3c24bf48cb972897bcec42",
+    "src\\user_source\\rtl\\media_storage_ingest_top.v": "f23edf1353bad117d1cce4c0929665aee8c5fb086eb12a683f6c9875005b4b4e",
+    "src\\user_source\\rtl\\media_video_pipeline.v": "e52e9071dafd716494adc3b999b9c997e6f7361bafdb8459312ed073cd333a07",
     "src\\user_source\\rtl\\osd_overlay_24.v": "2efde3e174ab0bff8638cab4f99faf8981c686927051f24eae9e2d8d54480df0",
     "src\\user_source\\rtl\\param_menu_controller.v": "2efb681b5c518f6ce7d8e8f629c2e1f8db873bc4dd50fc497c958849cb20ccc6",
     "src\\user_source\\rtl\\pcm_content_mux.v": "0935d932acf9a4c5971f994a7a07e6eb1451fe96aff53c79bcef4ec4816de37d",
@@ -117,7 +117,7 @@
     "src\\user_source\\rtl\\pcm_test_tone.v": "eaf6fe15573bd49062bdc9390e99f08214af26940d23cca9323499c63002a6ff",
     "src\\user_source\\rtl\\player_config_persistence.v": "c9b5c967dcb98406785150b2580d1b8444429ab9059f4e4a6a5d716ce41489d7",
     "src\\user_source\\rtl\\promax_audio_waveform.v": "18e9de3a34f38d1a4ff0f53f11baf6e3fc8309f6679cff78affc6e3651d733ae",
-    "src\\user_source\\rtl\\promax_text_overlay.v": "c6a5b01b9fee7ed8f6ffb89f53a855263b4dc8126d66418768c91a37f32eb87c",
+    "src\\user_source\\rtl\\promax_text_overlay.v": "70fa308e193a69d59d1f7183c8e26740440209d5b63520211c559ce9a11ee8f9",
     "src\\user_source\\rtl\\pulse_toggle_sync.v": "6d0120564a79335a6df744098207fc46bc824bff0823d1b45e2b6e7ea960184b",
     "src\\user_source\\rtl\\reset_sync.v": "a766aff880982a487cc57b3d55ad9665ce26db5d8ce4634146b6c1abff3f39cc",
     "src\\user_source\\rtl\\rgb_video_adapter.v": "edcca4a11291e590e48ab292567dba3eb40b185f021e00112b8155db9bd19e68",
@@ -131,7 +131,7 @@
     "src\\user_source\\rtl\\spi_byte_engine.v": "7f4eb1fa86e01610451ec140ab5aaaa24052977b5df972c2f08b68dc8404e7ea",
     "src\\user_source\\rtl\\status_osd_overlay.v": "7bb371cf980beea18985c807658b5e2b100e6f6db38fd9973f9c940dd30687fc",
     "src\\user_source\\rtl\\subtitle_frame_commit.v": "4049c911722c6838d65796c3e359333e9bc9be81fab9782fa27cb44c0c39565f",
-    "src\\user_source\\rtl\\subtitle_uart_controller.v": "046fedb3a640aa73d8f74c8b2d60bbfe89ac476a56c1a43e4551ea4865c4f877",
+    "src\\user_source\\rtl\\subtitle_uart_controller.v": "21cf02800082f28cd78bd38edced5412c3916cbdf905f6d7037616a890f6b6cb",
     "src\\user_source\\rtl\\sync_2ff.v": "691a3ea359a4ac443ab87d3202a1f3398f16e46b83066efd485f25f912f47fe9",
     "src\\user_source\\rtl\\sync_fade_gain.v": "400429304f46d3ce16fc99fc48eb53e6f174cc58010fa82ea0dbc17650562067",
     "src\\user_source\\rtl\\sys_pll_promax_40.v": "84f39794fe0f3a9b9c433707d91295eac52cad6faad4ebe221b031ec92bfdbc4",

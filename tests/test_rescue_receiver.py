@@ -16,6 +16,16 @@ class FakeJournal:
         self.rows.append(row)
 
 class ReceiverTests(unittest.TestCase):
+    def test_boot_metrics(self):
+        log=FakeJournal();events=[];sent=[]
+        engine=module.Receiver(log,sent.append,events.append)
+        engine.new_session("test")
+        engine.receive(b"BOOT,SD=0065,SC=00DC,P1=033E,TF=0352,P5=05DC,V=1F\r\n")
+        self.assertEqual(events[-1]["kind"],"boot_metrics")
+        self.assertEqual(events[-1]["tf_ms"],850)
+        self.assertEqual(events[-1]["valid"],31)
+        self.assertFalse(sent)
+
     def setUp(self):
         self.log=FakeJournal();self.sent=[];self.events=[];self.now=0
         self.receiver=module.Receiver(self.log,self.sent.append,self.events.append,lambda:self.now)

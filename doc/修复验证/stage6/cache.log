@@ -1,0 +1,2 @@
+PASS cache: all 307200 pixels, 4 banks, missing bank, 4:1 sampling
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_cache.v:20: $finish called at 10564826000 (1ps)

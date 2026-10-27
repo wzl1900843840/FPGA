@@ -61,7 +61,8 @@ module media_ingest_pipeline #(
     output wire [3:0]            app_wr_mask,
     output wire [31:0]           app_wr_data,
     input  wire                 write_drain_idle,
-    output wire [4:0]           image_ready
+    output wire [4:0]           image_ready,
+    output wire                scan_complete
 );
     localparam integer IMAGE_WORDS = IMAGE_WIDTH * IMAGE_HEIGHT;
     // 主错误码：80=扫卡失败 82=读文件失败 83=BMP校验失败 84=写SDRAM失败
@@ -89,14 +90,13 @@ module media_ingest_pipeline #(
     reg [7:0] drain_count;
     assign image_ready=EARLY_DISPLAY ? verified_images : image_complete;
 
-    // In the elevator demo the emergency page is loaded first so ALERT can
-    // select a complete bank as soon as possible.  The default media mode
-    // retains the original PIC1..PIC5 order.
+    // Competition order: show verified PIC1 immediately, prepare PIC5 next,
+    // then continue daily pages. Logical emergency fallback covers PIC5 loading.
     function [2:0] sequence_image;
         input [2:0] step;
         begin
             if (PRIORITIZE_EMERGENCY)
-                sequence_image = (step==3'd0) ? 3'd4 : (step-3'd1);
+                sequence_image = step==0 ? 0 : step==1 ? 4 : step-1'b1;
             else
                 sequence_image = step;
         end
@@ -105,6 +105,7 @@ module media_ingest_pipeline #(
 
     wire scan_busy;
     wire scan_done;
+    assign scan_complete=scan_done;
     wire [7:0] scan_error;
     wire [7:0] sectors_per_cluster;
     wire [31:0] fat_start_lba;

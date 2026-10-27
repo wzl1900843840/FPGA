@@ -1,0 +1,13 @@
+{
+  "legacy_pic5_first": {
+    "pic1_cycles": 6723,
+    "pic5_cycles": 4397,
+    "total_cycles": 13700
+  },
+  "pic1_first": {
+    "pic1_cycles": 4397,
+    "pic5_cycles": 6723,
+    "total_cycles": 13700
+  },
+  "scope": "Synthetic 16x8 images, replay-sector model, identical clocks and bytes; not hardware boot time"
+}

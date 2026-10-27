@@ -1,0 +1,3 @@
+PASS boot milestones: five sticky timestamps, synchronized first TF pixel, freeze after capture
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency_top.v:32: $finish called at 6960000 (1ps)
+

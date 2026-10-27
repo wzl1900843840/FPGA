@@ -4,13 +4,14 @@ reg clk=0,rst=0,alarm=0,rxv=0;reg[7:0]rxd=0;always #5 clk=~clk;
 wire ack,reply_valid,reply_last,reply_ready,tx,ov,oe;wire[7:0]reply_data,out_byte;
 wire[15:0]ack_id,event_id;wire[1:0]comm;
 reg[3:0]floor_tens=0,floor_ones=5;reg[1:0]dir=1,door=2;
+reg [84:0] metrics={5'h1f,16'd101,16'd220,16'd830,16'd850,16'd1500};
 subtitle_uart_controller #(.APPLIED_STATUS_INPUTS(1)) parser(.clk(clk),.rst_n(rst),
  .rx_data(rxd),.rx_valid(rxv),.rx_framing_error(1'b0),.service_ready(1'b1),
  .save_done(1'b0),.save_failed(1'b0),.request_dropped(1'b0),.live_text(96'd0),.live_length(6'd0),.live_enable(1'b0),
  .reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready),
  .rescue_ack_valid(ack),.rescue_ack_id(ack_id),.rescue_event_id(event_id),.rescue_comm_state(comm),
  .applied_alert(alarm),.applied_floor_basement(1'b0),.applied_floor_tens(floor_tens),.applied_floor_ones(floor_ones),
- .applied_direction(dir),.applied_door(door));
+ .applied_direction(dir),.applied_door(door),.boot_metrics(metrics));
 uart_status_reporter #(.CLKS_PER_BIT(BIT_CYCLES),.ACK_TIMEOUT_CYCLES(BIT_CYCLES*1000)) report(.clk(clk),.rst_n(rst),.enable(1'b0),
  .media_id(2'd0),.volume(8'd0),.period_ms(32'd5000),.auto_enabled(1'b0),.switch_event(1'b0),
  .menu_event(1'b0),.menu_kind(2'd0),.error_code(8'd0),.bright_event(1'b0),.bright_value(8'd0),
@@ -31,6 +32,8 @@ task settle_line;begin wait(report.state==0);repeat(8)@(negedge clk);end endtask
 integer before_count;string snapshot;
 initial begin
  #21;rst=1;repeat(10)@(negedge clk);
+ command("BOOT?");wait(report.state==2);metrics=0;
+ expect_line("BOOT,SD=0065,SC=00DC,P1=033E,TF=0352,P5=05DC,V=1F");settle_line;
  command("RESCUE?");expect_line("RESCUE,ID=0000,A=0,C=IDLE");
  settle_line;alarm=1;
  expect_line("RESCUE,ID=0001,A=1,F=05,D=U,DO=C,S=L,E=00");settle_line;
