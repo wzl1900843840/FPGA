@@ -210,6 +210,7 @@ module media_frame_reader #(
                 3'd1: bank_base = IMAGE_WORDS;
                 3'd2: bank_base = IMAGE_WORDS * 2;
                 3'd3: bank_base = IMAGE_WORDS * 3;
+                3'd5: bank_base = IMAGE_WORDS * 5; // thumbnail cache, frame-latched
                 default: bank_base = IMAGE_WORDS * 4;
             endcase
         end

@@ -359,7 +359,7 @@ module promax_text_overlay #(
             if(py>=4 && py<4+CELL_H && px>=FLOOR_X && px<FLOOR_X+9*CELL_W) begin
                 lx=px-FLOOR_X;ly=py-4;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=elevator_char(cell_idx);found=1;
-            end else if(show_info_frame && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
+            end else if((show_info_frame || error_frame!=0) && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
                 lx=px-STATUS_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
                 col=(lx-cell_idx*CELL_W)>>1;ch=status_char(cell_idx);found=1;
             end else if(show_info_frame && py>=PARAM_Y && py<PARAM_Y+CELL_H && px>=PARAM_X && px<PARAM_X+PARAM_CHARS*CELL_W) begin

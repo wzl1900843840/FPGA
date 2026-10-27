@@ -18,8 +18,10 @@ always @(posedge d.pixel_clk) if(checking) begin
     d.u_video.u_reader.inflight_count_mem!==0 ||
     (!d.diag_fifo_pix && (d.u_video.u_reader.fifo_write_enable!==0 || d.u_video.u_reader.pixel_consume!==0)))
     $fatal(1,"diagnostic isolation broken");
- if(d.de_adjust) begin
- x=d.x_adjust;y=d.y_adjust;
+ // Observe RGB and its matching companion signals at the HDMI bridge input.
+ // OSD and waveform each register a stage after de_adjust/x_adjust/y_adjust.
+ if(d.u_audio.video_de) begin
+ x=d.wave_stage_x;y=d.wave_stage_y;
  if(y<240) case(x/80)
  0:expected=24'hffffff;1:expected=24'hffff00;2:expected=24'h00ffff;3:expected=24'h00ff00;
  4:expected=24'hff00ff;5:expected=24'hff0000;6:expected=24'h0000ff;7:expected=0;
@@ -27,7 +29,7 @@ always @(posedge d.pixel_clk) if(checking) begin
  else if(y<360) expected=(x%256)*24'h010101;
  else if(x<512) expected=((x%256)<<16)|((y%256)<<8)|((x^y)%256);
  else expected=(((x/8)^(y/8))%2)?24'hffffff:0;
- if(d.u_audio.video_rgb!==expected) $fatal(1,"pattern mismatch x=%d y=%d",x,y);
+ if(d.u_audio.video_rgb!==expected) $fatal(1,"pattern mismatch x=%d y=%d got=%h expected=%h",x,y,d.u_audio.video_rgb,expected);
  pixels=pixels+1;
  end
 end

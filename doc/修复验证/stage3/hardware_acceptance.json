@@ -1,0 +1,46 @@
+{
+  "stage": "3 应急显示",
+  "status": "功能仿真通过，物理构建进行中，实板待验收",
+  "checks": [
+    {
+      "item": "上电告警与PIC5未就绪备用页",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "普通/自动播放告警及解除恢复",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "缩略图焦点保存与恢复",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "菜单抢占与恢复",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "SW4双沿抖动和UART来源重叠",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "PIC5缺失/损坏和故障码可见",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "换图/突发读取期间进入告警",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "告警≤2帧、正常恢复≤3帧实测",
+      "status": "待实板验收",
+      "result": null
+    }
+  ]
+}

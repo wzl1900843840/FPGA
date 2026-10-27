@@ -1,0 +1,2 @@
+PASS keys: debounce, next, short/long discrimination, one-shot chord save, volume and period menu
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_keys.v:26: $finish called at 3830000 (1ps)

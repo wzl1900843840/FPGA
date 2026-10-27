@@ -1,0 +1,23 @@
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\rtl\media_video_pipeline.v:195: warning: Port 11 (active_index) of module video_fade_transition expects 2 bit(s), given 3.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\rtl\media_video_pipeline.v:195:        : Pruning 1 high bits of the expression.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\rtl\media_video_pipeline.v:262: warning: Port 21 (reader_index) of module media_frame_reader expects 3 bit(s), given 2.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\rtl\media_video_pipeline.v:262:        : Padding 1 high bits of the port.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\hdl_source\top_tf_hdmi_audio.v:748: warning: Port 8 (media_id) of module media_hdmi_audio_bridge expects 2 bit(s), given 3.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\hdl_source\top_tf_hdmi_audio.v:748:        : Pruning 1 high bits of the expression.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\hdl_source\top_tf_hdmi_audio.v:769: warning: Port 3 (src_data) of module frame_config_cdc expects 2 bit(s), given 3.
+D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\src\user_source\hdl_source\top_tf_hdmi_audio.v:769:        : Pruning 1 high bits of the expression.
+Traceback (most recent call last):
+  File "D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\tools\run_local_pattern_test.py", line 13, in <module>
+FATAL: D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\stage3_pattern_baseline\tests\tb_local_pattern.v:30: pattern mismatch x=          0 y=          0
+       Time: 1446780000  Scope: tb_local_pattern
+
+    print(log);result.check_returncode()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Anaconda\Lib\subprocess.py", line 502, in check_returncode
+    raise CalledProcessError(self.returncode, self.args, self.stdout,
+subprocess.CalledProcessError: Command '['D:/iverilog/bin/vvp.exe', 'D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\build_out\\stage3_pattern_baseline\\tests\\results\\local_pattern.vvp']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "<stdin>", line 11, in <module>
+  File "D:\Anaconda\Lib\subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['D:/Anaconda/python.exe', 'D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\build_out\\stage3_pattern_baseline\\tools\\run_local_pattern_test.py']' returned non-zero exit status 1.

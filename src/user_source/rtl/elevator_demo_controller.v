@@ -36,7 +36,9 @@ module elevator_demo_controller (
         if (!rst_n) begin
             state_code <= ST_STARTUP;
         end else if (frame_start) begin
-            if (media_fault) begin
+            if (alert_request) begin
+                state_code <= ST_ALERT;
+            end else if (media_fault && !startup_ready) begin
                 state_code <= ST_FAULT;
             end else begin
                 case (state_code)

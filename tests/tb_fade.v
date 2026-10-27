@@ -2,7 +2,7 @@
 module tb_fade;
 reg clk=0,rst=0,request=0,fs=0,commit=0;reg[1:0]idx=0;always #5 clk=~clk;
 wire next,busy,active,wipe;wire[7:0]alpha;wire[4:0]ramp;wire[1:0]kind;
-video_fade_transition #(.FADE_FRAMES(4)) d(clk,rst,request,next,busy,clk,rst,1'b1,fs,commit,idx,alpha,active,wipe,ramp,kind);
+video_fade_transition #(.FADE_FRAMES(4)) d(clk,rst,request,next,busy,clk,rst,1'b1,fs,commit,idx,alpha,active,wipe,ramp,kind,1'b0);
 integer requests=0,i,k;reg pending=0;
 always @(posedge clk)if(next)begin if(alpha!=0)$fatal(1,"switch before black");requests=requests+1;pending=1;end
 task frame;begin

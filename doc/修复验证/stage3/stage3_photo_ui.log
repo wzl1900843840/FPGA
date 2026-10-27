@@ -1,0 +1,37 @@
+Running boot_mute
+PASS boot mute: blank, saved 255, K1 reset, corrupt slots, Flash failure, first key=64, runtime save/readback, period/mode, pixel CDC
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_boot_mute.v:65: $finish called at 176920000 (1ps)
+Running audio_mute
+PASS HDMI mute: tone, SW4 test tone, full-scale WAV, both channels, runtime unmute/remute, reset, valid/ready, packet/symbol regression
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_audio_mute.v:40: $finish called at 15937840000 (1ps)
+Running decode_pic1
+PASS photo decode: all 307200 actual pixels, header, BGR ordering, bottom-up direction, single commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_decode.v:36: $finish called at 36866410000 (1ps)
+Running ui_pic1
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+Running decode_pic2
+PASS photo decode: all 307200 actual pixels, header, BGR ordering, bottom-up direction, single commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_decode.v:36: $finish called at 36866410000 (1ps)
+Running ui_pic2
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+Running decode_pic3
+PASS photo decode: all 307200 actual pixels, header, BGR ordering, bottom-up direction, single commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_decode.v:36: $finish called at 36866410000 (1ps)
+Running ui_pic3
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+Running decode_pic4
+PASS photo decode: all 307200 actual pixels, header, BGR ordering, bottom-up direction, single commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_decode.v:36: $finish called at 36866410000 (1ps)
+Running ui_pic4
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+Running ui_startup_muted
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+Running ui_chinese_optional
+PASS photo UI: actual periods, frame commits, concurrent updates, error/detail, all Chinese glyphs, Logo clear, subtitle passthrough, exact blends, RGB/HS/VS/DE/XY alignment; pixels=307200
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_photo_ui.v:129: $finish called at 15392480000 (1ps)
+PASS photo UI and mute checks

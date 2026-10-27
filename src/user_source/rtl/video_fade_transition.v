@@ -30,11 +30,12 @@ module video_fade_transition #(
     // coordinate compare; ramp_out drives the reveal boundary counter.
     output wire       wipe_active,
     output wire [4:0] ramp_out,
-    output wire [1:0] transition_kind
+    output wire [1:0] transition_kind,
+    input wire emergency_active
 );
     generate
         if (FADE_FRAMES == 0) begin : g_bypass
-            assign next_event_out = next_event_in;
+            assign next_event_out = next_event_in && !(emergency_active === 1'b1);
             assign fade_busy = 1'b0;
             assign alpha_out = 8'd255;
             assign fade_active = 1'b0;
@@ -66,6 +67,8 @@ module video_fade_transition #(
             reg commit_toggle;
             reg wipe_mode;
             reg [1:0] wipe_kind;
+            reg alarm_sync1,alarm_sync2;
+            reg recovery_pending,recovery_frame_seen;
 
             wire fade_running = (state != S_IDLE);
             assign fade_active = fade_running;
@@ -95,11 +98,24 @@ module video_fade_transition #(
                     commit_toggle <= 1'b0;
                     wipe_mode <= 1'b0;
                     wipe_kind <= 2'd0;
+                    alarm_sync1 <= 0; alarm_sync2 <= 0;
+                    recovery_pending <= 0; recovery_frame_seen <= 0;
                 end else begin
+                    alarm_sync1 <= emergency_active === 1'b1; alarm_sync2 <= alarm_sync1;
                     req_sync1 <= req_toggle;
                     req_sync2 <= req_sync1;
-
-                    case (state)
+                    if (alarm_sync2) begin
+                        state <= S_IDLE; ramp <= 0; wipe_mode <= 0;
+                        req_seen <= req_sync2;
+                        recovery_pending <= 1; recovery_frame_seen <= 0;
+                    end else if (recovery_pending) begin
+                        // The first normal frame and its next-cycle commit
+                        // must be fully visible, without an ordinary wipe.
+                        state <= S_IDLE; ramp <= 0; wipe_mode <= 0;
+                        req_seen <= req_sync2;
+                        if (frame_start) recovery_frame_seen <= 1;
+                        if (recovery_frame_seen) recovery_pending <= 0;
+                    end else case (state)
                     S_IDLE: begin
                         if (req_sync2 != req_seen) begin
                             req_seen <= req_sync2;
@@ -154,7 +170,7 @@ module video_fade_transition #(
 
             // ---- control-domain bookkeeping ----
             assign fade_busy = busy_sync2;
-            assign next_event_out = (commit_sync2 != ack_seen);
+            assign next_event_out = (commit_sync2 != ack_seen) && !(emergency_active === 1'b1);
 
             always @(posedge ctrl_clk or negedge ctrl_rst_n) begin
                 if (!ctrl_rst_n) begin
@@ -172,7 +188,7 @@ module video_fade_transition #(
                     // Events during an active fade are dropped; the display
                     // is already transitioning and control cannot accept a
                     // second request before the black dwell anyway.
-                    if (next_event_in && !busy_sync2)
+                    if (next_event_in && !busy_sync2 && !(emergency_active === 1'b1))
                         req_toggle <= ~req_toggle;
                     if (commit_sync2 != ack_seen)
                         ack_seen <= commit_sync2;

@@ -38,7 +38,8 @@ module top #(
     parameter integer DIAG_LOCAL_PATTERN=0,
     // 置1时固定进入电梯演示；运行时也可用 SW2=0、SW3=1 进入电梯演示。
     // 电梯演示下 SW4 是独立告警开关；普通媒体模式下 SW4 保持测试音。
-    parameter integer ELEVATOR_DEMO_MODE=0
+    parameter integer ELEVATOR_DEMO_MODE=0,
+    parameter integer SW_DEBOUNCE_CYCLES=1000000
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
     input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
@@ -93,8 +94,11 @@ module top #(
                     // SW4 is an alert control in elevator mode.  Keep the legacy
                     // reset-time diagnostic entry available only in normal media
                     // mode so a demo setup cannot accidentally enter diagnostics.
-                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !sw[1] && !sw[2] && !diag_key_sync[1] && diag_sw_sync[1]);
-                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !sw[1] && !sw[2] && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
+                    // Holding K4 deliberately selects diagnostics; SW3 then
+                    // selects the FIFO variant. Ordinary SW4 alarm startup
+                    // without K4 never enters either diagnostic mode.
+                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !sw[1] && !diag_key_sync[1] && diag_sw_sync[1]);
+                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !sw[1] && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
                 end
             end
         end
@@ -307,6 +311,16 @@ module top #(
     wire auto_status_sys;
     sync_2ff u_auto_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(auto_enabled),.sync_out(auto_status_sys));
     reg [3:0] sw_sync1,sw_sync2;
+    reg sw4_stable;
+    reg local_alert_latched;
+    wire elev_alert_request_sys;
+    reg [19:0] sw4_debounce_count;
+    always @(posedge clk or negedge sys_reset_n)
+        if(!sys_reset_n) begin sw4_stable<=0;sw4_debounce_count<=0;end
+        else if(sw_sync2[3]==sw4_stable) sw4_debounce_count<=0;
+        else if(sw4_debounce_count>=SW_DEBOUNCE_CYCLES-1) begin
+            sw4_stable<=sw_sync2[3];sw4_debounce_count<=0;
+        end else sw4_debounce_count<=sw4_debounce_count+1'b1;
     reg [7:0] brightness,contrast;
     // SW3 is deliberately mode-dependent: it selects the parameter field
     // while SW2 is on, and becomes the elevator-demo enable while SW2 is off.
@@ -314,6 +328,10 @@ module top #(
     // control between the public demo and the service menu.
     wire elevator_demo_switch_sys=!sw_sync2[1] && sw_sync2[2];
     wire elevator_demo_active_sys=ELEVATOR_DEMO_MODE || elevator_demo_switch_sys;
+    always @(posedge clk or negedge sys_reset_n)
+        if(!sys_reset_n) local_alert_latched<=0;
+        else if(!sw4_stable) local_alert_latched<=0;
+        else if(elevator_demo_active_sys) local_alert_latched<=1;
     always @(posedge clk or negedge sys_reset_n)
         if(!sys_reset_n) begin sw_sync1<=0;sw_sync2<=0;brightness<=255;contrast<=128;end
         else begin
@@ -334,9 +352,9 @@ module top #(
     // into that destination, never back into the source pixel clock.
     sync_2ff u_view_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(view_mode),.sync_out(view_sys));
     // 参数调节模式下 K3 短按改的是"自动/手动"开关，而不是减亮度
-    wire mode_update=auto_sys && !sw_sync2[1] && !view_sys;
+    wire mode_update=auto_sys && !sw_sync2[1] && !view_sys && !elev_alert_request_sys;
     player_config_persistence #(.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(.clk(clk),.rst_n(sys_reset_n),
-        .cfg_update_valid((menu_update && !view_sys) || mode_update),.cfg_period_ms(menu_update?menu_period:period_ms),
+        .cfg_update_valid(((menu_update && !view_sys) || mode_update) && !elev_alert_request_sys),.cfg_period_ms(menu_update?menu_period:period_ms),
         .cfg_volume(menu_update?menu_volume:volume),.cfg_mode(mode_update?{7'd0,~mode[0]}:mode),.save_request(save_event),
         .service_ready(cfg_ready),.busy(cfg_busy),.load_done(cfg_load_done),.save_done(cfg_save_done),
         .apply_valid(cfg_apply),.config_rejected(),.fatal_error(cfg_fatal),.error_code(cfg_error),
@@ -378,7 +396,7 @@ module top #(
     wire elevator_demo_active_pix=ELEVATOR_DEMO_MODE || (!switches_pix[1] && switches_pix[2]);
     // SW2 is the service-menu/display switch.  The public viewer sees only
     // the floor/alert line unless this switch is intentionally enabled.
-    wire show_info_pix=switches_pix[1];
+    wire show_info_pix=switches_pix[1] && !elevator_alert_pix_state;
     wire cache_ready_pix;
     sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
         .async_in(cache_ready),.sync_out(cache_ready_pix));
@@ -402,10 +420,10 @@ module top #(
         sync_2ff u_sync(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(image_complete[k]),.sync_out(complete_pix[k]));
     end endgenerate
     always @(posedge pixel_clk or negedge pix_reset_n)
-        if(!pix_reset_n) mode_seen<=0;else mode_seen<=thumbnail_switch;
+        if(!pix_reset_n) mode_seen<=0;else if(!elevator_alert_pix && !elevator_alert_pix_state) mode_seen<=thumbnail_switch;
     thumbnail_controller u_thumbnail(.clk(pixel_clk),.rst_n(pix_reset_n),
-        .key_right(next_pix),.key_left(auto_pix),.key_confirm(confirm_pix),
-        .key_mode((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode)),.image_complete(complete_pix[3:0]),.frame_start(frame_start),
+        .key_right(next_pix && !elevator_alert_pix),.key_left(auto_pix && !elevator_alert_pix),.key_confirm(confirm_pix && !elevator_alert_pix),
+        .key_mode(!elevator_alert_pix && !elevator_alert_pix_state && ((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode))),.image_complete(complete_pix[3:0]),.frame_start(frame_start && !elevator_alert_pix && !elevator_alert_pix_state),
         .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),
         .transition_req(thumb_transition),.selection_committed(thumbnail_select));
 
@@ -426,13 +444,14 @@ module top #(
         if(!pix_reset_n) last_period<=5000;
         else last_period<=config_pix[31:0];
     reg display_view,last_cfg_mode,last_display_view,selection_wait;
+    wire effective_display_view=display_view && !elevator_alert_pix_state;
     always @(posedge pixel_clk or negedge pix_reset_n)
         if(!pix_reset_n) begin display_view<=0;last_cfg_mode<=0;last_display_view<=0;selection_wait<=0;end
         else begin
             last_cfg_mode<=config_pix[56];last_display_view<=display_view;
-            if(thumbnail_select) selection_wait<=1;
+            if(thumbnail_select && !elevator_alert_pix) selection_wait<=1;
             // 快选目标通过控制器握手提交之前保持缩略图，不能闪回旧图。
-            if(frame_start) begin
+            if(frame_start && !elevator_alert_pix && !elevator_alert_pix_state) begin
                 if(view_mode) display_view<=1;
                 else if(!selection_wait || active_index==selected_index) begin display_view<=0;selection_wait<=0;end
             end
@@ -453,14 +472,14 @@ module top #(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data(media_fault_src),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),
         .dst_data(media_fault_pix_bus));
-    wire media_fault_pix=media_fault_pix_bus[1] || media_fault_pix_bus[0];
+    wire media_fault_pix=media_fault_pix_bus[0] || (media_fault_pix_bus[1] && complete_pix[3:0]==0);
     wire [2:0] elevator_state_code;
     elevator_demo_controller u_elevator_demo(
         .clk(pixel_clk), .rst_n(pix_reset_n), .frame_start(frame_start),
         .startup_ready(complete_pix[3:0] != 4'd0),
         .media_fault(media_fault_pix),
         .alert_request(elevator_alert_pix),
-        .alert_page_available(complete_pix[4]),
+        .alert_page_available(complete_pix[4] && active_index==4 && !media_fault_pix_bus[0] && !(video_error>=8'h61 && video_error<=8'h64)),
         .alert_active(elevator_alert_pix_state),
         .alert_fallback(elevator_alert_fallback),
         .alert_page_index(elevator_alert_page), .state_code(elevator_state_code));
@@ -468,14 +487,14 @@ module top #(
     media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
         .diag_fifo_pix(diag_fifo_pix),.diag_fifo_mem(diag_fifo_mem),
-        .ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(next_pix && !display_view),
-        .previous_event(previous_pix && !display_view),.select_valid(thumbnail_select),
-        .select_index(selected_media_index),.view_mode(display_view),.mode_transition(display_view!=last_display_view),.focus_index(focus_index),
+        .ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(next_pix && !effective_display_view && !elevator_alert_pix),
+        .previous_event(previous_pix && !effective_display_view && !elevator_alert_pix),.select_valid(thumbnail_select && !elevator_alert_pix),
+        .select_index(selected_media_index),.view_mode(effective_display_view),.mode_transition(!elevator_alert_pix_state && display_view!=last_display_view),.focus_index(focus_index),
         .transition_alpha(fade_alpha),.transition_active(fade_active),.video_y(video_y),
         .toggle_auto_event(1'b0),.period_cfg_valid(last_period!=config_pix[31:0]),
         .period_cfg_cycles(config_pix[31:0]*32'd25000),.auto_cfg_valid(display_view || last_display_view!=display_view || last_cfg_mode!=config_pix[56]),.auto_cfg_enabled(config_pix[56] && !display_view),
-        .image_complete(complete_pix),.emergency_active(elevator_alert_pix_state),.emergency_index(elevator_alert_page),
-         .player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
+        .image_complete(complete_pix),.emergency_active(elevator_alert_pix),.emergency_index(elevator_alert_page),
+         .player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (effective_display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
         .controller_init_done(sdram_init && player_mem),.controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .app_rd_en(video_rd),.app_rd_addr(video_rd_addr),.sdram_rd_valid(rd_valid && video_return && !diag_local_mem),.sdram_rd_data(rd_data),
         .burst_grant(video_grant),.burst_request(video_request),.read_urgent(video_urgent),
@@ -509,7 +528,7 @@ module top #(
         ((x_adjust[5] && !y_adjust[8]) ? 24'h001018 : 24'h000000);
     wire [23:0] focus_rgb=elevator_alert_fallback ? alert_fallback_rgb :
         elevator_startup_page ? startup_page_rgb :
-        ((display_view && focus_border)?24'hffff00:adjusted_rgb);
+        ((effective_display_view && focus_border)?24'hffff00:adjusted_rgb);
 
     //--------------------------------------------------------------------------
     // 17. 错误码汇总与跨域提交
@@ -556,7 +575,7 @@ module top #(
     // In elevator demo mode SW4 is the local, independent alert switch.
     // Outside that mode SW4 remains the audio test switch and cannot assert
     // an emergency page by accident.
-    wire elev_alert_request_sys=elev_alert_sys || (elevator_demo_active_sys && sw_sync2[3]);
+    assign elev_alert_request_sys=elev_alert_sys || local_alert_latched;
     wire [15:0] elev_status_src={elev_alert_request_sys,elev_signal_lost_sys,
         elev_floor_basement_sys,elev_direction_sys,elev_door_sys,
         elev_floor_tens_sys,elev_floor_ones_sys,elev_status_valid_sys};
@@ -565,7 +584,7 @@ module top #(
     frame_config_cdc #(.WIDTH(16),.RESET_VALUE(16'h4000)) u_elevator_status_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data(elev_status_src),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(elev_status_pix));
-    assign elevator_alert_pix=elev_status_pix[15];
+    sync_2ff u_alarm_pix(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(elev_alert_request_sys),.sync_out(elevator_alert_pix));
     wire elevator_signal_lost_pix=elev_status_pix[14];
     wire elevator_floor_basement_pix=elev_status_pix[13];
     wire [1:0] elevator_direction_pix=elev_status_pix[12:11];
@@ -747,7 +766,7 @@ module top #(
     wire [9:0] ch0,ch1,ch2;
     media_hdmi_audio_bridge u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
         .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
-        .media_id(active_index),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
+        .media_id(active_index[1:0]),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
         .force_test(switches_pix[3] && !elevator_demo_active_pix),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),
         .sequence_error(),.tone_overflow(),.pcm_contract_error(),.blip_active(),
@@ -766,7 +785,7 @@ module top #(
     //     周期毫秒转"秒"用多拍减法实现，避免32位除法形成长组合路径。
     //--------------------------------------------------------------------------
     wire [1:0] index_sys;
-    frame_config_cdc #(.WIDTH(2)) u_index_report(.src_clk(pixel_clk),.src_rst_n(pix_reset_n),.src_data(active_index),
+    frame_config_cdc #(.WIDTH(2)) u_index_report(.src_clk(pixel_clk),.src_rst_n(pix_reset_n),.src_data(active_index[1:0]),
         .dst_clk(clk),.dst_rst_n(sys_reset_n),.frame_start(1'b1),.dst_data(index_sys));
     // 周期换算采用多拍减法，避免32位除法直接串到数码管IO。
     reg [15:0] seconds_remainder;
@@ -787,7 +806,7 @@ module top #(
         .menu_event(menu_event),.menu_kind(menu_kind),.error_code(system_error),
         .bright_event(sw_sync2[1] && (next_sys || auto_sys)),.bright_value(brightness),
         .alert_request(elev_alert_request_sys),
-        .alert_sources({elevator_demo_active_sys && sw_sync2[3],elev_alert_sys}),
+        .alert_sources({local_alert_latched,elev_alert_sys}),
         .floor_valid(elev_status_valid_sys),.floor_basement(elev_floor_basement_sys),
         .floor_tens(elev_floor_tens_sys),.floor_ones(elev_floor_ones_sys),
         .direction(elev_direction_sys),.door(elev_door_sys),.rescue_overflow(rescue_queue_overflow),

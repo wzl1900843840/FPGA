@@ -1,0 +1,23 @@
+[
+  {
+    "suite": "RTL回归",
+    "passed": 23,
+    "total": 23,
+    "source_report": "tests\\results\\summary.json",
+    "sha256": "b719b06ebd62f85ecb61f58805f6bf7c1b15fa6e6e73e4e22601e2dc5a964fce"
+  },
+  {
+    "suite": "扩展启动与共享SDRAM",
+    "passed": 7,
+    "total": 7,
+    "source_report": "tests\\results\\fast_boot\\summary.json",
+    "sha256": "dabc8e98a5fcd413b4c7f1153a47c722dc11bef574d46db3e99fa473984515c5"
+  },
+  {
+    "suite": "厂商PLL/SDRAM/CDC/缓存",
+    "passed": 4,
+    "total": 4,
+    "source_report": "tests\\results\\vendor_checks\\summary.json",
+    "sha256": "a6538e7e68ac0523b5f1ed79cd6ab2458d0efcb8675d5392ca5ac93cf67e81e0"
+  }
+]

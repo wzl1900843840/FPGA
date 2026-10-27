@@ -1,0 +1,2 @@
+PASS uart: subtitle compatibility, elevator ASCII status/query, alert commands and validation
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_uart.v:63: $finish called at 1009310000 (1ps)

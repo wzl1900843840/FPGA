@@ -1,0 +1,22 @@
+[
+  {
+    "test": "tb_pll_clocks",
+    "passed": true,
+    "seconds": 9.010249614715576
+  },
+  {
+    "test": "tb_vendor_sdram",
+    "passed": true,
+    "seconds": 7.287038803100586
+  },
+  {
+    "test": "tb_vendor_cdc",
+    "passed": true,
+    "seconds": 27.3686785697937
+  },
+  {
+    "test": "tb_vendor_cache",
+    "passed": true,
+    "seconds": 31.196086645126343
+  }
+]

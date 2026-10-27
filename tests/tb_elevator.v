@@ -15,8 +15,9 @@ initial begin
  alert_page_available=1; #1; if(!alert_active || alert_fallback)$fatal(1,"alert page availability");
  alert_request=0;frame; if(state_code!==3 || alert_active)$fatal(1,"recovery state");
  frame; if(state_code!==1)$fatal(1,"recovery to normal");
- alert_request=1;frame;media_fault=1;frame; if(state_code!==4 || alert_active)$fatal(1,"fault state");
- media_fault=0;alert_request=0;frame; if(state_code!==1)$fatal(1,"fault recovery");
+ alert_request=1;frame;media_fault=1;frame; if(state_code!==2 || !alert_active)$fatal(1,"fault covered alert");
+ media_fault=0;alert_request=0;frame; if(state_code!==3)$fatal(1,"fault recovery state");
+ frame; if(state_code!==1)$fatal(1,"fault recovery");
  $display("PASS elevator demo: startup, alert, fallback, recovery and fault states");$finish;
 end
 initial begin #100000;$fatal(1,"watchdog");end

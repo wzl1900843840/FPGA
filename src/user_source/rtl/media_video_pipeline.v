@@ -120,7 +120,7 @@ module media_video_pipeline #(
     wire [23:0] reader_rgb;
     wire reader_pixel_valid;
     wire reader_done;
-    wire [1:0] reader_index;
+    wire [2:0] reader_index;
     wire [7:0] reader_error;
     wire player_enable_pix;
     reg [7:0] reader_error_pix1;
@@ -188,8 +188,8 @@ module media_video_pipeline #(
     wire fade_next_event;
     wire [7:0] fade_alpha;
     wire wipe_active;
-    assign transition_alpha=fade_alpha;
-    assign transition_active=(fade_alpha!=255) || wipe_active;
+    assign transition_alpha=emergency_active ? 8'd255 : fade_alpha;
+    assign transition_active=!emergency_active && ((fade_alpha!=255) || wipe_active);
     wire [4:0] wipe_ramp;
     wire [1:0] transition_kind;
     video_fade_transition #(.FADE_FRAMES(FADE_FRAMES)) u_fade (
@@ -198,10 +198,10 @@ module media_video_pipeline #(
         .fade_busy(),
         .pix_clk(pix_clk), .pix_rst_n(pix_rst_n),
         .player_active(player_enable_pix), .frame_start(frame_start),
-        .index_commit(index_commit || mode_transition), .active_index(active_index),
+        .index_commit(index_commit || mode_transition), .active_index(active_index[1:0]),
         .alpha_out(fade_alpha), .fade_active(),
         .wipe_active(wipe_active), .ramp_out(wipe_ramp),
-        .transition_kind(transition_kind)
+        .transition_kind(transition_kind), .emergency_active(emergency_active)
     );
 
     always @(posedge pix_clk or negedge pix_rst_n) begin
@@ -251,9 +251,9 @@ module media_video_pipeline #(
     // 第4级：帧读取器（40MHz域），缩略图模式下把地址平移到第5页
     // 缩略图合成缓存位于四个原图 bank 之后，仍沿用同一个 burst reader。
     wire [20:0] reader_address;
-    wire thumb_mem;
-    sync_2ff u_thumb_mem(.clk(mem_clk),.rst_n(mem_rst_n),.async_in(view_mode),.sync_out(thumb_mem));
-    assign app_rd_addr=reader_address + (thumb_mem ? IMAGE_WORDS*5 : 0);
+    // Bank selection crosses with the frame request, never as a live offset
+    // that could change the address halfway through an outstanding burst.
+    assign app_rd_addr=reader_address;
     media_frame_reader #(
         .ADDR_WIDTH(21), .IMAGE_WORDS(IMAGE_WORDS),
         .FIFO_DEPTH(FIFO_DEPTH), .FIFO_MARGIN(FIFO_MARGIN),
@@ -267,7 +267,7 @@ module media_video_pipeline #(
         .app_rd_en(app_rd_en), .app_rd_addr(reader_address),
         .sdram_rd_valid(sdram_rd_valid), .sdram_rd_data(sdram_rd_data),
         .pix_clk(pix_clk), .pix_rst_n(pix_rst_n),
-        .frame_start(frame_start && player_enable_pix), .active_index(view_mode ? 3'd0 : active_index),
+        .frame_start(frame_start && player_enable_pix), .active_index(view_mode ? 3'd5 : active_index),
         .pixel_consume(raw_de && player_enable_pix), .pixel_rgb(reader_rgb),
         .pixel_valid(reader_pixel_valid), .underflow(reader_underflow),
         .reader_busy(reader_busy), .frame_read_done(reader_done),
@@ -333,7 +333,7 @@ module media_video_pipeline #(
     rgb_video_adapter u_video_adapter (
         .pclk(pix_clk), .rst_n(pix_rst_n), .hs_in(color_hs),
         .vs_in(color_vs), .de_in(color_de),
-        .rgb_in((RUNTIME_DIAG && diag_fifo_pix)?diag_aligned_rgb:faded_rgb), .video_clk(video_clk),
+        .rgb_in((RUNTIME_DIAG && diag_fifo_pix)?diag_aligned_rgb:(emergency_active?color_rgb:faded_rgb)), .video_clk(video_clk),
         .video_hs(video_hs), .video_vs(video_vs),
         .video_de(video_de), .video_rgb(video_rgb)
     );

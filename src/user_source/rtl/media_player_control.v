@@ -47,6 +47,32 @@ module media_player_control #(
     reg req_seen_pix;
     reg [2:0] requested_index_pix;
     reg commit_pending_pix;
+    reg emergency_pix1, emergency_pix2;
+    reg emergency_seen_pix;
+    reg [2:0] normal_index_pix;
+    reg [4:0] complete_pix1, complete_pix2;
+    reg [2:0] active_sys1, active_sys2;
+    reg restore_pending;
+    reg [3:0] restore_target;
+    integer restore_scan;
+    reg [3:0] restore_target_pix;
+    integer pix_restore_scan;
+    always @* begin
+        restore_target_pix = 0;
+        for (pix_restore_scan=0; pix_restore_scan<4; pix_restore_scan=pix_restore_scan+1)
+            if (!restore_target_pix[3] && complete_pix2[pix_restore_scan])
+                restore_target_pix = {1'b1,pix_restore_scan[2:0]};
+        if (normal_index_pix<4 && complete_pix2[normal_index_pix])
+            restore_target_pix = {1'b1,normal_index_pix};
+    end
+    always @* begin
+        restore_target = 0;
+        for (restore_scan=0; restore_scan<4; restore_scan=restore_scan+1)
+            if (!restore_target[3] && image_complete[restore_scan])
+                restore_target = {1'b1,restore_scan[2:0]};
+        if (normal_index<4 && image_complete[normal_index])
+            restore_target = {1'b1,normal_index};
+    end
 
     assign request_busy = request_toggle != ack_sync2;
 
@@ -64,10 +90,10 @@ module media_player_control #(
             // bank 4.
             for (step = 1; step <= 4; step = step + 1) begin
                 if (previous_event) begin
-                    candidate_int = current - step;
+                    candidate_int = current[1:0] - step;
                     if (candidate_int < 0) candidate_int = candidate_int + 4;
                 end else begin
-                    candidate_int = current + step;
+                    candidate_int = current[1:0] + step;
                     if (candidate_int >= 4) candidate_int = candidate_int - 4;
                 end
                 candidate = candidate_int[2:0];
@@ -106,7 +132,9 @@ module media_player_control #(
             request_toggle <= 1'b0;
             ack_sync1 <= 1'b0;
             ack_sync2 <= 1'b0;
+            active_sys1 <= 0; active_sys2 <= 0; restore_pending <= 0;
         end else begin
+            active_sys1 <= active_index; active_sys2 <= active_sys1;
             ack_sync1 <= ack_toggle_pix;
             ack_sync2 <= ack_sync1;
             if (!request_busy)
@@ -122,12 +150,12 @@ module media_player_control #(
                 end
             end
 
-            if (auto_cfg_valid) begin
+            if (auto_cfg_valid && !emergency_active && !emergency_seen && !restore_pending) begin
                 auto_enabled <= auto_cfg_enabled;
                 auto_counter <= 32'd0;
             end
 
-            if (toggle_auto_event) begin
+            if (toggle_auto_event && !emergency_active && !emergency_seen && !restore_pending) begin
                 auto_enabled <= ~auto_enabled;
                 auto_counter <= 32'd0;
             end
@@ -139,20 +167,23 @@ module media_player_control #(
                 auto_counter <= 32'd0;
                 if (!emergency_seen) begin
                     emergency_seen <= 1'b1;
-                    normal_index <= sys_current_index;
-                    if (!request_busy && image_complete[emergency_index]) begin
-                        pending_index <= emergency_index;
-                        request_toggle <= ~request_toggle;
-                    end else if (!image_complete[emergency_index]) begin
-                        control_error <= ERR_NO_RESOURCE;
-                    end
+                    normal_index <= active_sys2 < 4 ? active_sys2 : normal_index;
+                    restore_pending <= 1'b0;
                 end
-            end else if (emergency_seen) begin
-                emergency_seen <= 1'b0;
-                auto_counter <= 32'd0;
-                if (!request_busy && image_complete[normal_index]) begin
-                    pending_index <= normal_index;
+                // Level request persists across busy handshakes and late PIC5.
+                if (!request_busy && image_complete[emergency_index] &&
+                    pending_index != emergency_index) begin
+                    pending_index <= emergency_index;
                     request_toggle <= ~request_toggle;
+                end
+            end else if (emergency_seen || restore_pending) begin
+                emergency_seen <= 1'b0;
+                restore_pending <= 1'b1;
+                auto_counter <= 32'd0;
+                if (!request_busy && restore_target[3]) begin
+                    pending_index <= restore_target[2:0];
+                    request_toggle <= ~request_toggle;
+                    restore_pending <= 1'b0;
                 end
             end else if (select_valid && !request_busy && image_complete[select_index]) begin
                 pending_index <= select_index;
@@ -190,7 +221,12 @@ module media_player_control #(
             active_index <= 3'd0;
             index_commit <= 1'b0;
             ack_toggle_pix <= 1'b0;
+            emergency_pix1 <= 0; emergency_pix2 <= 0;
+            emergency_seen_pix <= 0; normal_index_pix <= 0;
+            complete_pix1 <= 0; complete_pix2 <= 0;
         end else begin
+            emergency_pix1 <= emergency_active; emergency_pix2 <= emergency_pix1;
+            complete_pix1 <= image_complete; complete_pix2 <= complete_pix1;
             index_sync1 <= pending_index;
             index_sync2 <= index_sync1;
             req_sync1 <= request_toggle;
@@ -203,9 +239,32 @@ module media_player_control #(
                 commit_pending_pix <= 1'b1;
             end
 
-            if (frame_start && commit_pending_pix) begin
-                active_index <= requested_index_pix;
-                index_commit <= 1'b1;
+            if (frame_start && emergency_pix2) begin
+                if (!emergency_seen_pix) begin
+                    emergency_seen_pix <= 1;
+                    if (active_index<4) normal_index_pix <= active_index;
+                end
+                if (complete_pix2[emergency_index] && active_index != emergency_index) begin
+                    active_index <= emergency_index; index_commit <= 1'b1;
+                end
+                if (commit_pending_pix) begin
+                    commit_pending_pix <= 1'b0; ack_toggle_pix <= req_seen_pix;
+                end
+            end else if (frame_start && emergency_seen_pix) begin
+                // Recovery uses the visible-page snapshot in this domain;
+                // an obsolete handshake cannot add extra frame boundaries.
+                if (restore_target_pix[3]) begin
+                    active_index <= restore_target_pix[2:0]; index_commit <= 1;
+                end
+                emergency_seen_pix <= 0;
+                if (commit_pending_pix) begin
+                    commit_pending_pix <= 0; ack_toggle_pix <= req_seen_pix;
+                end
+            end else if (frame_start && commit_pending_pix) begin
+                // A request already in flight cannot bring PIC5 back after clear.
+                if (requested_index_pix < 4 && requested_index_pix != active_index) begin
+                    active_index <= requested_index_pix; index_commit <= 1'b1;
+                end
                 commit_pending_pix <= 1'b0;
                 ack_toggle_pix <= req_seen_pix;
             end

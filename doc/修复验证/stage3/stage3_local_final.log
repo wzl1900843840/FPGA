@@ -1,0 +1,3 @@
+PASS local_pattern: 307200 RGB pixels; no TF start or SDRAM R/W; diagnostic isolation and normal reboot verified
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_local_pattern.v:59: $finish called at 17121770000 (1ps)
+

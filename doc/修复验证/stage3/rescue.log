@@ -1,0 +1,2 @@
+PASS rescue: commands/local alarm, OR arbitration, floor context, fault independence, recovery, atomic replies
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_rescue.v:101: $finish called at 549910000 (1ps)

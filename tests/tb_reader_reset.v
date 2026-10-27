@@ -50,15 +50,19 @@ endtask
 integer j;
 initial begin
  #53;mrst=1;#13;prst=1;
- for(j=0;j<5;j=j+1)begin start_frame(j);read_words(j,128);end
+ for(j=0;j<6;j=j+1)begin start_frame(j);read_words(j,128);end
  if(underflow || error) $fatal(1,"normal frames failed %h",error);
+ // A live view/index change cannot retarget an already issued burst.
+ @(negedge pc);index=5;fs=1;@(negedge pc);fs=0;
+ wait(re);@(negedge pc);index=4;wait(done);repeat(30)@(negedge pc);
+ read_words(5,128);
  // Flush a partially consumed old frame; no old pixels may survive.
  start_frame(1);read_words(1,9);start_frame(4);read_words(4,128);
  // Manual reset at a non-clock phase with prefetched pixels outstanding.
  start_frame(3);#7;mrst=0;prst=0;#57;prst=1;#11;mrst=1;
  repeat(8)@(negedge pc);start_frame(2);read_words(2,128);
  if(underflow || error) $fatal(1,"reset recovery failed %h",error);
- $display("PASS reader reset: destination release, read/write isolation, five banks, stale-pixel flush, manual reset");
+ $display("PASS reader reset: destination release, read/write isolation, five media banks plus thumbnail bank, stale-pixel flush, manual reset");
  $finish;
 end
 initial begin #3000000;$fatal(1,"reader reset timeout");end
