@@ -9,14 +9,31 @@
 // 本课把它收敛成标准两级写法并正式封存。
 // 合同边界：本模块不产生复位请求，只整形释放沿；上电顺序、看门狗属系统课题。
 // -----------------------------------------------------------------------------
-module reset_sync (
+module reset_sync #(
+    // Falling-edge release gives rising-edge consumers half a cycle for
+    // recovery/removal. Use only for asynchronous-reset consumers in this domain.
+    parameter RELEASE_ON_FALLING_EDGE = 0
+) (
     input  wire clk,         // 本时钟域
     input  wire ext_rst_n,   // 外部异步低有效复位
     output wire rst_n_sync   // 本域使用的复位：异步压下、同步释放
 );
 
-    (* async_reg = "true" *) reg s1, s2;
+    // Dedicated synchronizer flops must not merge with unrelated reset-held
+    // constants elsewhere in the flattened design (TD SWUG106 preserve).
+    (* async_reg = "true", preserve = "true" *) reg s1, s2;
 
+    generate if (RELEASE_ON_FALLING_EDGE) begin : g_falling
+    always @(negedge clk or negedge ext_rst_n) begin
+        if (!ext_rst_n) begin
+            s1 <= 1'b0;
+            s2 <= 1'b0;
+        end else begin
+            s1 <= 1'b1;
+            s2 <= s1;
+        end
+    end
+    end else begin : g_rising
     always @(posedge clk or negedge ext_rst_n) begin
         if (!ext_rst_n) begin
             s1 <= 1'b0;
@@ -26,6 +43,7 @@ module reset_sync (
             s2 <= s1;
         end
     end
+    end endgenerate
 
     assign rst_n_sync = s2;
 

@@ -8,7 +8,8 @@
 // path short enough for the 50 MHz system clock. Dynamic values print in
 // hexadecimal to avoid divider logic.
 module uart_status_reporter #(
-    parameter integer CLKS_PER_BIT = 434
+    parameter integer CLKS_PER_BIT = 434,
+    parameter integer ACK_TIMEOUT_CYCLES = 50000000
 ) (
     input  wire        clk,
     input  wire        rst_n,
@@ -37,7 +38,11 @@ module uart_status_reporter #(
     input  wire [7:0]  reply_data,
     input  wire        reply_last,
     output reg         reply_ready,
-    output wire        uart_tx
+    output wire        uart_tx,
+    input wire         rescue_ack_valid,
+    input wire [15:0]  rescue_ack_id,
+    output reg [15:0]  rescue_event_id,
+    output reg [1:0]   rescue_comm_state
 );
     localparam [7:0] CR = 8'h0d;
     localparam [7:0] LF = 8'h0a;
@@ -86,6 +91,12 @@ module uart_status_reporter #(
     reg [1:0] rescue_wr, rescue_rd;
     reg [2:0] rescue_count;
     reg [40:0] rescue_snapshot;
+    reg [40:0] current_rescue_snapshot;
+    localparam [1:0] COMM_IDLE=0,COMM_WAIT=1,COMM_ACKED=2,COMM_TIMEOUT=3;
+    localparam integer ACK_COUNTER_W=ACK_TIMEOUT_CYCLES<=1 ? 1 : $clog2(ACK_TIMEOUT_CYCLES);
+    reg [ACK_COUNTER_W-1:0] ack_counter;
+    reg ack_timer_running,retry_pending;
+    reg [1:0] rescue_attempts;
     wire rescue_pop = state == ST_IDLE && rescue_count != 0;
     wire rescue_edge = alert_request != alert_seen;
     wire rescue_push = rescue_edge && (rescue_count < 4 || rescue_pop);
@@ -94,6 +105,11 @@ module uart_status_reporter #(
     wire [3:0] report_tens, report_ones;
     wire [1:0] report_direction, report_door, report_sources;
     wire [7:0] report_error;
+    wire matching_ack=(rescue_ack_valid === 1'b1) && alert_request && rescue_comm_state!=COMM_IDLE &&
+                      rescue_ack_id==rescue_event_id;
+    wire retry_pop=state==ST_IDLE && rescue_count==0 && !rescue_edge &&
+                   retry_pending && alert_request && !matching_ack;
+    wire rescue_send_complete=state==ST_SEND && send_index>=msg_len && kind_q==K_RESCUE;
     assign {report_id, report_alert, report_floor_valid, report_basement,
             report_tens, report_ones, report_direction, report_door,
             report_sources, report_error} = rescue_snapshot;
@@ -106,6 +122,9 @@ module uart_status_reporter #(
             rescue_wr <= 2'd0; rescue_rd <= 2'd0; rescue_count <= 3'd0;
             rescue_snapshot <= 41'd0;
             rescue_overflow <= 1'b0;
+            rescue_event_id<=0;rescue_comm_state<=COMM_IDLE;
+            current_rescue_snapshot<=0;ack_counter<=0;ack_timer_running<=0;
+            retry_pending<=0;rescue_attempts<=0;
         end else begin
             alert_seen <= alert_request;
             if (alert_request) last_alert_sources <= alert_sources;
@@ -123,12 +142,40 @@ module uart_status_reporter #(
             if (rescue_pop) begin
                 rescue_snapshot <= rescue_fifo[rescue_rd];
                 rescue_rd <= rescue_rd + 1'b1;
+            end else if(retry_pop) begin
+                rescue_snapshot<=current_rescue_snapshot;
             end
             case ({rescue_push, rescue_pop})
                 2'b10: rescue_count <= rescue_count + 1'b1;
                 2'b01: rescue_count <= rescue_count - 1'b1;
                 default: ;
             endcase
+            // New/clear edges supersede all old retry activity. The timer
+            // starts after the final LF stop bit, never at report enqueue.
+            if(rescue_edge) begin
+                ack_timer_running<=0;ack_counter<=0;retry_pending<=0;rescue_attempts<=0;
+                if(alert_request && rescue_push) begin
+                    rescue_event_id<=rescue_sequence;rescue_comm_state<=COMM_WAIT;
+                    current_rescue_snapshot<={rescue_sequence,alert_request,
+                        floor_valid,floor_basement,floor_tens,floor_ones,
+                        direction,door,alert_sources,error_code};
+                end else rescue_comm_state<=COMM_IDLE;
+            end else if(matching_ack) begin
+                rescue_comm_state<=COMM_ACKED;ack_timer_running<=0;retry_pending<=0;
+            end else begin
+                if(retry_pop) retry_pending<=0;
+                if(rescue_send_complete && report_alert && report_id==rescue_event_id &&
+                   alert_request && rescue_comm_state==COMM_WAIT) begin
+                    rescue_attempts<=rescue_attempts+1'b1;
+                    ack_counter<=0;ack_timer_running<=1;
+                end else if(ack_timer_running && rescue_comm_state==COMM_WAIT) begin
+                    if(ack_counter>=ACK_TIMEOUT_CYCLES-1) begin
+                        ack_timer_running<=0;ack_counter<=0;
+                        if(rescue_attempts<3) retry_pending<=1;
+                        else rescue_comm_state<=COMM_TIMEOUT;
+                    end else ack_counter<=ack_counter+1'b1;
+                end
+            end
         end
     end
 
@@ -287,6 +334,8 @@ module uart_status_reporter #(
                     kind_q <= K_RESCUE;
                     msg_len <= 6'd43;
                     state <= ST_SEND;
+                end else if (retry_pop) begin
+                    kind_q<=K_RESCUE;msg_len<=6'd43;state<=ST_SEND;
                 end else if (reply_valid && !reply_ready) begin
                     tx_data_r <= reply_data;
                     reply_last_q <= reply_last;

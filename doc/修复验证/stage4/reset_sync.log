@@ -1,0 +1,2 @@
+PASS reset_sync: async assertion, two-edge rising/falling release across five phases
+tests/tb_reset_sync.v:28: $finish called at 801000 (1ps)

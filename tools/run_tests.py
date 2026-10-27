@@ -13,9 +13,11 @@ cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_co
 'elevator':['elevator_demo_controller'],
 'emergency':['elevator_demo_controller','media_player_control','video_fade_transition'],
 'rescue':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],
+'rescue_ack':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],
 'rescue_queue':['uart_rx_byte','uart_tx_byte','uart_status_reporter'],
 'pic5_address':['media_frame_loader'],
 'reader_reset':['media_frame_reader','fifo_prefetch_2','afifo_32_16_256'],
+'reset_sync':['reset_sync'],
 'sd_protocol':['sd_media_service','sd_spi_init','sd_spi_command','sd_spi_byte_engine','sd_spi_sector_reader']}
 results=[]
 for name,modules in cases.items():

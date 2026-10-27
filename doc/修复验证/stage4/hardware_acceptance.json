@@ -1,0 +1,37 @@
+{
+  "stage": "4 救援闭环",
+  "status": "软件功能及完整物理时序通过；实板待验收",
+  "hardware_tested": false,
+  "checks": [
+    {
+      "item": "匹配ACK及本地告警保持",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "关闭确认三发与超时",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "延迟确认与错误编号",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "重复及过期ACK",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "串口断开重连新会话",
+      "status": "待实板验收",
+      "result": null
+    },
+    {
+      "item": "真实界面与FPGA查询一致",
+      "status": "待实板验收",
+      "result": null
+    }
+  ]
+}

@@ -66,7 +66,9 @@ module top #(
         .clk4_out(pixel_clk_5x),.locked(mem_locked));
     reset_sync u_sys_reset(.clk(clk),.ext_rst_n(ext_reset_n),.rst_n_sync(sys_reset_n));
     reset_sync u_mem_reset(.clk(mem_clk),.ext_rst_n(ext_reset_n),.rst_n_sync(mem_reset_n));
-    reset_sync u_pix_reset(.clk(pixel_clk),.ext_rst_n(ext_reset_n),.rst_n_sync(pix_reset_n));
+    // Pixel consumers use rising edges; release async reset on the falling edge
+    // so its high-fanout tree has a real half-cycle recovery/removal budget.
+    reset_sync #(.RELEASE_ON_FALLING_EDGE(1)) u_pix_reset(.clk(pixel_clk),.ext_rst_n(ext_reset_n),.rst_n_sync(pix_reset_n));
     reset_sync u_serial_reset(.clk(pixel_clk_5x),.ext_rst_n(ext_reset_n),.rst_n_sync(serial_reset_n));
 
     //--------------------------------------------------------------------------
@@ -538,6 +540,7 @@ module top #(
     //--------------------------------------------------------------------------
     wire [23:0] text_rgb,final_rgb;
     wire rescue_queue_overflow;
+    wire rescue_ack_valid;wire[15:0]rescue_ack_id,rescue_event_id;wire[1:0]rescue_comm_state;
     wire [7:0] system_error=rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
     wire [7:0] system_error_pix;
@@ -627,14 +630,18 @@ module top #(
             if (alert_command_valid) elev_alert_sys<=alert_command_value;
         end
     end
-    subtitle_uart_controller u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
+    subtitle_uart_controller #(.APPLIED_STATUS_INPUTS(1)) u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
         .rx_framing_error(rx_error),.service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
         .request_dropped(1'b0),.live_text(live_text),.live_length(live_length),.live_enable(live_subtitle),
         .cfg_update_valid(subtitle_commit),.cfg_text(subtitle_text),.cfg_length(subtitle_length),.cfg_enable(subtitle_enable),
         .elev_update_valid(elev_update_valid),.elev_floor_value(elev_floor_value),.elev_floor_basement(elev_floor_basement),
         .elev_direction(elev_direction),.elev_door(elev_door),.elev_alert_value(elev_alert_value),
         .elev_alert_update_valid(elev_alert_update_valid),.alert_command_valid(alert_command_valid),.alert_command_value(alert_command_value),
-        .save_request(subtitle_save),.reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready));
+        .save_request(subtitle_save),.reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready),
+        .rescue_ack_valid(rescue_ack_valid),.rescue_ack_id(rescue_ack_id),
+        .rescue_event_id(rescue_event_id),.rescue_comm_state(rescue_comm_state),.applied_alert(elev_alert_request_sys),
+        .applied_floor_basement(elev_floor_basement_sys),.applied_floor_tens(elev_floor_tens_sys),.applied_floor_ones(elev_floor_ones_sys),
+        .applied_direction(elev_direction_sys),.applied_door(elev_door_sys));
     wire [102:0] subtitle_pix;
     frame_config_cdc #(.WIDTH(103),.RESET_VALUE(103'd0)) u_subtitle_frame_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({live_subtitle,live_length,live_text}),
@@ -810,5 +817,6 @@ module top #(
         .floor_valid(elev_status_valid_sys),.floor_basement(elev_floor_basement_sys),
         .floor_tens(elev_floor_tens_sys),.floor_ones(elev_floor_ones_sys),
         .direction(elev_direction_sys),.door(elev_door_sys),.rescue_overflow(rescue_queue_overflow),
+        .rescue_ack_valid(rescue_ack_valid),.rescue_ack_id(rescue_ack_id),.rescue_event_id(rescue_event_id),.rescue_comm_state(rescue_comm_state),
         .reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready),.uart_tx(uart_tx));
 endmodule

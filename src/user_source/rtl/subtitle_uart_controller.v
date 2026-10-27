@@ -21,7 +21,7 @@
 //   2) CRLF 会被当作一个结束符：收到 CR 后丢弃紧随的一个 LF。
 //   3) 回包用"当前回包 + 一个待发回包"的两级结构，避免上一条还没发完时丢回执。
 //   4) 字幕只在这里改寄存器，真正上屏要等顶层帧边界提交，所以不会撕裂画面。
-module subtitle_uart_controller (
+module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     input  wire         clk,
     input  wire         rst_n,
     input  wire [7:0]   rx_data,
@@ -53,7 +53,15 @@ module subtitle_uart_controller (
     output wire         reply_valid,
     output wire [7:0]   reply_data,
     output wire         reply_last,
-    input  wire         reply_ready
+    input  wire         reply_ready,
+    output reg          rescue_ack_valid,
+    output reg [15:0]   rescue_ack_id,
+    input wire [15:0]   rescue_event_id,
+    input wire [1:0]    rescue_comm_state,
+    input wire         applied_alert,
+    input wire         applied_floor_basement,
+    input wire [3:0]   applied_floor_tens,applied_floor_ones,
+    input wire [1:0]   applied_direction,applied_door
 );
     // ===== 常量与回包种类 =====
     // MAX_LINE 是整行缓冲上限（含 "SUB=" 前缀），MAX_TEXT 是字幕正文上限。
@@ -76,6 +84,35 @@ module subtitle_uart_controller (
     localparam [3:0] R_OK_ELEV = 4'd11;
     localparam [3:0] R_ERR_ELEV = 4'd12;
     localparam [3:0] R_ELEV_QUERY = 4'd13;
+    localparam [3:0] R_RESCUE_QUERY = 4'd14;
+    reg [15:0] query_event_id;
+    reg [1:0] query_comm_state;
+    reg query_alert,query_basement;
+    reg [3:0] query_tens,query_ones;
+    reg [1:0] query_direction,query_door;
+    wire [2:0] comm_word_length=rescue_comm_state==3 ? 7 : rescue_comm_state==2 ? 5 : 4;
+    function [4:0] hex_value;
+        input [7:0] ch;
+        begin
+            if(ch>="0" && ch<="9") hex_value=ch-"0";
+            else if(ch>="A" && ch<="F") hex_value=ch-"A"+10;
+            else if(ch>="a" && ch<="f") hex_value=ch-"a"+10;
+            else hex_value=5'h10;
+        end
+    endfunction
+    function [7:0] hex_char;
+        input [3:0] n;
+        begin hex_char=n<10 ? "0"+n : "A"+n-10;end
+    endfunction
+    function [7:0] comm_char;
+        input [1:0] code;input integer pos;reg[55:0] word;
+        begin
+            case(code)
+                0:word="IDLE   ";1:word="WAIT   ";2:word="ACKED  ";default:word="TIMEOUT";
+            endcase
+            comm_char=word[55-pos*8 -:8];
+        end
+    endfunction
 
     reg [8*MAX_LINE-1:0] line_buffer;
     reg [5:0] line_length;
@@ -167,18 +204,36 @@ module subtitle_uart_controller (
                     case(index)
                         0:reply_char="E"; 1:reply_char="L"; 2:reply_char="E";
                         3:reply_char="V"; 4:reply_char="="; 5:reply_char="F";
-                        6:reply_char = elev_floor_basement ? "B" : (8'h30 + (elev_floor_value / 10));
-                        7:reply_char = 8'h30 + (elev_floor_value % 10);
+                        6:reply_char = query_basement ? "B" : (8'h30 + query_tens);
+                        7:reply_char = 8'h30 + query_ones;
                         8:reply_char=","; 9:reply_char="D"; 10:reply_char="=";
-                        11:reply_char = elev_direction==2'd1 ? "U" :
-                                         (elev_direction==2'd2 ? "D" : "S");
+                        11:reply_char = query_direction==2'd1 ? "U" :
+                                         (query_direction==2'd2 ? "D" : "S");
                         12:reply_char=","; 13:reply_char="D"; 14:reply_char="O";
                         15:reply_char="=";
-                        16:reply_char = elev_door==2'd1 ? "O" :
-                                         (elev_door==2'd2 ? "C" : "M");
+                        16:reply_char = query_door==2'd1 ? "O" :
+                                         (query_door==2'd2 ? "C" : "M");
                         17:reply_char=","; 18:reply_char="A"; 19:reply_char="=";
-                        20:reply_char=elev_alert_value ? "1" : "0";
+                        20:reply_char=query_alert ? "1" : "0";
                         21:reply_char=8'h0d; default:reply_char=8'h0a;
+                    endcase
+                end
+                R_RESCUE_QUERY: begin
+                    case(index)
+                        0:reply_char="R";1:reply_char="E";2:reply_char="S";3:reply_char="C";
+                        4:reply_char="U";5:reply_char="E";6:reply_char=",";7:reply_char="I";
+                        8:reply_char="D";9:reply_char="=";
+                        10:reply_char=hex_char(query_event_id[15:12]);
+                        11:reply_char=hex_char(query_event_id[11:8]);
+                        12:reply_char=hex_char(query_event_id[7:4]);
+                        13:reply_char=hex_char(query_event_id[3:0]);
+                        14:reply_char=",";15:reply_char="A";16:reply_char="=";17:reply_char=query_alert?"1":"0";
+                        18:reply_char=",";19:reply_char="C";20:reply_char="=";
+                        default:begin
+                            if(index==reply_length-2) reply_char=8'h0d;
+                            else if(index==reply_length-1) reply_char=8'h0a;
+                            else reply_char=comm_char(query_comm_state,index-21);
+                        end
                     endcase
                 end
                 R_QUERY: begin
@@ -208,7 +263,7 @@ module subtitle_uart_controller (
         input [6:0] length;
         reg [6:0] actual_length;
         begin
-            actual_length = (kind == R_QUERY || kind == R_ELEV_QUERY) ? length :
+            actual_length = (kind == R_QUERY || kind == R_ELEV_QUERY || kind == R_RESCUE_QUERY) ? length :
                             ((kind <= R_OK_SAVE || kind == R_OK_ELEV) ? 7'd4 :
                              (kind == R_ERR_ELEV ? 7'd10 : 7'd5));
             if (reply_active) begin
@@ -268,12 +323,16 @@ module subtitle_uart_controller (
             elev_alert_update_valid <= 1'b0;
             alert_command_valid <= 1'b0;
             alert_command_value <= 1'b0;
+            rescue_ack_valid<=0;rescue_ack_id<=0;query_event_id<=0;query_comm_state<=0;
+            query_alert<=0;query_basement<=0;query_tens<=0;query_ones<=0;query_direction<=0;query_door<=0;
         end else begin
             cfg_update_valid <= 1'b0;
             save_request <= 1'b0;
             elev_update_valid <= 1'b0;
             elev_alert_update_valid <= 1'b0;
             alert_command_valid <= 1'b0;
+
+            rescue_ack_valid<=0;
 
             if (reply_active && reply_ready) begin
                 if (reply_last) begin
@@ -313,13 +372,34 @@ module subtitle_uart_controller (
                     discard_lf <= 1'b0;
                 end else if (rx_data == 8'h0d || rx_data == 8'h0a) begin
                     discard_lf <= rx_data == 8'h0d;
-                    if (!reply_active && !waiting_save && line_length != 0) begin
+                    // ACK is accepted independently of reply capacity and
+                    // emits no textual response, preventing an ACK loop.
+                    if (!line_overflow && line_length==8 && line_char(0)=="A" &&
+                        line_char(1)=="C" && line_char(2)=="K" && line_char(3)=="=" &&
+                        hex_value(line_char(4))<16 && hex_value(line_char(5))<16 &&
+                        hex_value(line_char(6))<16 && hex_value(line_char(7))<16) begin
+                        rescue_ack_id<=(hex_value(line_char(4))<<12) | (hex_value(line_char(5))<<8) |
+                                       (hex_value(line_char(6))<<4) | hex_value(line_char(7));
+                        rescue_ack_valid<=1;
+                    end else if (!reply_active && !waiting_save && line_length != 0) begin
                         if (line_overflow) begin
                             start_reply(R_LONG,10);
+                        end else if(line_length==7 && line_char(0)=="R" && line_char(1)=="E" &&
+                                    line_char(2)=="S" && line_char(3)=="C" && line_char(4)=="U" &&
+                                    line_char(5)=="E" && line_char(6)=="?") begin
+                            query_event_id<=rescue_event_id;query_comm_state<=rescue_comm_state;
+                            query_alert<=applied_alert;
+                            start_reply(R_RESCUE_QUERY,23+comm_word_length);
                         end else if (line_length == 5 &&
                                      line_char(0)=="E" && line_char(1)=="L" &&
                                      line_char(2)=="E" && line_char(3)=="V" &&
                                      line_char(4)=="?") begin
+                            query_alert<=APPLIED_STATUS_INPUTS ? applied_alert : elev_alert_value;
+                            query_basement<=APPLIED_STATUS_INPUTS ? applied_floor_basement : elev_floor_basement;
+                            query_tens<=APPLIED_STATUS_INPUTS ? applied_floor_tens : elev_floor_value/10;
+                            query_ones<=APPLIED_STATUS_INPUTS ? applied_floor_ones : elev_floor_value%10;
+                            query_direction<=APPLIED_STATUS_INPUTS ? applied_direction : elev_direction;
+                            query_door<=APPLIED_STATUS_INPUTS ? applied_door : elev_door;
                             start_reply(R_ELEV_QUERY,23);
                         end else if (line_length == 8 &&
                                      line_char(0)=="A" && line_char(1)=="L" &&

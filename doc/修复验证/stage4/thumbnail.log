@@ -1,0 +1,2 @@
+PASS thumbnail: frame commit, unavailable bank, wrap
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_thumbnail.v:16: $finish called at 310000 (1ps)

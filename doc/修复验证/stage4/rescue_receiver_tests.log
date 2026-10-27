@@ -1,0 +1,12 @@
+test_clear_reconnect_and_boot_cancel_delayed_ack (test_rescue_receiver.ReceiverTests.test_clear_reconnect_and_boot_cancel_delayed_ack) ... ok
+test_delay_and_auto_off (test_rescue_receiver.ReceiverTests.test_delay_and_auto_off) ... ok
+test_disk_failure_prevents_ack (test_rescue_receiver.ReceiverTests.test_disk_failure_prevents_ack) ... ok
+test_invalid_and_conflicting_duplicate (test_rescue_receiver.ReceiverTests.test_invalid_and_conflicting_duplicate) ... ok
+test_persist_then_ack_and_duplicate (test_rescue_receiver.ReceiverTests.test_persist_then_ack_and_duplicate) ... ok
+test_serial_worker_partial_reads_and_reconnect (test_rescue_receiver.ReceiverTests.test_serial_worker_partial_reads_and_reconnect) ... ok
+test_state_query_and_utf8_csv (test_rescue_receiver.ReceiverTests.test_state_query_and_utf8_csv) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.044s
+
+OK

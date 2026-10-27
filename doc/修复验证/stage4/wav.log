@@ -1,0 +1,2 @@
+PASS wav: ten sectors, ring wraps, LE pairing, backpressure, tail drain
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_wav.v:15: $finish called at 208341000 (1ps)

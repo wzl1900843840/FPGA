@@ -1,0 +1,2 @@
+PASS streamer: fragmented 3->7 chain, 700-byte EOF, terminal FAT check
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_streamer.v:12: $finish called at 20656000 (1ps)
