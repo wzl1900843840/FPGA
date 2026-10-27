@@ -1,0 +1,2 @@
+PASS SD: real 5000000-cycle startup delay reaches SPI clocks
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_sd_delay.v:7: $finish called at 10000139000 (1ps)

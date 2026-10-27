@@ -15,7 +15,9 @@
 // 输出约定：channelN_symbol 是已编码的 10bit TMDS 符号；wav_ready 反压 wav 源；
 //          pcm_tap_valid/pcm_tap_left 把最终送出链路的样本抽头给波形显示模块。
 // 关键点：音量/增益只在"样本被接受"的那一拍锁存，背压期间参数变化不会改写已生效样本。
-module media_hdmi_audio_bridge (
+module media_hdmi_audio_bridge #(
+    parameter integer ALARM_SOUND_ENABLE = 1
+) (
     input  wire        pixel_clk,
     input  wire        pixel_rst_n,
     input  wire        video_hsync,
@@ -38,7 +40,8 @@ module media_hdmi_audio_bridge (
     output wire        pcm_contract_error,
     output wire        blip_active,
     output wire        pcm_tap_valid,
-    output wire signed [15:0] pcm_tap_left
+    output wire signed [15:0] pcm_tap_left,
+    input wire alarm_active
 );
     wire source_valid;
     wire source_ready;
@@ -135,8 +138,55 @@ module media_hdmi_audio_bridge (
     // 乘法结果只在 mux_ready（本拍样本能被接受）时写入 scaled_*，所以背压期间
     // volume/fade_gain 变化不会改写已经生效的那个样本，这是音量无爆音的关键。
     // 增益在进入valid/ready契约适配器前计算；样本未握手时保持上游数据。
+    // Three independent 1 kHz beeps at 48 kHz: 200 ms on/off/on/off/on.
+    // An elastic source holds valid/data under backpressure. User mute/fade
+    // apply only to normal audio; alarm amplitude is capped at 4096/32768.
+    reg alarm_seen,alarm_playing,alarm_valid;
+    reg [2:0] alarm_segment;
+    reg [13:0] alarm_samples;
+    reg [5:0] alarm_phase;
+    reg [6:0] alarm_envelope,normal_envelope;
+    reg signed [15:0] alarm_sample;
+    wire alarm_requested=ALARM_SOUND_ENABLE && (alarm_active === 1'b1);
+    wire alarm_override=ALARM_SOUND_ENABLE && alarm_playing;
+    wire alarm_ready=!alarm_override || mux_ready;
+    wire alarm_loud=alarm_requested && !alarm_segment[0] && alarm_samples<9536;
+    wire signed [15:0] alarm_level=$signed({3'd0,alarm_envelope,6'd0});
+    always @(posedge pixel_clk or negedge pixel_rst_n)
+        if(!pixel_rst_n) begin
+            alarm_seen<=0;alarm_playing<=0;alarm_valid<=0;
+            alarm_segment<=0;alarm_samples<=0;alarm_phase<=0;
+            alarm_envelope<=0;normal_envelope<=64;alarm_sample<=0;
+        end else begin
+            alarm_seen<=alarm_requested;
+            if(alarm_ready) alarm_valid<=0;
+            if(alarm_requested && !alarm_seen) begin
+                alarm_playing<=1;alarm_segment<=0;alarm_samples<=0;
+                alarm_phase<=0;alarm_envelope<=0;
+            end
+            if(sample_tick && (!alarm_valid || alarm_ready)) begin
+                if(alarm_playing) begin
+                    alarm_valid<=1;
+                    alarm_sample<=alarm_phase<24 ? alarm_level : -alarm_level;
+                    alarm_phase<=alarm_phase==47 ? 0 : alarm_phase+1'b1;
+                    if(alarm_loud) begin
+                        if(alarm_envelope<64) alarm_envelope<=alarm_envelope+1'b1;
+                    end else if(alarm_envelope!=0) alarm_envelope<=alarm_envelope-1'b1;
+                    if(!alarm_requested) begin
+                        if(alarm_envelope==0) alarm_playing<=0;
+                    end else if(alarm_samples==9599) begin
+                        alarm_samples<=0;alarm_phase<=0;
+                        if(alarm_segment==4) alarm_playing<=0;
+                        else alarm_segment<=alarm_segment+1'b1;
+                    end else alarm_samples<=alarm_samples+1'b1;
+                    normal_envelope<=0;
+                end else if(normal_envelope<64) normal_envelope<=normal_envelope+1'b1;
+            end
+        end
     wire [16:0] gain_product=volume*({1'b0,fade_gain}+9'd1);
-    wire [7:0] gain=fade_gain==255?volume:gain_product[15:8];
+    wire [7:0] user_gain=fade_gain==255?volume:gain_product[15:8];
+    wire [14:0] recovery_product=user_gain*normal_envelope;
+    wire [7:0] gain=normal_envelope==64 ? user_gain : recovery_product[13:6];
     wire signed [24:0] left_product=mux_left*$signed({1'b0,gain});
     wire signed [24:0] right_product=mux_right*$signed({1'b0,gain});
     reg scaled_valid;
@@ -149,8 +199,10 @@ module media_hdmi_audio_bridge (
     always @(posedge pixel_clk or negedge pixel_rst_n)
         if(!pixel_rst_n) begin scaled_valid<=0;scaled_left<=0;scaled_right<=0;end
         else if(mux_ready) begin
-            scaled_valid<=mux_valid;
-            if(mux_valid) begin
+            scaled_valid<=alarm_override ? alarm_valid : mux_valid;
+            if(alarm_override && alarm_valid) begin
+                scaled_left<=alarm_sample;scaled_right<=alarm_sample;
+            end else if(!alarm_override && mux_valid) begin
                 scaled_left<=gain==255?mux_left:left_product>>>8;
                 scaled_right<=gain==255?mux_right:right_product>>>8;
             end

@@ -18,6 +18,7 @@ cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_co
 'pic5_address':['media_frame_loader'],
 'reader_reset':['media_frame_reader','fifo_prefetch_2','afifo_32_16_256'],
 'reset_sync':['reset_sync'],
+'emergency_osd':['promax_text_overlay'],
 'sd_protocol':['sd_media_service','sd_spi_init','sd_spi_command','sd_spi_byte_engine','sd_spi_sector_reader']}
 results=[]
 for name,modules in cases.items():

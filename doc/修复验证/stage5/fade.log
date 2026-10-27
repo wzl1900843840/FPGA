@@ -1,0 +1,2 @@
+PASS fade: switch only at black, full recovery, all four wipe kinds
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fade.v:22: $finish called at 8870000 (1ps)

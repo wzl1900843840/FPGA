@@ -39,7 +39,8 @@ module top #(
     // 置1时固定进入电梯演示；运行时也可用 SW2=0、SW3=1 进入电梯演示。
     // 电梯演示下 SW4 是独立告警开关；普通媒体模式下 SW4 保持测试音。
     parameter integer ELEVATOR_DEMO_MODE=0,
-    parameter integer SW_DEBOUNCE_CYCLES=1000000
+    parameter integer SW_DEBOUNCE_CYCLES=1000000,
+    parameter integer ALARM_SOUND_ENABLE=1
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
     input wire [3:0] sw,                   // 拨码开关逻辑值（不是面板ON字样）
@@ -651,6 +652,10 @@ module top #(
     // 19. 叠加层第二级：OSD文字（状态/参数/计时/错误码 + 字幕）
     //     输入是已经过焦点框的像素，输出带文字阴影的RGB。
     //--------------------------------------------------------------------------
+    wire [17:0] rescue_status_pix;
+    frame_config_cdc #(.WIDTH(18)) u_rescue_status_commit(
+        .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({rescue_event_id,rescue_comm_state}),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(rescue_status_pix));
     promax_text_overlay u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
         .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.show_info(show_info_pix),.subtitle_enable(subtitle_pix[102]),
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
@@ -661,7 +666,7 @@ module top #(
         .elevator_floor_basement(elevator_floor_basement_pix),.elevator_floor_tens(elevator_floor_tens_pix),
         .elevator_floor_ones(elevator_floor_ones_pix),.elevator_direction(elevator_direction_pix),
         .elevator_door(elevator_door_pix),.elevator_alert(elevator_alert_pix_state),
-        .rgb_out(text_rgb),.overlay_active());
+        .rgb_out(text_rgb),.overlay_active(),.rescue_event_id(rescue_status_pix[17:2]),.rescue_comm_state(rescue_status_pix[1:0]));
 
     //--------------------------------------------------------------------------
     // 20. 流水线级：文字查找与波形合成之间
@@ -689,7 +694,7 @@ module top #(
     //     PIPELINE_OUTPUT=1 表示内部再寄存一拍输出，所以下面还有一级流水线。
     //--------------------------------------------------------------------------
     promax_audio_waveform #(.PIPELINE_OUTPUT(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
-        .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(1'b1),.pcm_tap_valid(pcm_tap_valid),
+        .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(!elevator_alert_pix_state),.pcm_tap_valid(pcm_tap_valid),
         .pcm_tap_left(pcm_tap_left),.rgb_out(final_rgb),.waveform_active());
 
     //--------------------------------------------------------------------------
@@ -771,13 +776,13 @@ module top #(
     //     串化成差分对输出。DDC总线保持释放，分辨率固定VIC=1(640×480)。
     //--------------------------------------------------------------------------
     wire [9:0] ch0,ch1,ch2;
-    media_hdmi_audio_bridge u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
+    media_hdmi_audio_bridge #(.ALARM_SOUND_ENABLE(ALARM_SOUND_ENABLE)) u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
         .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
         .media_id(active_index[1:0]),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
         .force_test(switches_pix[3] && !elevator_demo_active_pix),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),
         .sequence_error(),.tone_overflow(),.pcm_contract_error(),.blip_active(),
-        .pcm_tap_valid(pcm_tap_valid),.pcm_tap_left(pcm_tap_left));
+        .pcm_tap_valid(pcm_tap_valid),.pcm_tap_left(pcm_tap_left),.alarm_active(elevator_alert_pix));
     hdmi_phy_wrapper #(.DEVICE("EG")) u_hdmi2phy_wrapper(.I_pixel_clk(pixel_clk),.I_serial_clk(pixel_clk_5x),
         .I_rst(~serial_reset_n),.I_tmds_channel_0(ch0),.I_tmds_channel_1(ch1),.I_tmds_channel_2(ch2),
         .I_tmds_channel_clk(10'b1111100000),.O_tmds_ch0_p(HDMI_D0_P),.O_tmds_ch1_p(HDMI_D1_P),

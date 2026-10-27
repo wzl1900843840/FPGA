@@ -1,0 +1,2 @@
+PASS alarm audio: 3x200ms/200ms, 48-sample 1kHz phase, amplitude cap, mute/fade bypass, no repeat, backpressure, clear ramp, compile disable
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_alarm_audio.v:35: $finish called at 7709640000 (1ps)
