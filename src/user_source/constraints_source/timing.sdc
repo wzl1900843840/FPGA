@@ -12,7 +12,7 @@ set_false_path -from [get_clocks {mem_clk_shift}] -to [get_clocks {mem_clk}]
 set_clock_uncertainty -hold 0.050 [get_clocks {sys_clk pixel_clk pixel_clk_5x mem_clk mem_clk_shift}]
 set_false_path -from [get_ports {rst_n}]
 # 公共 FIFO 复位进入的就是异步置位/同步释放链；仅豁免这些复位同步触发器。
-set_false_path -from [get_regs -hier {u_media_pix_reset/s2}] -to [get_regs -hier {u_video/u_reader/fifo_ready_mem[*] u_video/u_reader/u_read_fifo/asy_w_rst0 u_video/u_reader/u_read_fifo/asy_w_rst1}]
+set_false_path -from [get_regs -hier {u_pix_reset/s2 u_media_pix_reset/s2}] -to [get_regs -hier {u_video/u_reader/fifo_ready_mem[*] u_video/u_reader/u_read_fifo/asy_w_rst0 u_video/u_reader/u_read_fifo/asy_w_rst1}]
 # The shared flush asserts these dedicated two-stage reset synchronizers.
 # Their outputs release consumers on the destination clock; no ordinary data
 # registers or FIFO pointers are excepted by this crossing-specific rule.

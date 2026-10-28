@@ -116,7 +116,7 @@ module media_frame_reader #(
                               (fifo_reset_count_mem != 0);
     wire fifo_reset = fifo_reset_request ||
                       !fifo_release_mem[1] || !fifo_release_pix[1];
-    reg [1:0] fifo_ready_mem;
+    (* async_reg = "true" *) reg [1:0] fifo_ready_mem;
     (* async_reg = "true" *) reg [1:0] prefetch_release_pix;
     wire prefetch_reset_pix = !prefetch_release_pix[1];
     // A common FIFO flush is required on both sides, but ordinary pixel
@@ -153,9 +153,11 @@ module media_frame_reader #(
         if(!mem_rst_n)begin diagnostic_fifo_min<=511;diagnostic_started<=0;diagnostic_underflows<=0;end
         else begin
             diagnostic_underflows<=underflows_snapshot;
-            if(!fifo_reset && fifo_wrusedw>=256)diagnostic_started<=1;
+            // Ordinary diagnostic CE logic must use the mem-domain release,
+            // never the raw common reset which also contains pix_rst_n.
+            if(fifo_ready_mem[1] && fifo_wrusedw>=256)diagnostic_started<=1;
             // Exclude intentional flushes and the finite frame's natural tail.
-            if(diagnostic_started && !fifo_reset && !reload_pending_mem && reader_busy &&
+            if(diagnostic_started && fifo_ready_mem[1] && !reload_pending_mem && reader_busy &&
                 issued_count_mem<IMAGE_WORDS && fifo_wrusedw<diagnostic_fifo_min)
                 diagnostic_fifo_min<=fifo_wrusedw;
         end

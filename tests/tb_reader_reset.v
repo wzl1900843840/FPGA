@@ -62,6 +62,23 @@ initial begin
  start_frame(3);#7;mrst=0;prst=0;#57;prst=1;#11;mrst=1;
  repeat(8)@(negedge pc);start_frame(2);read_words(2,128);
  if(underflow || error) $fatal(1,"reset recovery failed %h",error);
+ // The common FIFO reset can fall between memory edges. Diagnostics must
+ // remain frozen through both local release stages, even with a low count.
+ @(negedge mc);mrst=0;prst=0;#57;mrst=1;#11;prst=1;
+ force dut.diagnostic_started=1'b1;
+ force dut.reload_pending_mem=1'b0;
+ force dut.reader_busy=1'b1;
+ force dut.issued_count_mem=0;
+ force dut.fifo_wrusedw=9'd17;
+ wait(!dut.fifo_reset);
+ @(posedge mc);#1;
+ if(dut.diagnostic_fifo_min!==9'd511) $fatal(1,"diagnostics sampled before local release stage 1");
+ @(posedge mc);#1;
+ if(dut.diagnostic_fifo_min!==9'd511) $fatal(1,"diagnostics sampled before local release stage 2");
+ @(posedge mc);#1;
+ if(dut.diagnostic_fifo_min!==9'd17) $fatal(1,"diagnostics did not resume after local release");
+ release dut.diagnostic_started;release dut.reload_pending_mem;
+ release dut.reader_busy;release dut.issued_count_mem;release dut.fifo_wrusedw;
  $display("PASS reader reset: destination release, read/write isolation, five media banks plus thumbnail bank, stale-pixel flush, manual reset");
  $finish;
 end
