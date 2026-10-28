@@ -1,0 +1,9 @@
+{
+  "branch": "opt/fullchain-20261029",
+  "backup": "D:\\FPGA\\anlu\\example_code111\\backups\\fullchain_before_20261029_012404.zip",
+  "backup_sha256": "d3f1f528747419fd355b6dc78a025836d5a70b04ca4bf0b1969f9a8d6f5f4ced",
+  "files": 619,
+  "stage6_bit_sha256": "695120841c89711b7624f093b4708f2eff1530f2544619e61a3092d64189cca1",
+  "preexisting_status": " M README.md\n M src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0.bit\n M src/td_project/lab_ex5_i2s_v1.0_Runs/best_result/lab_ex5_i2s_v1.0_phy.ts\n?? .workbuddy/memory/2026-10-28.md\n?? config/\n?? \"doc/\\344\\277\\256\\345\\244\\215\\351\\252\\214\\350\\257\\201/host_review_20261028/\"\n?? \"doc/\\345\\256\\211\\350\\267\\257\\350\\265\\233\\351\\242\\230\\344\\270\\200_\\351\\253\\230\\345\\210\\206\\345\\257\\274\\345\\220\\221\\345\\205\\250\\351\\223\\276\\350\\267\\257\\345\\256\\241\\346\\237\\245_20261029.md\"\n?? \"doc/\\345\\256\\241\\346\\237\\245\\351\\252\\214\\350\\257\\201/\"\n?? docs/\n?? start_console.cmd\n?? tests/test_host_app.py\n?? tests/test_host_display.py\n?? tools/host_app/\n?? tools/launch_console.py\n?? tools/stairwell_watch.py\n",
+  "hardware_tested": false
+}
