@@ -109,13 +109,22 @@ module media_frame_reader #(
     reg [9:0] diag_column_mem;
     reg [9:0] diag_row_mem;
     reg [23:0] diag_rgb_mem;
-    reg [1:0] fifo_release_mem;
-    reg [1:0] fifo_release_pix;
+    (* async_reg = "true" *) reg [1:0] fifo_release_mem;
+    (* async_reg = "true" *) reg [1:0] fifo_release_pix;
 
     wire fifo_reset_request = !mem_rst_n || !pix_rst_n ||
                               (fifo_reset_count_mem != 0);
     wire fifo_reset = fifo_reset_request ||
                       !fifo_release_mem[1] || !fifo_release_pix[1];
+    // The request contains both clock domains. It may assert at any phase,
+    // so each hold-extension chain must assert asynchronously and release
+    // only on its own two clock edges, rather than sampling raw reset as D.
+    always @(posedge mem_clk or posedge fifo_reset_request)
+        if(fifo_reset_request) fifo_release_mem<=2'b00;
+        else fifo_release_mem<={fifo_release_mem[0],1'b1};
+    always @(posedge pix_clk or posedge fifo_reset_request)
+        if(fifo_reset_request) fifo_release_pix<=2'b00;
+        else fifo_release_pix<={fifo_release_pix[0],1'b1};
     (* async_reg = "true" *) reg [1:0] fifo_ready_mem;
     (* async_reg = "true" *) reg [1:0] prefetch_release_pix;
     wire prefetch_reset_pix = !prefetch_release_pix[1];
@@ -251,13 +260,7 @@ module media_frame_reader #(
             frame_armed_pix <= 1'b0;
             consumed_count_pix <= 0;
             underflow <= 1'b0;
-            fifo_release_pix <= 2'b00;
         end else begin
-            if (fifo_reset_request)
-                fifo_release_pix <= 2'b00;
-            else
-                fifo_release_pix <= {fifo_release_pix[0], 1'b1};
-
             if (frame_start) begin
                 if (frame_armed_pix && consumed_count_pix != IMAGE_WORDS) begin
                     underflow <= 1'b1;
@@ -301,7 +304,6 @@ module media_frame_reader #(
             diag_written_count_mem <= 0;
             diag_column_mem <= 0;
                 diag_row_mem <= 0;
-            fifo_release_mem <= 2'b00;
             inflight_window_ok_q <= 1'b1;
             fifo_reservation_ok_q <= 1'b1;
             app_rd_en <= 1'b0;
@@ -311,11 +313,6 @@ module media_frame_reader #(
             reader_index <= 3'd0;
             reader_error <= ERR_NONE;
         end else begin
-            if (fifo_reset_request)
-                fifo_release_mem <= 2'b00;
-            else
-                fifo_release_mem <= {fifo_release_mem[0], 1'b1};
-
             request_sync1_mem <= request_toggle_pix;
             request_sync2_mem <= request_sync1_mem;
             index_sync1_mem <= request_index_pix;

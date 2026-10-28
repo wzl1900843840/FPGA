@@ -62,6 +62,16 @@ initial begin
  start_frame(3);#7;mrst=0;prst=0;#57;prst=1;#11;mrst=1;
  repeat(8)@(negedge pc);start_frame(2);read_words(2,128);
  if(underflow || error) $fatal(1,"reset recovery failed %h",error);
+ // A reset pulse shorter than either clock must still assert both hold
+ // chains immediately. This fails if raw cross-domain reset is sampled as D.
+ @(negedge mc);#2;prst=0;#1;
+ if(dut.fifo_release_mem!==2'b00 || dut.fifo_release_pix!==2'b00)
+   $fatal(1,"short pixel reset did not asynchronously assert both release chains");
+ prst=1;repeat(8)@(negedge pc);
+ @(negedge pc);#2;mrst=0;#1;
+ if(dut.fifo_release_mem!==2'b00 || dut.fifo_release_pix!==2'b00)
+   $fatal(1,"short memory reset did not asynchronously assert both release chains");
+ mrst=1;repeat(8)@(negedge pc);
  // The common FIFO reset can fall between memory edges. Diagnostics must
  // remain frozen through both local release stages, even with a low count.
  @(negedge mc);mrst=0;prst=0;#57;mrst=1;#11;prst=1;
