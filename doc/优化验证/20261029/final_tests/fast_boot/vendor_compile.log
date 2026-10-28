@@ -1,0 +1,36 @@
+Model Technology ModelSim ALTERA vlog 10.3c Compiler 2014.09 Sep 20 2014
+Start time: 03:32:05 on Oct 29,2026
+vlog -work D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work -suppress 2121 "+incdir+D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\hdl_source\include" D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\hdl_source\include\sdr_as_ram.enc.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\hdl_source\include\sdr_init_ref.enc.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\hdl_source\include\sdr_wrrd.enc.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\hdl_source\SD\sdram.v D:\FPGA\anlu\5_软件工具及驱动\lab_ex_2025_7_12_nosoft\HX4S20C_lab_ex\lab_ex_4_tf_sdram_etnernet_pc\source_code\model\IS42s32200.v D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\sdram_chip_model.v 
+-- Compiling module sdr_as_ram
+-- Compiling module sdr_init_ref
+-- Compiling module sdram
+-- Compiling module IS42s32200
+-- Compiling module EG_PHY_SDRAM_2M_32
+
+Top level modules:
+	sdram
+End time: 03:32:06 on Oct 29,2026, Elapsed time: 0:00:01
+Errors: 0, Warnings: 0, Suppressed Errors: 2
+Model Technology ModelSim ALTERA vlog 10.3c Compiler 2014.09 Sep 20 2014
+Start time: 03:32:06 on Oct 29,2026
+vlog -work D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work -sv D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\afifo_32_16_256.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\fifo_prefetch_2.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\frame_config_cdc.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\media_frame_reader.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\media_sdram_write_cdc.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\media_sdram_arbiter.v D:\FPGA\anlu\example_code111\lab_ex4_tf\src\user_source\rtl\thumbnail_cache_builder.v D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\lut1_model.v D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_vendor_shared.v D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_vendor_shared_cache.v 
+-- Compiling module rfifo_32_32_512
+-- Compiling module fifo_cross_domain_addr_process_al_rfifo_32_32_512
+-- Compiling module ram_infer_rfifo_32_32_512
+-- Compiling module fifo_prefetch_2
+-- Compiling module frame_config_cdc
+-- Compiling module media_frame_reader
+-- Compiling module media_sdram_write_cdc
+-- Compiling module async_command_fifo
+-- Compiling module media_sdram_arbiter
+-- Compiling module thumbnail_cache_builder
+-- Compiling module AL_MAP_LUT1
+-- Compiling module tb_vendor_shared
+-- Compiling module tb_vendor_shared_cache
+
+Top level modules:
+	AL_MAP_LUT1
+	tb_vendor_shared
+	tb_vendor_shared_cache
+End time: 03:32:06 on Oct 29,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0

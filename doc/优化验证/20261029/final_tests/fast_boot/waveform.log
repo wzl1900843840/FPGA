@@ -1,0 +1,2 @@
+PASS waveform: bank isolation, decimation, signed clipping, silence, peak hold/release, panel bounds, rendered RTL
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_waveform.v:72: $finish called at 12780801000 (1ps)

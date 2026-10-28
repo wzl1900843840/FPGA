@@ -1,0 +1,2 @@
+PASS recovery: fallback ack before reset, bounded retry, STOP and manual rearm
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_recovery.v:15: $finish called at 570000 (1ps)

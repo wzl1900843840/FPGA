@@ -1,0 +1,6 @@
+CHECK fullsize 640x480 orientation0: 307200 pixels exact, one commit
+CHECK fullsize 640x480 orientation1: 307200 pixels exact, one commit
+CHECK fullsize 1280x960 orientation0: 307200 pixels exact, one commit
+CHECK fullsize 1280x960 orientation1: 307200 pixels exact, one commit
+PASS bmp_fullsize: actual 640x480 and 1280x960, both BMP orientations, all 1228800 output pixels verified
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_bmp_fullsize.v:41: $finish called at 184325250000 (1ps)

@@ -1,0 +1,187 @@
+[
+  {
+    "test": "keys",
+    "passed": true,
+    "seconds": 0.25
+  },
+  {
+    "test": "fade",
+    "passed": true,
+    "seconds": 0.21
+  },
+  {
+    "test": "uart",
+    "passed": true,
+    "seconds": 1.73
+  },
+  {
+    "test": "bmp",
+    "passed": true,
+    "seconds": 0.28
+  },
+  {
+    "test": "pixels",
+    "passed": true,
+    "seconds": 0.35
+  },
+  {
+    "test": "thumbnail",
+    "passed": true,
+    "seconds": 0.23
+  },
+  {
+    "test": "seg7",
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "test": "thumbnail_layout",
+    "passed": true,
+    "seconds": 8.66
+  },
+  {
+    "test": "cache",
+    "passed": true,
+    "seconds": 5.56
+  },
+  {
+    "test": "wav",
+    "passed": true,
+    "seconds": 0.44
+  },
+  {
+    "test": "sd_delay",
+    "passed": true,
+    "seconds": 19.18
+  },
+  {
+    "test": "fat32",
+    "passed": true,
+    "seconds": 0.33
+  },
+  {
+    "test": "streamer",
+    "passed": true,
+    "seconds": 0.22
+  },
+  {
+    "test": "cdc",
+    "passed": true,
+    "seconds": 0.18
+  },
+  {
+    "test": "flash",
+    "passed": true,
+    "seconds": 0.37
+  },
+  {
+    "test": "player",
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "test": "elevator",
+    "passed": true,
+    "seconds": 0.18
+  },
+  {
+    "test": "emergency",
+    "passed": true,
+    "seconds": 0.24
+  },
+  {
+    "test": "rescue",
+    "passed": true,
+    "seconds": 0.85
+  },
+  {
+    "test": "rescue_ack",
+    "passed": true,
+    "seconds": 1.3
+  },
+  {
+    "test": "rescue_queue",
+    "passed": true,
+    "seconds": 0.55
+  },
+  {
+    "test": "pic5_address",
+    "passed": true,
+    "seconds": 0.2
+  },
+  {
+    "test": "reader_reset",
+    "passed": true,
+    "seconds": 0.44
+  },
+  {
+    "test": "reset_sync",
+    "passed": true,
+    "seconds": 0.19
+  },
+  {
+    "test": "emergency_osd",
+    "passed": true,
+    "seconds": 19.22
+  },
+  {
+    "test": "fix_single_image",
+    "passed": true,
+    "seconds": 0.23
+  },
+  {
+    "test": "fix_burst_abort",
+    "passed": true,
+    "seconds": 0.45
+  },
+  {
+    "test": "fix_repeat_save",
+    "passed": true,
+    "seconds": 0.21
+  },
+  {
+    "test": "sd_protocol",
+    "passed": true,
+    "seconds": 0.54
+  },
+  {
+    "test": "demo_ui",
+    "passed": true,
+    "seconds": 0.24
+  },
+  {
+    "test": "ui_command",
+    "passed": true,
+    "seconds": 0.23
+  },
+  {
+    "test": "recovery",
+    "passed": true,
+    "seconds": 0.19
+  },
+  {
+    "test": "extended_flash",
+    "passed": true,
+    "seconds": 0.43
+  },
+  {
+    "test": "demo_switches",
+    "passed": true,
+    "seconds": 0.19
+  },
+  {
+    "test": "demo_menu",
+    "passed": true,
+    "seconds": 11.52
+  },
+  {
+    "test": "font_pipeline",
+    "passed": true,
+    "seconds": 48.13
+  },
+  {
+    "test": "arbiter_watchdog",
+    "passed": true,
+    "seconds": 0.2
+  }
+]

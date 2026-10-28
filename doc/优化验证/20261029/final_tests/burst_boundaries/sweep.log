@@ -1,0 +1,384 @@
+TRIGGER=1
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 125950000 (1ps)
+TRIGGER=2
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126000000 (1ps)
+TRIGGER=3
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126025000 (1ps)
+TRIGGER=4
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126025000 (1ps)
+TRIGGER=5
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126075000 (1ps)
+TRIGGER=6
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126075000 (1ps)
+TRIGGER=7
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126100000 (1ps)
+TRIGGER=8
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126150000 (1ps)
+TRIGGER=9
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126150000 (1ps)
+TRIGGER=10
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126200000 (1ps)
+TRIGGER=11
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126225000 (1ps)
+TRIGGER=12
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126225000 (1ps)
+TRIGGER=13
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126275000 (1ps)
+TRIGGER=14
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126275000 (1ps)
+TRIGGER=15
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126300000 (1ps)
+TRIGGER=16
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126350000 (1ps)
+TRIGGER=17
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126350000 (1ps)
+TRIGGER=18
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126400000 (1ps)
+TRIGGER=19
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126425000 (1ps)
+TRIGGER=20
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126425000 (1ps)
+TRIGGER=21
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126475000 (1ps)
+TRIGGER=22
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126475000 (1ps)
+TRIGGER=23
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126500000 (1ps)
+TRIGGER=24
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126550000 (1ps)
+TRIGGER=25
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126550000 (1ps)
+TRIGGER=26
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126600000 (1ps)
+TRIGGER=27
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126625000 (1ps)
+TRIGGER=28
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126625000 (1ps)
+TRIGGER=29
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126675000 (1ps)
+TRIGGER=30
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126675000 (1ps)
+TRIGGER=31
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126700000 (1ps)
+TRIGGER=32
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126750000 (1ps)
+TRIGGER=33
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126750000 (1ps)
+TRIGGER=34
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126800000 (1ps)
+TRIGGER=35
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126825000 (1ps)
+TRIGGER=36
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126825000 (1ps)
+TRIGGER=37
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126875000 (1ps)
+TRIGGER=38
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126875000 (1ps)
+TRIGGER=39
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126900000 (1ps)
+TRIGGER=40
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126950000 (1ps)
+TRIGGER=41
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 126950000 (1ps)
+TRIGGER=42
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127000000 (1ps)
+TRIGGER=43
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127025000 (1ps)
+TRIGGER=44
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127025000 (1ps)
+TRIGGER=45
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127075000 (1ps)
+TRIGGER=46
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127075000 (1ps)
+TRIGGER=47
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127100000 (1ps)
+TRIGGER=48
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127150000 (1ps)
+TRIGGER=49
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127150000 (1ps)
+TRIGGER=50
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127200000 (1ps)
+TRIGGER=51
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127225000 (1ps)
+TRIGGER=52
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127225000 (1ps)
+TRIGGER=53
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127275000 (1ps)
+TRIGGER=54
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127275000 (1ps)
+TRIGGER=55
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127300000 (1ps)
+TRIGGER=56
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127350000 (1ps)
+TRIGGER=57
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127350000 (1ps)
+TRIGGER=58
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127400000 (1ps)
+TRIGGER=59
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127425000 (1ps)
+TRIGGER=60
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127425000 (1ps)
+TRIGGER=61
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127475000 (1ps)
+TRIGGER=62
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127475000 (1ps)
+TRIGGER=63
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127500000 (1ps)
+TRIGGER=64
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127550000 (1ps)
+TRIGGER=65
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127550000 (1ps)
+TRIGGER=66
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127600000 (1ps)
+TRIGGER=67
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127625000 (1ps)
+TRIGGER=68
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127625000 (1ps)
+TRIGGER=69
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127675000 (1ps)
+TRIGGER=70
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127675000 (1ps)
+TRIGGER=71
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127700000 (1ps)
+TRIGGER=72
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127750000 (1ps)
+TRIGGER=73
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127750000 (1ps)
+TRIGGER=74
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127800000 (1ps)
+TRIGGER=75
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127825000 (1ps)
+TRIGGER=76
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127825000 (1ps)
+TRIGGER=77
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127875000 (1ps)
+TRIGGER=78
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127875000 (1ps)
+TRIGGER=79
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127900000 (1ps)
+TRIGGER=80
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127950000 (1ps)
+TRIGGER=81
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 127950000 (1ps)
+TRIGGER=82
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128000000 (1ps)
+TRIGGER=83
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128025000 (1ps)
+TRIGGER=84
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128025000 (1ps)
+TRIGGER=85
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128075000 (1ps)
+TRIGGER=86
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128075000 (1ps)
+TRIGGER=87
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128100000 (1ps)
+TRIGGER=88
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128150000 (1ps)
+TRIGGER=89
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128150000 (1ps)
+TRIGGER=90
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128200000 (1ps)
+TRIGGER=91
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128225000 (1ps)
+TRIGGER=92
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128225000 (1ps)
+TRIGGER=93
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128275000 (1ps)
+TRIGGER=94
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128275000 (1ps)
+TRIGGER=95
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128300000 (1ps)
+TRIGGER=96
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128350000 (1ps)
+TRIGGER=97
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128350000 (1ps)
+TRIGGER=98
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128400000 (1ps)
+TRIGGER=99
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128425000 (1ps)
+TRIGGER=100
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128425000 (1ps)
+TRIGGER=101
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128475000 (1ps)
+TRIGGER=102
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128475000 (1ps)
+TRIGGER=103
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128500000 (1ps)
+TRIGGER=104
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128550000 (1ps)
+TRIGGER=105
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128550000 (1ps)
+TRIGGER=106
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128600000 (1ps)
+TRIGGER=107
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128625000 (1ps)
+TRIGGER=108
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128625000 (1ps)
+TRIGGER=109
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128675000 (1ps)
+TRIGGER=110
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128675000 (1ps)
+TRIGGER=111
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128700000 (1ps)
+TRIGGER=112
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128750000 (1ps)
+TRIGGER=113
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128750000 (1ps)
+TRIGGER=114
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128800000 (1ps)
+TRIGGER=115
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128825000 (1ps)
+TRIGGER=116
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128825000 (1ps)
+TRIGGER=117
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128875000 (1ps)
+TRIGGER=118
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128875000 (1ps)
+TRIGGER=119
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128900000 (1ps)
+TRIGGER=120
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128950000 (1ps)
+TRIGGER=121
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 128950000 (1ps)
+TRIGGER=122
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129000000 (1ps)
+TRIGGER=123
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129025000 (1ps)
+TRIGGER=124
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129025000 (1ps)
+TRIGGER=125
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129075000 (1ps)
+TRIGGER=126
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129075000 (1ps)
+TRIGGER=127
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129100000 (1ps)
+TRIGGER=128
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_burst_abort.v:28: $finish called at 129150000 (1ps)

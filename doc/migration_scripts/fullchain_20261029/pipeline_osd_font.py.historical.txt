@@ -1,0 +1,100 @@
+"""One-shot migration of OSD lookup into a synchronous initialized font ROM."""
+from pathlib import Path
+R=Path(__file__).resolve().parents[1]
+p=R/'src/user_source/rtl/promax_text_overlay.v'
+s=p.read_text(encoding='utf-8')
+assert 'function text_pixel;' in s and 'function [16:0] text_lookup;' not in s
+s=s.replace('parameter integer MENU_ENABLE=0,','parameter integer MENU_ENABLE=0, FONT_BRAM=0,')
+a=s.index('    function text_pixel;');b=s.index('    // ===== 最终叠加',a)
+f=s[a:b].replace('function text_pixel;','function [16:0] text_lookup;')
+f=f.replace('reg found,sub;reg [3:0] mr;','reg found,sub;reg [3:0] mr,font_row;')
+f=f.replace('text_pixel=0;','text_lookup=0;font_row=0;')
+start=f.index('            if(found) begin')
+f=f[:start]+'''            if(found) begin
+                if(sub && ch[7]) begin
+                    if(col>=1 && col<17 && ly>=2 && ly<18) begin
+                        font_row=ly-2;
+                        text_lookup={1'b1,4'd16-col[3:0],ch,font_row};
+                    end
+                end else if(sub) begin
+                    if(col>=4 && col<14 && ly>=2 && ly<16) begin
+                        font_row=(ly-2)>>1;
+                        text_lookup={1'b1,4'd3-col[3:0],ch,font_row};
+                    end
+                end else if(col<5 && ly<14) begin
+                    font_row=ly>>1;
+                    text_lookup={1'b1,4'd15-{col[2:0],1'b0},ch,font_row};
+                end
+            end
+        end
+    endfunction
+    function [15:0] ascii_font_word;
+        input [7:0] ch;input [3:0] row;
+        reg [4:0] bits;
+        begin
+            bits=glyph_row(ch,row[2:0]);
+            ascii_font_word={bits[4],bits[4],bits[3],bits[3],bits[2],bits[2],bits[1],bits[1],bits[0],bits[0],6'd0};
+        end
+    endfunction
+    function text_pixel;
+        input [9:0] px,py;reg [16:0] lookup;reg [15:0] bits;
+        begin
+            lookup=text_lookup(px,py);
+            bits=lookup[11] ? chinese_glyph_row(lookup[10:4],lookup[3:0]) : ascii_font_word(lookup[11:4],lookup[3:0]);
+            text_pixel=lookup[16] && bits[lookup[15:12]];
+        end
+    endfunction
+    wire [9:0] compose_x,compose_y;
+    wire [23:0] compose_rgb;
+    wire compose_de,ink;
+    generate if(FONT_BRAM)begin:g_font_bram
+        // Configuration-time ROM contents are included in the bitstream.
+        // A single synchronous read replaces the large per-pixel glyph mux.
+        reg [15:0] font_rom[0:4095] /* fehdl force_ram=1, ram_style="bram" */;
+        integer init_ch,init_row;
+        initial begin
+            for(init_ch=0;init_ch<256;init_ch=init_ch+1)
+                for(init_row=0;init_row<16;init_row=init_row+1)
+                    font_rom[init_ch*16+init_row]=init_ch>=128 ?
+                        chinese_glyph_row(init_ch-128,init_row) : ascii_font_word(init_ch,init_row);
+        end
+        wire [16:0] lookup=text_lookup(pixel_x,pixel_y);
+        reg [15:0] font_word;reg [4:0] meta;
+        reg [9:0] x_q,y_q;reg [23:0] rgb_q;reg de_q;
+        always @(posedge clk)font_word<=font_rom[lookup[11:0]];
+        always @(posedge clk or negedge rst_n)
+            if(!rst_n)begin meta<=0;x_q<=0;y_q<=0;rgb_q<=0;de_q<=0;end
+            else begin meta<=lookup[16:12];x_q<=pixel_x;y_q<=pixel_y;rgb_q<=rgb_in;de_q<=de;end
+        assign compose_x=x_q;assign compose_y=y_q;assign compose_rgb=rgb_q;assign compose_de=de_q;
+        assign ink=enable && de_q && meta[4] && font_word[meta[3:0]];
+    end else begin:g_font_comb
+        assign compose_x=pixel_x;assign compose_y=pixel_y;assign compose_rgb=rgb_in;assign compose_de=de;
+        assign ink=enable && de && text_pixel(pixel_x,pixel_y);
+    end endgenerate
+'''
+s=s[:a]+f+s[b:]
+s=s.replace('    wire ink=enable && de && text_pixel(pixel_x,pixel_y);\n','')
+a=s.index('    wire shadow;')
+tail=s[a:].replace('pixel_x','compose_x').replace('pixel_y','compose_y')
+import re
+tail=re.sub(r'\bde\b','compose_de',tail).replace(': rgb_in;',': compose_rgb;')
+s=s[:a]+tail
+p.write_text(s,encoding='utf-8')
+p=R/'src/user_source/hdl_source/top_tf_hdmi_audio.v';s=p.read_text(encoding='utf-8')
+s=s.replace('promax_text_overlay #(.MENU_ENABLE(1))','promax_text_overlay #(.MENU_ENABLE(1),.FONT_BRAM(1))')
+anchor='    reg [23:0] text_stage_rgb,diag_stage_rgb;'
+s=s.replace(anchor,'''    reg [23:0] font_diag_rgb;
+    reg [9:0] font_x,font_y;
+    reg font_hs,font_vs,font_de;
+    always @(posedge pixel_clk or negedge pix_reset_n)
+        if(!pix_reset_n)begin font_diag_rgb<=0;font_x<=0;font_y<=0;font_hs<=1;font_vs<=1;font_de<=0;end
+        else begin
+            font_diag_rgb<=diag_fifo_pix?video_rgb:diag_rgb;
+            font_x<=x_adjust;font_y<=y_adjust;font_hs<=hs_adjust;font_vs<=vs_adjust;font_de<=de_adjust;
+        end
+'''+anchor)
+s=s.replace('text_stage_rgb<=text_rgb;diag_stage_rgb<=diag_fifo_pix?video_rgb:diag_rgb;','text_stage_rgb<=text_rgb;diag_stage_rgb<=font_diag_rgb;')
+s=s.replace('text_stage_x<=x_adjust;text_stage_y<=y_adjust;text_stage_hs<=hs_adjust;text_stage_vs<=vs_adjust;text_stage_de<=de_adjust;',
+ 'text_stage_x<=font_x;text_stage_y<=font_y;text_stage_hs<=font_hs;text_stage_vs<=font_vs;text_stage_de<=font_de;')
+p.write_text(s,encoding='utf-8')
+print('Applied font ROM and one-cycle companion bundle delay')

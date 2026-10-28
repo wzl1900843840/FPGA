@@ -1,0 +1,51 @@
+Reading E:/altera/14.1/modelsim_ase/tcl/vsim/pref.tcl
+
+# 10.3c
+
+# vsim -c -onfinish exit -lib D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work tb_vendor_shared -l D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\vendor_shared_transcript.log -do "run -all; quit -f" 
+# Start time: 03:32:08 on Oct 29,2026
+# Loading sv_std.std
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.tb_vendor_shared
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.media_sdram_write_cdc
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.async_command_fifo
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.media_frame_reader
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.frame_config_cdc
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.rfifo_32_32_512
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.fifo_cross_domain_addr_process_al_rfifo_32_32_512
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.ram_infer_rfifo_32_32_512
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.fifo_prefetch_2
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.media_sdram_arbiter
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.sdram
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.sdr_as_ram
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.sdr_init_ref
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.EG_PHY_SDRAM_2M_32
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\results\fast_boot\work.IS42s32200
+# ** Warning: (vsim-3017) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(18): [TFMPC] - Too few port connections. Expected 27, found 23.
+# 
+#         Region: /tb_vendor_shared/reader
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(18): [TFMPC] - Missing connection for port 'frame_read_done'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(18): [TFMPC] - Missing connection for port 'reader_index'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(18): [TFMPC] - Missing connection for port 'diagnostic_fifo_min'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(18): [TFMPC] - Missing connection for port 'diagnostic_underflows'.
+# 
+# ** Warning: (vsim-3017) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/media_frame_reader.v(158): [TFMPC] - Too few port connections. Expected 8, found 7.
+# 
+#         Region: /tb_vendor_shared/reader/u_underflows_commit
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/media_frame_reader.v(158): [TFMPC] - Missing connection for port 'src_busy'.
+# 
+# ** Warning: (vsim-3017) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/afifo_32_16_256.v(231): [TFMPC] - Too few port connections. Expected 16, found 14.
+# 
+#         Region: /tb_vendor_shared/reader/u_read_fifo/ram_inst
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/afifo_32_16_256.v(231): [TFMPC] - Missing connection for port 'doa'.
+# 
+# ** Warning: (vsim-3722) D:/FPGA/anlu/example_code111/lab_ex4_tf/src/user_source/rtl/afifo_32_16_256.v(231): [TFMPC] - Missing connection for port 'dib'.
+# 
+# run -all
+# PASS vendor shared: display pixels=       1280, background writes=1152, cache write/read=128, refresh-safe ownership
+# ** Note: $finish    : D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_vendor_shared.v(99)
+#    Time: 3487400 ns  Iteration: 2  Instance: /tb_vendor_shared
+# End time: 03:32:18 on Oct 29,2026, Elapsed time: 0:00:10
+# Errors: 0, Warnings: 10

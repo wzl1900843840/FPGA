@@ -1,0 +1,2 @@
+FATAL: tests/tb_reader_reset.v:96: flush did not rearm diagnostic prefill
+       Time: 100988500  Scope: tb_reader_reset

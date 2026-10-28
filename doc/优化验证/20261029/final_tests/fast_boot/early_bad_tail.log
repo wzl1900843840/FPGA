@@ -1,0 +1,2 @@
+PASS early ingest: verified before final done, CDC/physical drain, bad-tail=1 aborted-burst=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_early_ingest.v:90: $finish called at 263831000 (1ps)

@@ -1,0 +1,2 @@
+FATAL: build_out/tb_pre_gate.v:75: diagnostics sampled before local release stage 1
+       Time: 100238500  Scope: tb_reader_reset

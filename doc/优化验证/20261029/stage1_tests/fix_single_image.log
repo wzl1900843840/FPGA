@@ -1,0 +1,2 @@
+PASS single valid image: manual NEXT completes visibly, alpha=255 busy=0 active=0 commits=1
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_single_image.v:27: $finish called at 88520000 (1ps)

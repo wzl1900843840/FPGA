@@ -1,0 +1,17 @@
+from pathlib import Path
+import re
+p=Path(__file__).resolve().parents[1]/'src/td_project/lab_ex5_i2s_v1.0.al'
+s=p.read_text(encoding='utf-8')
+for i,n in enumerate(['demo_ui_controller','demo_switch_filter','ui_command_cdc','media_recovery_manager'],84):
+    pattern=r'            <File Path="../user_source/rtl/'+n+r'\.v">.*?</File>'
+    block=f'''            <File Path="../user_source/rtl/{n}.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="{i}"/>
+                </FileInfo>
+            </File>'''
+    s,c=re.subn(pattern,lambda _:block,s,flags=re.S)
+    assert c==1,n
+p.write_text(s,encoding='utf-8')

@@ -1,0 +1,2 @@
+PASS thumbnail layout: centered grid, all pixels/foci, source coordinates, missing bank, blanking
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_thumbnail_layout.v:34: $finish called at 1228804000 (1ps)

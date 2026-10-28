@@ -1,0 +1,70 @@
+"""Generate the finite Chinese UI vocabulary and sparse glyph/character ROMs."""
+from pathlib import Path
+import re
+from PIL import Image,ImageDraw,ImageFont
+R=Path(__file__).resolve().parents[1]
+p=R/'src/user_source/rtl/promax_text_overlay.v'
+s=p.read_text(encoding='utf-8')
+base={0:'参数设置                      未保存',1:'亮度            000/255',2:'对比度           000   中性128',
+ 3:'音量            000/255',4:'轮播周期          00.000秒',5:'诊断            K2/K3翻页',6:'媒体重载          长按K4',
+ 7:'K2 增大   K3 减小   K4 下一项',8:'长按K4 默认   SW2 退出',9:'',
+ 10:'',11:'K2+K3 长按3秒保存'}
+variants={'clean':'参数设置                      已保存','diag':'K2/K3 翻页   K4 下一项','reload':'长按K4 进入重载确认',
+ 'confirm':'媒体重载          确认重载?', 'confirm_keys':'K2 确认   K3 取消',
+ 'saving':'正在保存 请稍候','saved':'保存成功','busy':'系统忙 请稍后重试','error':'参数存储故障',
+ 'reloading':'正在重载媒体','unchanged':'参数未变 无需写入',
+ 'd0':'最低水位 / 欠载次数 十六进制','d1':'最长等待周期 / 重试次数 十六进制',
+ 'd2':'读卡 扫描 首图 告警 毫秒 十六进制','d3':'版本 / 媒体状态 十六进制'}
+glyphs={int(i):int(h,16 if b=='h' else 2) for i,b,h in re.findall(r"CN_GLYPH_(\d+)\s*=\s*256'([bh])([0-9a-fA-F]+)",s)}
+existing={ch:int(i) for i,ch in re.findall(r'CN_GLYPH_(\d+)\s*=.*?; // (.)',s)}
+chars=''.join(dict.fromkeys(''.join(base.values())+''.join(variants.values())))
+font=ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',14)
+new=[]
+for ch in chars:
+    if ord(ch)<128 or ch in existing:continue
+    i=max(glyphs)+1
+    if i>=128:raise RuntimeError('Finite UI glyph ID budget exceeded')
+    im=Image.new('1',(16,16));d=ImageDraw.Draw(im);b=d.textbbox((0,0),ch,font=font)
+    d.text(((16-b[2]+b[0])//2-b[0],(16-b[3]+b[1])//2-b[1]),ch,font=font,fill=1)
+    bits=int(''.join(str(int(im.getpixel((x,y))!=0)) for y in range(16) for x in range(16)),2)
+    glyphs[i]=bits;existing[ch]=i;new.append(f"    localparam [255:0] CN_GLYPH_{i}=256'h{bits:064x}; // {ch}")
+if new:s=s.replace('    function [15:0] chinese_glyph_row;','\n'.join(new)+'\n    function [15:0] chinese_glyph_row;')
+rows={}
+for g,bits in sorted(glyphs.items()):
+    for row in range(16):
+        v=(bits>>((15-row)*16))&65535
+        if v:rows.setdefault(v,[]).append((g<<4)|row)
+lines=['    function [15:0] chinese_glyph_row;','        input [6:0] glyph_id;','        input [3:0] row;','        begin','            case ({glyph_id,row})']
+for v,addr in sorted(rows.items()):lines.append('                '+','.join(f"11'h{a:03x}" for a in addr)+f": chinese_glyph_row=16'h{v:04x};")
+lines+=['                default: chinese_glyph_row=0;','            endcase','        end','    endfunction']
+s,c=re.subn(r'    function \[15:0\] chinese_glyph_row;.*?    endfunction','\n'.join(lines),s,flags=re.S);assert c==1
+s=s.replace('chinese_glyph_row(ch[5:0],ly-2)','chinese_glyph_row(ch[6:0],ly-2)')
+def code(ch):return ord(ch) if ord(ch)<128 else 128+existing[ch]
+# One sparse address lookup; no 288-bit dynamic line mux in the pixel path.
+texts=list(base.values())+list(variants.values());vid={k:12+i for i,k in enumerate(variants)}
+func=['    function [7:0] menu_rom_char;','        input [5:0] row_id;input [5:0] n;','        begin','            case({row_id,n})']
+for row,text in enumerate(texts):
+    assert len(text)<=36,(row,text)
+    for col,ch in enumerate(text):
+        if ch!=' ':func.append(f"                12'd{row*64+col}:menu_rom_char=8'h{code(ch):02x};")
+func+=['                default:menu_rom_char=" ";','            endcase','        end','    endfunction',
+ '    function [7:0] menu_char;','        input [3:0] r;input [5:0] n;',
+ '        reg [5:0] row_id;reg [11:0] digits;','        begin','            row_id=r;digits=0;',
+ f"            if(r==0 && !menu_dirty)row_id={vid['clean']};",
+ f"            if(r==7 && menu_field==4)row_id={vid['diag']};",
+ f"            if(r==7 && menu_field==5)row_id={vid['reload']};",
+ f"            if(menu_confirm && r==6)row_id={vid['confirm']};",
+ f"            if(menu_confirm && r==7)row_id={vid['confirm_keys']};",
+ '            if(r==9)case(menu_feedback)']
+for i,k in enumerate(['saving','saved','busy','error','reloading','unchanged'],1):func.append(f"                {i}:row_id={vid[k]};")
+func+=['                default:row_id=9;','            endcase',
+ '            menu_char=menu_rom_char(row_id,n);',
+ '            case(r)1:digits=numbers_frame[43:32];2:digits=numbers_frame[55:44];3:digits=numbers_frame[31:20];endcase',
+ '            if(r>=1 && r<=3 && n>=14 && n<=16)menu_char="0"+((digits>>((16-n)*4))&15);',
+ '            if(r==4)case(n)14:menu_char="0"+numbers_frame[19:16];15:menu_char="0"+numbers_frame[15:12];17:menu_char="0"+numbers_frame[11:8];18:menu_char="0"+numbers_frame[7:4];19:menu_char="0"+numbers_frame[3:0];endcase',
+ '            if(menu_field==4 && r==7)begin',f"                menu_char=menu_rom_char(6'd{vid['d0']}+menu_diag,n);",'            end',
+ '            if(menu_field==4 && r==10)begin','                if(n==0)menu_char="D";else if(n==1)menu_char="0"+menu_diag;',
+ '                else if(n>=3 && n<19)menu_char=hex_char(diagnostic_data[(18-n)*4 +:4]);','            end','        end','    endfunction']
+s,c=re.subn(r'    function \[7:0\] (?:menu_rom_char;.*?    endfunction\s+function \[7:0\] )?menu_char;.*?    endfunction','\n'.join(func),s,flags=re.S);assert c==1
+p.write_text(s,encoding='utf-8')
+print(f'Localized {len(texts)} lines; fixed Chinese glyphs {len(glyphs)}; max ID {max(glyphs)}')

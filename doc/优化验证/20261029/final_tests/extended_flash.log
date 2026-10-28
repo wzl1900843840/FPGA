@@ -1,0 +1,2 @@
+PASS extended Flash: four fields, boot mute/manual, unchanged no-write, CRC/torn fallback and legacy migration
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_extended_flash.v:44: $finish called at 176915000 (1ps)

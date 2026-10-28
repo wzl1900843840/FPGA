@@ -1,0 +1,2 @@
+PASS emergency OSD: WAIT/ACKED/TIMEOUT/clear, frame snapshot, fixed glyphs, fallback-independent status and ID, fault coexistence
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency_osd.v:36: $finish called at 490840000 (1ps)

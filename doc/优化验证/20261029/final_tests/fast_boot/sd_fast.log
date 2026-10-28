@@ -1,0 +1,3 @@
+PASS SD fast clocks: 390.625 kHz initialization, 12.5 MHz read, CRC and 512-byte payload
+PASS SD SPI: CMD0/8/55/41/58, SDHC CMD17 address, all 512 bytes, CRC fault
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_sd_protocol.v:37: $finish called at 2420620000 (1ps)

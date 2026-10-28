@@ -1,0 +1,42 @@
+"""Add only the fixed menu labels; existing emergency glyph IDs stay stable."""
+from pathlib import Path
+from PIL import Image, ImageFont, ImageDraw
+import re
+R=Path(__file__).resolve().parents[1]
+p=R/'src/user_source/rtl/promax_text_overlay.v';s=p.read_text(encoding='utf-8')
+chars='亮度对比音量轮播周期诊断媒体重载'
+chars=''.join(dict.fromkeys(chars));font=ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',14)
+constants=[];ids={}
+for i,ch in enumerate(chars,31):
+    ids[ch]=i;im=Image.new('1',(16,16));d=ImageDraw.Draw(im);b=d.textbbox((0,0),ch,font=font)
+    d.text(((16-b[2]+b[0])//2-b[0],(16-b[3]+b[1])//2-b[1]),ch,font=font,fill=1)
+    bits=''.join(str(int(im.getpixel((x,y))!=0)) for y in range(16) for x in range(16))
+    constants.append(f"    localparam [255:0] CN_GLYPH_{i}=256'h{int(bits,2):064x}; // {ch}")
+if '    // MENU CHINESE GLYPHS' not in s:
+    s=s.replace('    function [15:0] chinese_glyph_row;', '    // MENU CHINESE GLYPHS\n'+'\n'.join(constants)+'\n    function [15:0] chinese_glyph_row;')
+glyphs={int(i):int(h,16 if base=='h' else 2) for i,base,h in re.findall(r"CN_GLYPH_(\d+)\s*=\s*256'([bh])([0-9a-fA-F]+)",s)}
+rows={}
+for g,bits in sorted(glyphs.items()):
+    for row in range(16):
+        v=(bits>>((15-row)*16))&65535
+        if v:rows.setdefault(v,[]).append((g<<4)|row)
+lines=['    function [15:0] chinese_glyph_row;','        input [5:0] glyph_id;','        input [3:0] row;','        begin','            case ({glyph_id,row})']
+for v,addr in sorted(rows.items()):lines.append('                '+','.join(f"10'h{a:03x}" for a in addr)+f": chinese_glyph_row=16'h{v:04x};")
+lines+=['                default: chinese_glyph_row=0;','            endcase','        end','    endfunction']
+s,n=re.subn(r'    function \[15:0\] chinese_glyph_row;.*?    endfunction','\n'.join(lines),s,flags=re.S);assert n==1
+s=s.replace('chinese_glyph_row(ch[4:0],ly-2)','chinese_glyph_row(ch[5:0],ly-2)')
+label=['亮度','对比度','音量','轮播周期','诊断','媒体重载']
+cases=[]
+for row,text in enumerate(label,1):
+    for col,ch in enumerate(text):cases.append(f"                10'd{row*64+col}:menu_char=8'h{128+ids[ch]:02x};")
+block='''            // Fixed Chinese row labels replace only the left label columns.
+            case({r,n})
+'''+ '\n'.join(cases)+'''
+                default:begin end
+            endcase
+'''
+if '// Fixed Chinese row labels' not in s:s=s.replace('            if(menu_field==4 && r==10)begin',block+'            if(menu_field==4 && r==10)begin')
+# Remove the obsolete English label tails so the Chinese names stay clean.
+s=s.replace('case({r,n})', 'if(r>=1 && r<=6 && n<10)menu_char=" ";\n            case({r,n})')
+p.write_text(s,encoding='utf-8')
+print(f'Fixed menu Chinese glyphs: {len(chars)}; IDs 0..30 preserved')

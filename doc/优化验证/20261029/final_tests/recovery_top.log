@@ -1,0 +1,10 @@
+CHECK boot start t330000
+CHECK cache start t5650000
+CHECK initial ready t8000000
+CHECK fallback t10320000 state3 reset1 ack1
+CHECK boot start t10320000
+CHECK cache start t15650000
+CHECK boot start t22170000
+CHECK cache start t27490000
+PASS recovery top: frame fallback before shared reset, HDMI/UI reset continuity, finite auto retry, STOP manual reload and 5s floor expiry
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_recovery_top.v:50: $finish called at 1031870000 (1ps)

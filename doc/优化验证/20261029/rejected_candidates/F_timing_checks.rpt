@@ -1,0 +1,466 @@
+Table of Contents
+-----------------
+1. checking no clock(0) (HIGH)
+2. checking clock definition(0) (HIGH)
+3. checking dummy node(4) (HIGH)
+4. checking invalid constraint(0) (HIGH)
+5. checking pll/clock buffer clock constraints(0) (HIGH)
+6. checking combinational loops(0) (HIGH)
+7. checking soft fifo timing exception constraints(0) (HIGH)
+8. checking no path constraints(0) (MEDIUM)
+9. checking shadowed/ignored timing exception constraints(0) (MEDIUM)
+10. checking no input delay(12) (MEDIUM)
+11. checking no output delay(31) (MEDIUM)
+12. checking partial input delay(0) (MEDIUM)
+13. checking partial output delay(0) (MEDIUM)
+14. checking abnormal input delay(0) (MEDIUM)
+
+
+1. checking nets with no clock driven. (HIGH)
+---------------------------------------------
+2. checking clock definition problems. (HIGH)
+---------------------------------------------
+2.1 There are 0 leaf clock pins driven by multiple clocks. (HIGH)
+
+
+2.2 There are 0 clocks created on internal clock network. (HIGH)
+
+
+2.3 There are 0 unexpandable clock sets. (HIGH)
+
+
+2.4 There are 0 local clocks. (HIGH)
+
+
+2.5 There are 0 generated clocks that are not connected to their master clocks. (HIGH)
+
+
+3. checking dummy nodes. (HIGH)
+---------------------------------------------
+There are 4 nodes are dangling. (HIGH)
+
+DummyNode in Model: EG_PHY_LSLICE
+	u_audio/u_symbol_core/u_packet_scheduler/locked_reg_syn_24.d[1]
+	u_audio/u_symbol_core/u_packet_scheduler/locked_reg_syn_24.c[1]
+	u_config/u_journal/u_store/write_data_latched_reg[46]_syn_4.b[0]
+	u_config/u_journal/u_store/write_data_latched_reg[25]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[17]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[10]_syn_4.b[0]
+	wave_diag_rgb_reg[1]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[10]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[25]_syn_4.b[0]
+	u_config/u_journal/u_store/write_data_latched_reg[46]_syn_4.c[0]
+	u_config/u_journal/u_store/write_data_latched_reg[25]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[17]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[10]_syn_4.c[0]
+	wave_diag_rgb_reg[1]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[10]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[25]_syn_4.c[0]
+	u_config/u_journal/u_journal/record_period_reg[24]_syn_4.d[0]
+	u_config/u_journal/u_journal/record_crc_b8[20]_syn_8.d[0]
+	u_config/u_journal/journal_load_start_reg_syn_16.mi[0]
+	u_config/u_journal/u_journal/record_period_reg[24]_syn_4.c[0]
+	u_config/u_journal/u_journal/record_crc_b8[20]_syn_8.c[0]
+	u_config/u_journal/u_journal/record_period_reg[24]_syn_4.a[0]
+	u_config/u_journal/u_journal/record_crc_b8[20]_syn_8.a[0]
+	u_config/u_journal/u_journal/record_period_reg[24]_syn_4.b[0]
+	u_config/u_journal/u_journal/record_crc_b8[20]_syn_8.b[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[2]_syn_4.a[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[11]_syn_4.a[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[2]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[11]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[2]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[11]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[2]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot0_crc_q_reg[11]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[6]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[4]_syn_4.c[1]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[4]_syn_4.a[1]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[6]_syn_4.a[0]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[6]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[4]_syn_4.d[1]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[6]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_crc_q_reg[4]_syn_4.b[1]
+	u_config/u_journal/u_store/write_data_latched_reg[53]_syn_4.a[1]
+	u_config/u_journal/u_store/write_data_latched_reg[53]_syn_4.b[1]
+	u_config/u_journal/u_store/write_data_latched_reg[53]_syn_4.d[1]
+	u_config/u_journal/u_store/write_data_latched_reg[53]_syn_4.c[1]
+	boot_pic5_ms_reg[4]_syn_4.c[0]
+	boot_pic5_ms_reg[12]_syn_4.c[0]
+	boot_pic5_ms_reg[4]_syn_4.d[0]
+	boot_pic5_ms_reg[12]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[294]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[229]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[175]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[294]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[229]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[294]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[229]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[294]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[229]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[175]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3810]_syn_4.d[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3810]_syn_4.b[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3810]_syn_4.c[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[294]_syn_4.c[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[298]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_sector_replay/sector_byte_index_reg[2]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/resource2_size_reg[28]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/frame_commit_reg_syn_5.c[0]
+	u_storage/u_ingest_frontend/u_sector_replay/sector_byte_index_reg[2]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/current_image_reg[2]_syn_15.c[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/resource2_size_reg[28]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/frame_commit_reg_syn_5.b[0]
+	u_storage/u_ingest_frontend/u_sector_replay/sector_byte_index_reg[2]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/resource2_size_reg[28]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sectors_per_cluster_shift_reg[2]_syn_12.mi[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sectors_per_cluster_shift_reg[2]_syn_12.mi[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/fs_error_reg[0]_syn_423.mi[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/left_shift2_syn_475.mi[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sectors_per_cluster_shift_reg[0]_syn_9.mi[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sectors_per_cluster_shift_reg[0]_syn_9.mi[0]
+	u_subtitle_frame_commit/held_reg[11]_syn_4.d[1]
+	boot_pic1_ms_reg[11]_syn_4.c[0]
+	boot_pic5_ms_reg[4]_syn_4.e[0]
+	boot_pic5_ms_reg[12]_syn_4.e[0]
+	live_text_reg[30]_syn_4.c[0]
+	u_subtitle_frame_commit/held_reg[11]_syn_4.c[1]
+	live_text_reg[30]_syn_4.d[0]
+	boot_pic1_ms_reg[11]_syn_4.d[0]
+	u_subtitle_uart/line_buffer_reg[89]_syn_4.c[1]
+	boot_pic5_ms_reg[4]_syn_4.b[0]
+	boot_pic5_ms_reg[12]_syn_4.b[0]
+	u_subtitle_uart/line_buffer_reg[89]_syn_4.d[1]
+	boot_pic5_ms_reg[4]_syn_4.a[0]
+	boot_pic5_ms_reg[12]_syn_4.a[0]
+	u_config/u_journal/u_store/write_data_latched_reg[46]_syn_4.d[0]
+	u_config/u_journal/u_store/write_data_latched_reg[25]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[17]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[10]_syn_4.d[0]
+	wave_diag_rgb_reg[1]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[10]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_version_q_reg[25]_syn_4.d[0]
+	u_text/g_font_bram$lookup_b1[7]_syn_2921.d[0]
+	u_text/g_font_bram$lookup_b1[7]_syn_2921.c[0]
+	u_ui/cfg_volume_b4[7]_syn_20.d[0]
+	u_text/convert_step_reg[3]_syn_99.d[1]
+	u_text/convert_step_reg[2]_syn_22.d[1]
+	u_text/convert_step_reg[2]_syn_22.c[1]
+	u_ui/cfg_volume_b4[7]_syn_20.c[0]
+	u_text/convert_step_reg[3]_syn_99.c[1]
+	u_text/g_font_bram$lookup_b1[7]_syn_2921.b[0]
+	u_ui/cfg_volume_b4[7]_syn_20.b[0]
+	u_text/convert_step_reg[3]_syn_99.b[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/current_image_reg[0]_syn_13.mi[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/current_image_reg[1]_syn_65.mi[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/current_image_reg[2]_syn_15.mi[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[294]_syn_4.d[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[298]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_sector_replay/sector_byte_index_reg[2]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/resource2_size_reg[28]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/frame_commit_reg_syn_5.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/current_image_reg[2]_syn_15.d[1]
+	u_subtitle_uart/mux400_syn_1478.mi[0]
+	u_ui/cfg_volume_b4[7]_syn_20.a[0]
+	u_text/convert_step_reg[3]_syn_99.a[1]
+
+DummyNode in Model: EG_PHY_MSLICE
+	u_text/mm_tens_reg[1]_syn_42.d[1]
+	u_video/g_color$y_q_reg[8]_syn_4.d[1]
+	u_text/g_font_bram$lookup_b1[6]_syn_317.d[0]
+	u_text/g_font_bram$lookup_b1[6]_syn_319.d[0]
+	u_config/u_journal/u_store/pending_error_code_reg[1]_syn_15.b[0]
+	u_config/u_journal/u_store/write_data_latched_reg[85]_syn_4.b[0]
+	u_config/u_journal/u_store/write_data_latched_reg[14]_syn_4.b[1]
+	u_config/u_journal/u_journal/slot1_crc_mid_reg[15]_syn_4.b[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[14]_syn_4.b[0]
+	u_config/u_journal/u_store/pending_error_code_reg[1]_syn_15.c[0]
+	u_config/u_journal/u_store/write_data_latched_reg[85]_syn_4.c[0]
+	u_config/u_journal/u_store/write_data_latched_reg[14]_syn_4.c[1]
+	u_config/u_journal/u_journal/slot1_crc_mid_reg[15]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[14]_syn_4.c[0]
+	u_config/u_journal/u_journal/slot1_crc_mid_b7[20]_syn_17.mi[0]
+	font_diag_rgb_b[6]_syn_11.mi[0]
+	u_config/u_journal/u_journal/slot1_crc_mid_b7[20]_syn_15.c[0]
+	u_config/u_journal/u_journal/slot1_crc_mid_b7[20]_syn_15.a[0]
+	u_config/u_journal/u_journal/slot1_crc_mid_b7[20]_syn_15.d[0]
+	u_config/u_journal/u_journal/slot1_crc_mid_b7[20]_syn_15.b[0]
+	u_config/u_journal/u_store/sel14_syn_4981.a[0]
+	u_config/u_journal/u_store/sel14_syn_4981.b[0]
+	u_config/u_journal/u_store/sel14_syn_4981.d[0]
+	u_config/u_journal/u_store/sel14_syn_4981.c[0]
+	u_report/ramread0_syn_157.b[1]
+	u_report/ramread0_syn_156.b[1]
+	u_report/ramread0_syn_157.b[0]
+	u_report/ramread0_syn_157.a[1]
+	u_report/ramread0_syn_156.a[1]
+	u_report/ramread0_syn_157.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/dib_size_q_b[13]_syn_28.a[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.a[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[324]_syn_4.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[186]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[253]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[324]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/dib_size_q_b[13]_syn_28.d[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.d[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[324]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/dib_size_q_b[13]_syn_28.c[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.c[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/dib_size_q_b[13]_syn_28.b[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[324]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.b[1]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[224]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[253]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_bmp_decoder/header_reg[186]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3801]_syn_4.d[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3801]_syn_4.b[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[3801]_syn_4.c[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[362]_syn_4.c[1]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.c[1]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.c[0]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.d[1]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.d[0]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.b[1]
+	u_subtitle_frame_commit/dst_data_reg[65]_syn_4.b[0]
+	u_subtitle_frame_commit/held_reg[12]_syn_4.c[0]
+	u_subtitle_frame_commit/held_reg[12]_syn_4.d[0]
+	u_subtitle_frame_commit/held_reg[44]_syn_4.c[0]
+	u_subtitle_frame_commit/held_reg[44]_syn_4.d[0]
+	u_config/u_journal/u_store/pending_error_code_reg[1]_syn_15.d[0]
+	u_config/u_journal/u_store/write_data_latched_reg[85]_syn_4.d[0]
+	u_config/u_journal/u_store/write_data_latched_reg[14]_syn_4.d[1]
+	u_config/u_journal/u_journal/slot1_crc_mid_reg[15]_syn_4.d[0]
+	u_config/u_journal/u_journal/slot1_period_q_reg[14]_syn_4.d[0]
+	u_text/g_font_bram$lookup_b1[7]_syn_2918.d[0]
+	u_text/g_font_bram$lookup_b1[7]_syn_2918.c[0]
+	u_text/convert_step_reg[3]_syn_103.d[1]
+	u_ui_status_commit/held_reg[6]_syn_4.d[0]
+	u_text/convert_step_reg[3]_syn_103.c[1]
+	u_ui_status_commit/held_reg[6]_syn_4.c[0]
+	u_text/g_font_bram$lookup_b1[7]_syn_2918.b[0]
+	u_text/convert_step_reg[3]_syn_103.b[1]
+	u_ui_status_commit/held_reg[6]_syn_4.b[0]
+	u_text/mm_tens_reg[1]_syn_42.c[1]
+	u_video/g_color$y_q_reg[8]_syn_4.c[1]
+	u_text/g_font_bram$lookup_b1[6]_syn_317.c[0]
+	u_text/g_font_bram$lookup_b1[6]_syn_319.c[0]
+	u_wave/ramread1_syn_328.d[0]
+	u_wave/ramread1_syn_356.d[0]
+	u_wave/ramread0_syn_272.d[0]
+	u_wave/ramread0_syn_300.d[0]
+	u_wave/ramread0_syn_328.d[0]
+	u_wave/ramread0_syn_356.d[0]
+	u_wave/ramread1_syn_272.d[0]
+	u_wave/ramread1_syn_300.d[0]
+	u_wave/ramread1_syn_328.c[0]
+	u_wave/ramread1_syn_356.c[0]
+	u_wave/ramread0_syn_272.c[0]
+	u_wave/ramread0_syn_300.c[0]
+	u_wave/ramread0_syn_328.c[0]
+	u_wave/ramread0_syn_356.c[0]
+	u_wave/ramread1_syn_272.c[0]
+	u_wave/ramread1_syn_300.c[0]
+	u_wave/ramread1_syn_328.b[0]
+	u_wave/ramread1_syn_356.b[0]
+	u_wave/ramread0_syn_272.b[0]
+	u_wave/ramread0_syn_300.b[0]
+	u_wave/ramread0_syn_328.b[0]
+	u_wave/ramread0_syn_356.b[0]
+	u_wave/ramread1_syn_272.b[0]
+	u_wave/ramread1_syn_300.b[0]
+	u_wave/ramread1_syn_328.a[0]
+	u_wave/ramread1_syn_356.a[0]
+	u_wave/ramread0_syn_272.a[0]
+	u_wave/ramread0_syn_300.a[0]
+	u_wave/ramread0_syn_328.a[0]
+	u_wave/ramread0_syn_356.a[0]
+	u_wave/ramread1_syn_272.a[0]
+	u_wave/ramread1_syn_300.a[0]
+	u_wave/ramread1_syn_440.d[0]
+	u_wave/ramread1_syn_468.d[0]
+	u_wave/ramread0_syn_384.d[0]
+	u_wave/ramread0_syn_412.d[0]
+	u_wave/ramread0_syn_440.d[0]
+	u_wave/ramread0_syn_468.d[0]
+	u_wave/ramread1_syn_384.d[0]
+	u_wave/ramread1_syn_412.d[0]
+	u_wave/ramread1_syn_440.c[0]
+	u_wave/ramread1_syn_468.c[0]
+	u_wave/ramread0_syn_384.c[0]
+	u_wave/ramread0_syn_412.c[0]
+	u_wave/ramread0_syn_440.c[0]
+	u_wave/ramread0_syn_468.c[0]
+	u_wave/ramread1_syn_384.c[0]
+	u_wave/ramread1_syn_412.c[0]
+	u_wave/ramread1_syn_440.b[0]
+	u_wave/ramread1_syn_468.b[0]
+	u_wave/ramread0_syn_384.b[0]
+	u_wave/ramread0_syn_412.b[0]
+	u_wave/ramread0_syn_440.b[0]
+	u_wave/ramread0_syn_468.b[0]
+	u_wave/ramread1_syn_384.b[0]
+	u_wave/ramread1_syn_412.b[0]
+	u_wave/ramread1_syn_440.a[0]
+	u_wave/ramread1_syn_468.a[0]
+	u_wave/ramread0_syn_384.a[0]
+	u_wave/ramread0_syn_412.a[0]
+	u_wave/ramread0_syn_440.a[0]
+	u_wave/ramread0_syn_468.a[0]
+	u_wave/ramread1_syn_384.a[0]
+	u_wave/ramread1_syn_412.a[0]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_volume_scanner/sector_buffer_reg[362]_syn_4.d[1]
+	u_report/tx_data_r_b[0]_syn_189.mi[0]
+	u_subtitle_uart/reply_index_reg[1]_syn_21.mi[0]
+	u_subtitle_uart/reply_index_reg[1]_syn_21.mi[1]
+	u_text/convert_step_reg[3]_syn_103.a[1]
+	u_ui_status_commit/held_reg[6]_syn_4.a[0]
+
+DummyNode in Model: EG_PHY_MULT18
+	u_cache/mult0_syn_74.b[17]
+	u_cache/mult0_syn_74.b[14]
+	u_cache/mult0_syn_74.b[15]
+	u_cache/mult0_syn_74.b[16]
+	u_cache/mult0_syn_74.b[12]
+	u_cache/mult0_syn_74.b[13]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_file_streamer/mult0_syn_84.b[14]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_file_streamer/mult0_syn_84.b[15]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_file_streamer/mult0_syn_84.b[16]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_file_streamer/mult0_syn_84.b[17]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/mult0_syn_4.a[13]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/mult0_syn_4.a[14]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/mult0_syn_4.a[15]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/mult0_syn_4.a[16]
+	u_storage/u_ingest_frontend/u_ingest_pipeline/u_frame_loader/mult0_syn_4.a[17]
+
+DummyNode in Model: EG_PHY_PAD
+	HDMI_DDC_SCL_syn_5.opad
+	flash_hold_n_syn_1.opad
+	flash_wp_n_syn_1.opad
+	seg_data[7]_syn_1.opad
+	U3/sdram_syn_5.opad
+	U3/sdram_syn_10.opad
+
+4. checking invalid constraints. (HIGH)
+---------------------------------------------
+There are 0 invalid constraints. (HIGH)
+
+
+5. checking PLL/buffer clocks. (HIGH)
+---------------------------------------------
+PLL/buffer inst: u_mem_pll/pll_inst
+{
+	There are 0 clock pins that have no clock constraints. (HIGH)
+
+
+	There are 0 clocks whose clock frequency do not match the PLL setting. (HIGH)
+
+
+}
+
+6. checking combinational loops. (HIGH)
+---------------------------------------------
+There are 0 combinational loops. (HIGH)
+
+
+7. checking soft fifo set_max_delay constraints. (HIGH)
+---------------------------------------------
+There are 0 max-delay datapath-only paths that are part of the provided async clock paths, whereas the timing between other registers is not relaxed or ignored. (HIGH)
+
+
+8. checking no path constraints. (MEDIUM)
+---------------------------------------------
+There are 0 constraints that have no timing paths. (MEDIUM)
+
+
+9. checking path exception constraints shadowed/ignored by other constraints. (MEDIUM)
+---------------------------------------------
+
+MCP/SMD Summary
+--------------------
+
+		Max Check
+		--------------------
+		     Total    Dominated     Shadowed      Ignored   Constraint
+		       710          710            0            0   set_max_delay -from [get_regs -hier {*/held[*]}] -to [get_regs -hier {*/dst_data[*] u_command/dst_command[*] u_command/dst_valid u_command/ack}] 20.000 -datapath_only
+		        18           18            0            0   set_max_delay -from [get_regs -hier {u_video/u_reader/u_read_fifo/wr_to_rd_cross_inst/primary_addr_gray_reg[*]}] -to [get_regs -hier {u_video/u_reader/u_read_fifo/wr_to_rd_cross_inst/sync_r1[*]}] 25.000 -datapath_only
+		        18           18            0            0   set_max_delay -from [get_regs -hier {u_video/u_reader/u_read_fifo/rd_to_wr_cross_inst/primary_addr_gray_reg[*]}] -to [get_regs -hier {u_video/u_reader/u_read_fifo/rd_to_wr_cross_inst/sync_r1[*]}] 40.000 -datapath_only
+		        18           18            0            0   set_max_delay -from [get_regs -hier {u_write_cdc/u_fifo/wr_gray[*]}] -to [get_regs -hier {u_write_cdc/u_fifo/wr_gray_sync1[*]}] 20.000 -datapath_only
+		        20           20            0            0   set_max_delay -from [get_regs -hier {u_write_cdc/u_fifo/rd_gray[*]}] -to [get_regs -hier {u_write_cdc/u_fifo/rd_gray_sync1[*]}] 25.000 -datapath_only
+		         6            6            0            0   set_max_delay -from [get_regs -hier {u_write_cdc/src_block_gray[*]}] -to [get_regs -hier {u_write_cdc/src_block_gray_sync1[*]}] 20.000 -datapath_only
+		        16           16            0            0   set_max_delay -from [get_clocks {pixel_clk_5x}] -to [get_ports {HDMI_CLK_P HDMI_D0_P HDMI_D1_P HDMI_D2_P}] 8.000 -datapath_only
+
+		Min Check
+		--------------------
+		     Total    Dominated     Shadowed      Ignored   Constraint
+
+10. checking no input delay (MEDIUM)
+--------------------------
+There are 12 input ports that with no input delay specified. (MEDIUM)
+
+	HDMI_DDC_SDA
+	flash_miso
+	key1
+	key2
+	key3
+	rst_n
+	sd_miso
+	sw[3]
+	sw[2]
+	sw[1]
+	sw[0]
+	uart_rx
+
+11. checking no output delay (MEDIUM)
+--------------------------
+There are 31 output ports that with no output delay specified. (MEDIUM)
+
+	HDMI_CLK_P
+	HDMI_D0_P
+	HDMI_D1_P
+	HDMI_D2_P
+	HDMI_DDC_SCL
+	HDMI_DDC_SDA
+	flash_cs_n
+	flash_hold_n
+	flash_mosi
+	flash_sclk
+	flash_wp_n
+	sd_dclk
+	sd_mosi
+	sd_ncs
+	seg_data[7]
+	seg_data[6]
+	seg_data[5]
+	seg_data[4]
+	seg_data[3]
+	seg_data[2]
+	seg_data[1]
+	seg_data[0]
+	seg_sel[7]
+	seg_sel[6]
+	seg_sel[5]
+	seg_sel[4]
+	seg_sel[3]
+	seg_sel[2]
+	seg_sel[1]
+	seg_sel[0]
+	uart_tx
+
+12. checking partial input delay (MEDIUM)
+--------------------------
+There are 0 input ports with partial input delay specified. (MEDIUM)
+
+
+13. checking partial output delay (MEDIUM)
+--------------------------
+There are 0 output ports with partial output delay specified. (MEDIUM)
+
+
+14. checking abnormal set_input_delay constraints. (MEDIUM)
+---------------------------------------------
+There are 0 abnormal set_input_delay constraints. (MEDIUM)
+
+

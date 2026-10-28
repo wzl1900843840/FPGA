@@ -1,0 +1,2 @@
+PASS arbiter watchdog: blocked grant, active/retiring stall, refresh drain, delayed progress, sticky owner
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_arbiter_watchdog.v:24: $finish called at 1010000 (1ps)

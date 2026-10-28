@@ -1,0 +1,2 @@
+PASS UI command: async clocks, backpressure, page cancellation, ack and rearm
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_ui_command.v:15: $finish called at 896000 (1ps)

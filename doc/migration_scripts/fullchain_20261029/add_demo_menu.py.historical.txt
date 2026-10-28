@@ -1,0 +1,22 @@
+from pathlib import Path
+p=Path('src/user_source/rtl/promax_text_overlay.v')
+s=p.read_text(encoding='utf-8')
+lines=['PARAMETERS','BRIGHTNESS 000/255','CONTRAST   000  NEUTRAL128','VOLUME     000/255','PERIOD     00.000S','DIAGNOSTIC K2/K3 PAGE','RELOAD     HOLD K4','K2+ K3- K4 NEXT HOLD DEFAULT','SW2 EXIT K2+K3 HOLD3S SAVE','','MEMORY VOLUME 128','640X480 OUTPUT V2']
+def literal(t):return "288'h"+t.ljust(36).encode().hex()
+f=['    function [7:0] menu_char;','        input [3:0] r;input [5:0] n;','        reg [287:0] line;reg [11:0] digits;','        begin','            line=0;digits=0;','            case(r)']
+for i,t in enumerate(lines):f.append(f'                {i}:line={literal(t)};')
+f+=['            endcase',f'            if(r==0)line=menu_dirty?{literal("PARAMETERS  UNSAVED")}:{literal("PARAMETERS  SYNCED")};',f'            if(r==7 && menu_field==4)line={literal("K2/K3 DIAG PAGE K4 NEXT")};',f'            if(r==7 && menu_field==5)line={literal("HOLD K4 TO RELOAD CONFIRM")};',f'            if(menu_confirm && r==6)line={literal("CONFIRM RELOAD MEDIA?")};',f'            if(menu_confirm && r==7)line={literal("K2 CONFIRM K3 CANCEL")};','            if(r==9)case(menu_feedback)']
+for i,t in enumerate(['','SAVING','SAVED','BUSY','FLASH ERROR','RELOADING','UNCHANGED']):f.append(f'                {i}:line={literal(t)};')
+f+=['                default:begin end','            endcase','            menu_char=line[(35-n)*8 +:8];','            case(r)1:digits=numbers_frame[43:32];2:digits=numbers_frame[55:44];3:digits=numbers_frame[31:20];endcase','            if(r>=1 && r<=3 && n>=11 && n<=13)menu_char="0"+((digits>>((13-n)*4))&15);','            if(r==4)case(n)11:menu_char="0"+numbers_frame[19:16];12:menu_char="0"+numbers_frame[15:12];14:menu_char="0"+numbers_frame[11:8];15:menu_char="0"+numbers_frame[7:4];16:menu_char="0"+numbers_frame[3:0];endcase','            if(menu_field==4 && r==10)begin','                if(n==0)menu_char="D";else if(n==1)menu_char="0"+menu_diag;','                else if(n>=3 && n<19)menu_char=hex_char(diagnostic_data[(18-n)*4 +:4]);','            end','        end','    endfunction']
+s=s.replace('    function text_pixel;','\n'.join(f)+'\n    function text_pixel;')
+s=s.replace('reg found,sub;','reg found,sub;reg [3:0] mr;')
+s=s.replace('if((alert_frame || clear_frames!=0) && px>=96', '''if(MENU_ENABLE && show_info_frame && !alert_frame && px>=24 && px<600 && py>=96 && py<384)begin
+                lx=px-24;mr=(py-96)/24;ly=(py-96)-mr*24;
+                cell_idx=lx/16;col=lx-cell_idx*16;ch=menu_char(mr,cell_idx);found=1;sub=1;
+            end else if((alert_frame || clear_frames!=0) && px>=96''',1)
+s=s.replace('    assign rgb_out=ink ?', '''    wire selected_box=MENU_ENABLE && show_info_frame && !alert_frame && de && pixel_x>=12 && pixel_x<620 && pixel_y>=120+menu_field*24 && pixel_y<140+menu_field*24;
+    wire menu_edge=selected_box && (pixel_x==12 || pixel_x==619 || pixel_y==120+menu_field*24 || pixel_y==139+menu_field*24);
+    wire menu_arrow=selected_box && pixel_x>=16 && pixel_x<22 && pixel_y>=126+menu_field*24 && pixel_y<134+menu_field*24;
+    assign rgb_out=menu_edge || menu_arrow ? 24'hffdc40 : ink ?''')
+p.write_text(s,encoding='utf-8')
+

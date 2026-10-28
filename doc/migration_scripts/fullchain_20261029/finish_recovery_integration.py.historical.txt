@@ -1,0 +1,24 @@
+from pathlib import Path
+R=Path(__file__).resolve().parents[1]
+p=R/'src/user_source/hdl_source/top_tf_hdmi_audio.v'
+s=p.read_text(encoding='utf-8')
+a=s.index('    wire sdram_init,');b=s.index('    // 10. ',a)
+s=s[:a]+s[a:b].replace('sys_reset_n','media_sys_reset_n').replace('mem_reset_n','media_mem_reset_n')+s[b:]
+s=s.replace('.write_drained(write_drained));','.write_drained(write_drained),.fault(arbiter_fault),.diagnostic_max_wait(diagnostic_max_wait));')
+s=s.replace('.ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(','.ctrl_clk(pixel_clk),.ctrl_rst_n(media_pix_reset_n),.next_event(')
+s=s.replace('.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),','.mem_clk(mem_clk),.mem_rst_n(media_mem_reset_n),')
+s=s.replace('.reader_busy(),.reader_underflow(),.video_error(video_error),.first_tf_pixel(first_tf_pixel));', '''.reader_busy(),.reader_underflow(),.video_error(video_error),.first_tf_pixel(first_tf_pixel),
+        .reader_reset_n(media_pix_reset_n),.diagnostic_fifo_min(diagnostic_fifo_min),
+        .diagnostic_underflows(diagnostic_underflows));''')
+s=s.replace('.alert_page_available(complete_pix[4] &&', '.alert_page_available(!reload_display_pix && complete_pix[4] &&')
+s=s.replace('wire [23:0] focus_rgb=elevator_alert_fallback ?', 'wire [23:0] focus_rgb=(elevator_alert_fallback || (reload_display_pix && elevator_alert_pix_state)) ?')
+s=s.replace('.wr_clk(clk),.wr_rst_n(sys_reset_n)', '.wr_clk(clk),.wr_rst_n(media_sys_reset_n)')
+s=s.replace('.rd_clk(pixel_clk),.rd_rst_n(pix_reset_n)', '.rd_clk(pixel_clk),.rd_rst_n(media_pix_reset_n)')
+p.write_text(s,encoding='utf-8')
+p=R/'src/td_project/lab_ex5_i2s_v1.0.al';s=p.read_text(encoding='utf-8')
+s=s.replace('        </Verilog>','''            <File Path="../user_source/rtl/media_recovery_manager.v">
+                <FileInfo><Attr Name="UsedInSyn" Val="true"/><Attr Name="UsedInP&amp;R" Val="true"/><Attr Name="BelongTo" Val="design_1"/></FileInfo>
+            </File>
+        </Verilog>''')
+p.write_text(s,encoding='utf-8')
+print('Integrated recovery; verify before build.')

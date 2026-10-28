@@ -1,0 +1,20 @@
+from pathlib import Path
+R=Path(__file__).resolve().parents[1]
+s=(R/'tests/tb_flash.v').read_text().replace('module tb_flash;','module tb_extended_flash;')
+s=s.replace('wire ready,ld,sd,fatal;', 'wire [7:0] lb,lc,memory;wire unchanged;reg [7:0] brightness=223,contrast=144;\nwire ready,ld,sd,fatal;')
+s=s.replace('#(.SPI_CLK_DIV(2)', '#(.EXTENDED_UI(1),.DEFAULT_VOLUME(0),.RESTORE_VOLUME_ON_BOOT(0),.SPI_CLK_DIV(2)')
+s=s.replace('.clk(clk),.rst_n(rst),', '.clk(clk),.rst_n(rst),.cfg_brightness(brightness),.cfg_contrast(contrast),.live_brightness(lb),.live_contrast(lc),.memory_volume(memory),.save_unchanged(unchanged),')
+a=s.index('initial begin #12;');b=s.index('initial begin #10000000;',a)
+s=s[:a]+'''initial begin #12;rst=1;wait(ld||fatal);
+if(fatal||lp!=5000||lv!=0||lm!=0||lb!=255||lc!=128||memory!=128)$fatal(1,"default extended");
+update_save;reboot;
+if(lp!=10000||lv!=0||lm!=0||memory!=128||lb!=223||lc!=144)$fatal(1,"extended restore");
+@(negedge clk);save=1;@(negedge clk);save=0;wait(sd);
+if(!unchanged || flash.writes!=1)$fatal(1,"unchanged write");repeat(4)@(negedge clk);
+period=30000;vol=64;brightness=127;contrast=96;update_save;reboot;
+if(lp!=30000||lv!=0||memory!=64||lb!=127||lc!=96)$fatal(1,"second restore");
+flash.mem[4096]=flash.mem[4096]^8'h80;reboot;
+if(lp!=10000||lv!=0||memory!=128||lb!=223||lc!=144)$fatal(1,"extended CRC fallback");
+$display("PASS extended Flash: four fields, boot mute/manual, memory volume, unchanged no-write and CRC fallback");$finish;end
+''' +s[b:]
+(R/'tests/tb_extended_flash.v').write_text(s)

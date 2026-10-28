@@ -4,6 +4,7 @@ reg mc=0,pc=0,rst=0,fs=0;always #12.5 mc=~mc;always #20 pc=~pc;
 wire app_read,valid,busy,req,urgent,grant,ret,drained;wire [20:0]addr;
 wire [1:0] owner;wire [7:0]error;reg rv=0;reg[31:0]data=0;
 integer commands=0;always @(posedge mc)begin rv<=app_read;data<=addr;if(rst&&app_read)commands=commands+1;end
+integer trigger_command=20;
 media_frame_reader #(.IMAGE_WORDS(256),.SHARED_MEMORY(1)) reader(
  .diag_synth_stream(1'b0),.mem_clk(mc),.mem_rst_n(rst),.controller_init_done(1'b1),
  .controller_busy(1'b0),.refresh_active(1'b0),.app_rd_en(app_read),.app_rd_addr(addr),
@@ -16,8 +17,10 @@ media_sdram_arbiter arb(.clk(mc),.rst_n(rst),.controller_busy(1'b0),.refresh_act
  .app_read(app_read),.app_write(1'b0),.rd_valid(rv),.video_grant(grant),.write_grant(),.cache_grant(),
  .owner(owner),.video_return(ret),.cache_return(),.write_drained(drained));
 initial begin
+ if(!$value$plusargs("TRIGGER=%d",trigger_command))trigger_command=20;
+ if(trigger_command<1 || trigger_command>128)$fatal(1,"trigger must be an authorized command position 1..128");
  #103;rst=1;repeat(10)@(negedge pc);fs=1;@(negedge pc);fs=0;
- wait(commands>=20);@(negedge pc);fs=1;@(negedge pc);fs=0;
+ wait(commands>=trigger_command);@(negedge pc);fs=1;@(negedge pc);fs=0;
  repeat(5000)@(negedge mc);
  if(commands>=384 && owner==0 && !req)
   $display("PASS frame-overrun authorized transaction completes: commands=%0d returns=%0d owner=%0d request=%0d grant=%0d",commands,arb.returns,owner,req,grant);

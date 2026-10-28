@@ -1,0 +1,2 @@
+PASS repeat-save rearmed: two full chord presses, save_count=2 locked=0
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fix_repeat_save.v:16: $finish called at 4040000 (1ps)

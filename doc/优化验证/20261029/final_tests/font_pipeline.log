@@ -1,0 +1,2 @@
+PASS font_pipeline: 4096 ROM entries and 921600 pixels match one-cycle RGB/DE/OSD alignment across menu, confirm and alarm
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_font_pipeline.v:35: $finish called at 9303020000 (1ps)

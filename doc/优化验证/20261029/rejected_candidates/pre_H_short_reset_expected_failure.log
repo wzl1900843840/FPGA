@@ -1,0 +1,2 @@
+FATAL: tests/tb_reader_reset.v:69: short pixel reset did not asynchronously assert both release chains
+       Time: 100103000  Scope: tb_reader_reset

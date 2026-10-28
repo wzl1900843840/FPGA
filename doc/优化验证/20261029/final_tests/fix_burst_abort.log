@@ -1,0 +1,2 @@
+PASS frame-overrun authorized transaction completes: commands=384 returns=0 owner=0 request=0 grant=0
+tests/tb_fix_burst_abort.v:28: $finish called at 126425000 (1ps)

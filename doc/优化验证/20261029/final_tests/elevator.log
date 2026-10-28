@@ -1,0 +1,2 @@
+PASS elevator demo: startup, alert, fallback, recovery and fault states
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_elevator.v:21: $finish called at 170000 (1ps)

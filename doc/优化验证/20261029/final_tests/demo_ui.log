@@ -1,0 +1,2 @@
+PASS demo UI: six visible fields, defaults, reload confirmation, short/long, repeat save, busy freeze, three keys and page ownership
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_demo_ui.v:60: $finish called at 19110000 (1ps)
