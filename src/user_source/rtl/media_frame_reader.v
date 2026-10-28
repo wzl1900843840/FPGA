@@ -164,7 +164,10 @@ module media_frame_reader #(
             diagnostic_underflows<=underflows_snapshot;
             // Ordinary diagnostic CE logic must use the mem-domain release,
             // never the raw common reset which also contains pix_rst_n.
-            if(fifo_ready_mem[1] && fifo_wrusedw>=256)diagnostic_started<=1;
+            // Rearm for every flush: the new frame's intentional empty fill
+            // interval must not overwrite the lifetime minimum with zero.
+            if(!fifo_ready_mem[1])diagnostic_started<=0;
+            else if(fifo_wrusedw>=256)diagnostic_started<=1;
             // Exclude intentional flushes and the finite frame's natural tail.
             if(diagnostic_started && fifo_ready_mem[1] && !reload_pending_mem && reader_busy &&
                 issued_count_mem<IMAGE_WORDS && fifo_wrusedw<diagnostic_fifo_min)

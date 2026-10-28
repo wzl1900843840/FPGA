@@ -89,6 +89,22 @@ initial begin
  if(dut.diagnostic_fifo_min!==9'd17) $fatal(1,"diagnostics did not resume after local release");
  release dut.diagnostic_started;release dut.reload_pending_mem;
  release dut.reader_busy;release dut.issued_count_mem;release dut.fifo_wrusedw;
+ // A subsequent frame flush must rearm the prefill qualification, while
+ // retaining the lifetime minimum from the previous active frame.
+ @(negedge mc);force dut.fifo_reset_count_mem=3'd4;
+ @(posedge mc);#1;
+ if(dut.diagnostic_started!==0) $fatal(1,"flush did not rearm diagnostic prefill");
+ release dut.fifo_reset_count_mem;
+ force dut.reload_pending_mem=1'b0;force dut.reader_busy=1'b1;
+ force dut.issued_count_mem=0;force dut.fifo_wrusedw=9'd0;
+ wait(dut.fifo_ready_mem[1]);repeat(3)@(negedge mc);
+ if(dut.diagnostic_fifo_min!==9'd17) $fatal(1,"intentional empty prefill polluted minimum");
+ force dut.fifo_wrusedw=9'd300;@(posedge mc);#1;
+ if(dut.diagnostic_started!==1) $fatal(1,"prefill did not restart diagnostics");
+ @(negedge mc);force dut.fifo_wrusedw=9'd9;@(posedge mc);#1;
+ if(dut.diagnostic_fifo_min!==9'd9) $fatal(1,"new frame active minimum was not recorded");
+ release dut.reload_pending_mem;release dut.reader_busy;
+ release dut.issued_count_mem;release dut.fifo_wrusedw;
  $display("PASS reader reset: destination release, read/write isolation, five media banks plus thumbnail bank, stale-pixel flush, manual reset");
  $finish;
 end
