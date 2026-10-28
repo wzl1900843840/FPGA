@@ -16,10 +16,12 @@
 // -----------------------------------------------------------------------------
 module frame_config_cdc #(parameter WIDTH=64,parameter [WIDTH-1:0] RESET_VALUE=0)(
     input wire src_clk,src_rst_n,input wire [WIDTH-1:0] src_data,
-    input wire dst_clk,dst_rst_n,frame_start,output reg [WIDTH-1:0] dst_data);
+    input wire dst_clk,dst_rst_n,frame_start,output reg [WIDTH-1:0] dst_data,
+    output wire src_busy);
     reg [WIDTH-1:0] held;      // 源域稳定副本：跨域搬的是它，不是变化的 src_data
     reg request,ack;           // request 源→目的"有新值"，ack 目的→源"已收下"
     (* async_reg="true" *) reg ack_sync1,ack_sync2,req_sync1,req_sync2;
+    assign src_busy=(request!=ack_sync2) || (src_data!=held);
     always @(posedge src_clk or negedge src_rst_n)
         if(!src_rst_n) begin held<=RESET_VALUE;request<=0;ack_sync1<=0;ack_sync2<=0;end
         else begin

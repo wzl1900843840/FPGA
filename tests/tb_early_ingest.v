@@ -4,7 +4,7 @@ reg sc=0,mc=0,rst=0,start=0;
 always #10 sc=~sc;always #12.5 mc=~mc;
 wire req,done,sw,full,overflow,idle,mw;
 wire [31:0] lba,swdata,mwdata;
-wire [20:0] swa,mwa;wire [3:0] mask,mmask,complete,ready;
+wire [20:0] swa,mwa;wire [3:0] mask,mmask;wire [4:0] complete,ready;
 wire [7:0] error,detail;
 reg busy=0,sv=0,sd=0;reg [7:0] sb=0;reg [8:0] bi=0;
 reg [7:0] physical_delay=0;

@@ -12,11 +12,11 @@ set_false_path -from [get_clocks {mem_clk_shift}] -to [get_clocks {mem_clk}]
 set_clock_uncertainty -hold 0.050 [get_clocks {sys_clk pixel_clk pixel_clk_5x mem_clk mem_clk_shift}]
 set_false_path -from [get_ports {rst_n}]
 # 公共 FIFO 复位进入的就是异步置位/同步释放链；仅豁免这些复位同步触发器。
-set_false_path -from [get_regs -hier {u_pix_reset/s2}] -to [get_regs -hier {u_video/u_reader/fifo_ready_mem[*] u_video/u_reader/u_read_fifo/asy_w_rst0 u_video/u_reader/u_read_fifo/asy_w_rst1}]
+set_false_path -from [get_regs -hier {u_media_pix_reset/s2}] -to [get_regs -hier {u_video/u_reader/fifo_ready_mem[*] u_video/u_reader/u_read_fifo/asy_w_rst0 u_video/u_reader/u_read_fifo/asy_w_rst1}]
 # The shared flush asserts these dedicated two-stage reset synchronizers.
 # Their outputs release consumers on the destination clock; no ordinary data
 # registers or FIFO pointers are excepted by this crossing-specific rule.
-set_false_path -from [get_regs -hier {u_mem_reset/s2 u_video/u_reader/fifo_reset_count_mem[*] u_video/u_reader/fifo_release_mem[*]}] -to [get_regs -hier {u_video/u_reader/prefetch_release_pix[*] u_video/u_reader/u_read_fifo/asy_r_rst0 u_video/u_reader/u_read_fifo/asy_r_rst1}]
+set_false_path -from [get_regs -hier {u_media_mem_reset/s2 u_video/u_reader/fifo_reset_count_mem[*] u_video/u_reader/fifo_release_mem[*]}] -to [get_regs -hier {u_video/u_reader/prefetch_release_pix[*] u_video/u_reader/u_read_fifo/asy_r_rst0 u_video/u_reader/u_read_fifo/asy_r_rst1}]
 set_false_path -from [get_regs -hier {u_video/u_reader/fifo_release_pix[*]}] -to [get_regs -hier {u_video/u_reader/fifo_ready_mem[*] u_video/u_reader/u_read_fifo/asy_w_rst0 u_video/u_reader/u_read_fifo/asy_w_rst1}]
 set_false_path -to [get_regs -hier {*/s1}]
 set_false_path -to [get_regs -hier {*/request_sync1_mem}]
@@ -25,7 +25,10 @@ set_false_path -to [get_regs -hier {*/req_sync1}]
 set_false_path -to [get_regs -hier {*/ack_sync1}]
 # fade 与控制器在本工程均为 pixel_clk，无需跨域例外。
 # frame_config_cdc 的 held 在请求至应答期间保持；目的端只在帧沿采样。
-set_false_path -from [get_regs -hier {*/held[*]}] -to [get_regs -hier {*/dst_data[*]}]
+set_max_delay -from [get_regs -hier {*/held[*]}] -to [get_regs -hier {*/dst_data[*] u_command/dst_command[*] u_command/dst_valid u_command/ack}] 20.000 -datapath_only
+# Only asynchronous external input paths. TD merges/renames the first-stage
+# registers; starting at ports keeps all register-to-register stages timed.
+set_false_path -from [get_ports {key1 key2 key3 sw[*]}]
 # 原始FIFO的Gray指针跨域只限定数据路径，不把整个时钟组设为互斥。
 set_max_delay -from [get_regs -hier {u_video/u_reader/u_read_fifo/wr_to_rd_cross_inst/primary_addr_gray_reg[*]}] -to [get_regs -hier {u_video/u_reader/u_read_fifo/wr_to_rd_cross_inst/sync_r1[*]}] 25.000 -datapath_only
 set_max_delay -from [get_regs -hier {u_video/u_reader/u_read_fifo/rd_to_wr_cross_inst/primary_addr_gray_reg[*]}] -to [get_regs -hier {u_video/u_reader/u_read_fifo/rd_to_wr_cross_inst/sync_r1[*]}] 40.000 -datapath_only

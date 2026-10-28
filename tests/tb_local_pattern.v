@@ -2,12 +2,18 @@
 module tb_local_pattern;
 reg clk=0,rst=0,key2=0;
 `ifdef FIFO_DIAG
-reg[3:0]sw=12;
+reg[3:0]sw=0;
 `else
-reg[3:0]sw=8;
+reg[3:0]sw=0;
 `endif
 always #10 clk=~clk;
-top d(.clk(clk)
+top #(.DIAG_LOCAL_PATTERN(1),.DIAG_FIFO_PATTERN(
+`ifdef FIFO_DIAG
+1
+`else
+0
+`endif
+)) d(.clk(clk)
 ,.rst_n(rst),.key1(1'b1),.key2(key2),.key3(1'b1),.sw(sw),
 .uart_rx(1'b1),.sd_miso(1'b1),.flash_miso(1'b1));
 integer pixels=0,frames=0;reg checking=0;reg[23:0]expected;integer x,y;
@@ -51,14 +57,16 @@ initial begin
  release d.u_video.u_reader.sdram_rd_data;
 `endif
  if(pixels!=307200)$fatal(1,"frame pixels %d",pixels);
- // Normal reset exits diagnostic and permits storage boot again.
+ // Explicit maintenance build stays isolated; a normal instance boots storage.
  rst=0;#200;rst=1;
 
- wait(d.ingest_start);
- if(d.diag_local_sys!==0 || d.diag_local_pix!==0)$fatal(1,"normal boot stuck in diagnostic");
- $display("PASS local_pattern: 307200 RGB pixels; no TF start or SDRAM R/W; diagnostic isolation and normal reboot verified");$finish;
+ wait(normal_d.ingest_start);
+ if(normal_d.diag_local_sys!==0 || normal_d.diag_local_pix!==0 || d.diag_local_sys!==1)$fatal(1,"maintenance isolation");
+ $display("PASS local_pattern: 307200 RGB pixels; explicit maintenance isolation and independent normal reboot verified");$finish;
 end
 initial begin #40000000;$fatal(1,"timeout");end
+top normal_d(.clk(clk),.rst_n(rst),.key1(1'b1),.key2(1'b1),.key3(1'b1),.sw(4'd0),
+ .uart_rx(1'b1),.sd_miso(1'b1),.flash_miso(1'b1));
 endmodule
 // Boundary devices only. Force unsolicited SDRAM returns to verify they are ignored.
 module sys_pll_promax_40(input refclk,reset,output clk0_out,output reg clk1_out=0,

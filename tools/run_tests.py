@@ -19,17 +19,24 @@ cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_co
 'rescue_ack':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],
 'rescue_queue':['uart_rx_byte','uart_tx_byte','uart_status_reporter'],
 'pic5_address':['media_frame_loader'],
-'reader_reset':['media_frame_reader','fifo_prefetch_2','afifo_32_16_256'],
+'reader_reset':['media_frame_reader','frame_config_cdc','fifo_prefetch_2','afifo_32_16_256'],
 'reset_sync':['reset_sync'],
 'emergency_osd':['promax_text_overlay'],
 'fix_single_image':['video_fade_transition','media_player_control'],
-'fix_burst_abort':['media_frame_reader','media_sdram_arbiter','fifo_prefetch_2','afifo_32_16_256'],
+'fix_burst_abort':['media_frame_reader','media_sdram_arbiter','frame_config_cdc','fifo_prefetch_2','afifo_32_16_256'],
 'fix_repeat_save':['dual_key_chord_router','dual_key_long_hold_guard'],
 'sd_protocol':['sd_media_service','sd_spi_init','sd_spi_command','sd_spi_byte_engine','sd_spi_sector_reader']}
+cases.update({'demo_ui':['demo_ui_controller'],
+ 'ui_command':['ui_command_cdc'], 'recovery':['media_recovery_manager']})
+cases['extended_flash']=cases['flash']
+cases['demo_switches']=['demo_switch_filter']
+cases['demo_menu']=['promax_text_overlay']
+cases['font_pipeline']=['promax_text_overlay']
+cases['arbiter_watchdog']=['media_sdram_arbiter']
 results=[]
 for name,modules in cases.items():
  start=time.time();binary=out/(name+'.vvp')
- extra={'flash':'spi_flash_model.v','sd_protocol':'spi_sd_model.v'}
+ extra={'flash':'spi_flash_model.v','extended_flash':'spi_flash_model.v','sd_protocol':'spi_sd_model.v'}
  c=subprocess.run(['D:/iverilog/bin/iverilog.exe','-g2012','-s','tb_'+name,'-o',str(binary),str(root/'tests'/('tb_'+name+'.v'))]+[str(rtl/(m+'.v')) for m in modules]+([str(root/'tests'/extra[name])] if name in extra else []),capture_output=True,text=True)
  log=c.stdout+c.stderr
  if c.returncode==0:

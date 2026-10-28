@@ -8,7 +8,7 @@ initial begin #10;forever #12.5 ms=~ms;end
 wire init,busy,refresh,rv;wire [31:0] rd;
 wire vre,cre,cwe,vrequest,urgent,vgrant,crequest,cwrite,cgrant;
 wire [20:0] va,cra,cwa;wire [31:0] cwd;
-wire [1:0] owner;wire vreturn,creturn,cache_busy,cache_done;
+wire [1:0] owner;wire vreturn,creturn,cache_busy,cache_done,arbiter_fault;wire [21:0] max_wait;
 wire [7:0] cache_error,reader_error;
 reg fs=0,consume=0;wire [23:0] rgb;wire valid,underflow;
 media_frame_reader #(.SHARED_MEMORY(1)) reader(
@@ -16,7 +16,8 @@ media_frame_reader #(.SHARED_MEMORY(1)) reader(
  .controller_busy(busy),.refresh_active(refresh),.app_rd_en(vre),.app_rd_addr(va),
  .sdram_rd_valid(rv && vreturn),.sdram_rd_data(rd),.pix_clk(pc),.pix_rst_n(rst),
  .frame_start(fs),.active_index(3'd0),.pixel_consume(consume),.pixel_rgb(rgb),.pixel_valid(valid),
- .underflow(underflow),.reader_error(reader_error),.burst_grant(vgrant),.burst_request(vrequest),.read_urgent(urgent));
+ .underflow(underflow),.reader_error(reader_error),.burst_grant(vgrant),.burst_request(vrequest),.read_urgent(urgent),
+ .reader_busy(),.frame_read_done(),.reader_index(),.diagnostic_fifo_min(),.diagnostic_underflows());
 thumbnail_cache_builder #(.SHARED_MEMORY(1)) cache(
  .clk(mc),.rst_n(rst),.start(start),.image_complete(4'b1101),.busy(cache_busy),.done(cache_done),.error(cache_error),
  .app_rd_en(cre),.app_rd_addr(cra),.rd_valid(rv && creturn),.rd_data(rd),
@@ -27,7 +28,7 @@ wire awe=owner==3 && cwe;
 media_sdram_arbiter arb(.clk(mc),.rst_n(rst),.controller_busy(busy),.refresh_active(refresh),
  .video_request(vrequest),.video_urgent(urgent),.write_request(1'b0),.cache_request(crequest),.cache_write(cwrite),
  .app_read(are),.app_write(awe),.rd_valid(rv),.video_grant(vgrant),.cache_grant(cgrant),
- .owner(owner),.video_return(vreturn),.cache_return(creturn));
+ .owner(owner),.video_return(vreturn),.cache_return(creturn),.write_grant(),.write_drained(),.fault(arbiter_fault),.diagnostic_max_wait(max_wait));
 sdram mem(.Clk(mc),.Clk_sft(ms),.Rst(!rst),.Sdr_init_done(init),.Sdr_busy(busy),.Sdr_init_ref_vld(refresh),
  .App_wr_en(awe),.App_wr_addr(cwa),.App_wr_dm(4'd0),.App_wr_din(cwd),
  .App_rd_en(are),.App_rd_addr(owner==3 ? cra : va),.Sdr_rd_en(rv),.Sdr_rd_dout(rd));

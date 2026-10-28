@@ -22,6 +22,7 @@
 //       0xDE=保存后回读不合法；0xDF=请求被丢弃；0xD1=Flash 里存的字段越界；
 //       0xD2=待写入的字段越界被拒绝；0xFF=状态机异常。
 module player_config_persistence #(
+    parameter integer EXTENDED_UI = 0,
     parameter integer SPI_CLK_DIV = 4,
     parameter integer STARTUP_CYCLES = 1024,
     parameter integer WAKE_CYCLES = 200,
@@ -47,6 +48,9 @@ module player_config_persistence #(
     input  wire [31:0] cfg_period_ms,
     input  wire [7:0]  cfg_volume,
     input  wire [7:0]  cfg_mode,
+    input wire [7:0] cfg_brightness,cfg_contrast,
+    output reg [7:0] live_brightness,live_contrast,memory_volume,
+    output reg save_unchanged,
     input  wire        save_request,
     output reg         service_ready,
     output wire        busy,
@@ -87,6 +91,18 @@ module player_config_persistence #(
     localparam [3:0] ST_SAVE_APPLY      = 4'd7;
     localparam [3:0] ST_ERROR           = 4'd8;
 
+    // A5:B:C:index extended record shares the proven journal CRC and slots.
+    // Legacy millisecond fields cannot collide with the A5 tag.
+    function [31:0] decoded_period; input [31:0] raw; begin
+        if(EXTENDED_UI && raw[31:24]==8'ha5)
+            case(raw[1:0])
+             0:decoded_period=2000;1:decoded_period=5000;2:decoded_period=10000;3:decoded_period=30000;
+            endcase
+        else decoded_period=raw;
+    end endfunction
+    wire [1:0] save_period_index=live_period_ms<5000?0:live_period_ms<10000?1:live_period_ms<30000?2:3;
+    wire [31:0] encoded_period=EXTENDED_UI?{8'ha5,live_brightness,live_contrast,6'd0,save_period_index}:live_period_ms;
+    reg [7:0] staged_brightness,staged_contrast;
     reg [3:0] state;
     reg [31:0] staged_period_ms;
     reg [7:0] staged_volume;
@@ -138,8 +154,9 @@ module player_config_persistence #(
         input [31:0] period_ms;
         input [7:0] mode_value;
         begin
-            config_fields_valid = period_ms >= MIN_PERIOD_MS &&
-                                  period_ms <= MAX_PERIOD_MS &&
+            config_fields_valid = decoded_period(period_ms) >= MIN_PERIOD_MS &&
+                                  decoded_period(period_ms) <= MAX_PERIOD_MS &&
+                                  (!(EXTENDED_UI && period_ms[31:24]==8'ha5) || period_ms[7:2]==0) &&
                                   mode_value[7:1] == 0;
         end
     endfunction
@@ -226,7 +243,7 @@ module player_config_persistence #(
     ) u_journal (
         .clk(clk), .rst_n(journal_rst_n),
         .load_start(journal_load_start), .save_start(journal_save_start),
-        .save_period(live_period_ms), .save_volume(live_volume),
+        .save_period(encoded_period), .save_volume(EXTENDED_UI?memory_volume:live_volume),
         .save_mode(live_mode), .busy(journal_busy),
         .load_done(journal_load_done), .save_done(journal_save_done),
         .error(journal_error), .error_code(journal_error_code),
@@ -243,10 +260,13 @@ module player_config_persistence #(
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= ST_PREFLIGHT_ISSUE;
+            live_brightness<=255;live_contrast<=128;memory_volume<=128;
+            staged_brightness<=255;staged_contrast<=128;
             preflight_start <= 1'b0;
             journal_load_start <= 1'b0;
             journal_save_start <= 1'b0;
             service_ready <= 1'b0;
+            save_unchanged<=0;
             load_done <= 1'b0;
             save_done <= 1'b0;
             apply_valid <= 1'b0;
@@ -269,6 +289,7 @@ module player_config_persistence #(
             preflight_start <= 1'b0;
             journal_load_start <= 1'b0;
             journal_save_start <= 1'b0;
+            save_unchanged<=0;
             load_done <= 1'b0;
             save_done <= 1'b0;
             apply_valid <= 1'b0;
@@ -302,7 +323,9 @@ module player_config_persistence #(
                     end else begin
                         if (journal_config_valid &&
                             config_fields_valid(journal_period,journal_mode)) begin
-                            staged_period_ms <= journal_period;
+                            staged_period_ms <= decoded_period(journal_period);
+                            staged_brightness<=EXTENDED_UI && journal_period[31:24]==8'ha5 ? journal_period[23:16]:255;
+                            staged_contrast<=EXTENDED_UI && journal_period[31:24]==8'ha5 ? journal_period[15:8]:128;
                             staged_volume <= journal_volume;
                             staged_mode <= journal_mode;
                             staged_stored_valid <= 1'b1;
@@ -329,7 +352,11 @@ module player_config_persistence #(
                     // the actual runtime volume without changing the record format.
                     apply_config(staged_period_ms,
                         RESTORE_VOLUME_ON_BOOT ? staged_volume : DEFAULT_VOLUME,
-                        staged_mode);
+                        EXTENDED_UI?8'd0:staged_mode);
+                    if(EXTENDED_UI)begin
+                        live_brightness<=staged_brightness;live_contrast<=staged_contrast;
+                        memory_volume<=staged_volume==0?128:staged_volume;
+                    end
                     state <= ST_READY;
                 end
                 ST_READY: begin
@@ -338,15 +365,23 @@ module player_config_persistence #(
                             request_dropped <= 1'b1;
                         if (config_fields_valid(cfg_period_ms,cfg_mode)) begin
                             error_code <= 8'd0;
-                            apply_config(cfg_period_ms,cfg_volume,cfg_mode);
+                            apply_config(cfg_period_ms,cfg_volume,EXTENDED_UI?8'd0:cfg_mode);
+                            if(EXTENDED_UI)begin
+                                live_brightness<=cfg_brightness;live_contrast<=cfg_contrast;
+                                if(cfg_volume!=0)memory_volume<=cfg_volume;
+                            end
                         end else begin
                             config_rejected <= 1'b1;
                             error_code <= 8'hd2;
                         end
                     end else if (save_request) begin
-                        service_ready <= 1'b0;
-                        journal_save_start <= 1'b1;
-                        state <= ST_SAVE_WAIT;
+                        if(EXTENDED_UI && stored_config_valid && journal_period==encoded_period && journal_volume==memory_volume)begin
+                            save_done<=1;save_unchanged<=1;
+                        end else begin
+                            service_ready <= 1'b0;
+                            journal_save_start <= 1'b1;
+                            state <= ST_SAVE_WAIT;
+                        end
                     end
                 end
                 ST_SAVE_WAIT: if (journal_save_done) begin
@@ -356,7 +391,9 @@ module player_config_persistence #(
                         enter_fatal(journal_request_dropped ? 8'hdf :
                                     journal_error ? journal_error_code : 8'hde);
                     end else begin
-                        staged_period_ms <= journal_period;
+                        staged_period_ms <= decoded_period(journal_period);
+                            staged_brightness<=EXTENDED_UI && journal_period[31:24]==8'ha5 ? journal_period[23:16]:255;
+                            staged_contrast<=EXTENDED_UI && journal_period[31:24]==8'ha5 ? journal_period[15:8]:128;
                         staged_volume <= journal_volume;
                         staged_mode <= journal_mode;
                         state <= ST_SAVE_APPLY;
@@ -367,14 +404,16 @@ module player_config_persistence #(
                     save_done <= 1'b1;
                     stored_config_valid <= 1'b1;
                     error_code <= 8'd0;
-                    apply_config(staged_period_ms,staged_volume,staged_mode);
+                    apply_config(staged_period_ms,EXTENDED_UI?live_volume:staged_volume,EXTENDED_UI?8'd0:staged_mode);
                     state <= ST_READY;
                 end
                 ST_ERROR: begin
                     // Flash型号/保护检查失败后仍允许RAM参数调节；禁止写操作。
                     service_ready<=1'b0;
-                    if(cfg_update_valid && config_fields_valid(cfg_period_ms,cfg_mode))
-                        apply_config(cfg_period_ms,cfg_volume,cfg_mode);
+                    if(cfg_update_valid && config_fields_valid(cfg_period_ms,cfg_mode))begin
+                        apply_config(cfg_period_ms,cfg_volume,EXTENDED_UI?8'd0:cfg_mode);
+                        if(EXTENDED_UI)begin live_brightness<=cfg_brightness;live_contrast<=cfg_contrast;if(cfg_volume!=0)memory_volume<=cfg_volume;end
+                    end
                 end
                 default: enter_fatal(8'hff);
             endcase

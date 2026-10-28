@@ -64,7 +64,8 @@ module media_frame_reader #(
     output reg  [7:0]            reader_error,
     input  wire                 burst_grant,
     output wire                 burst_request,
-    output wire                 read_urgent
+    output wire                 read_urgent,
+    output reg [8:0] diagnostic_fifo_min,output reg [15:0] diagnostic_underflows
 );
     // Runtime selection is latched at boot, before any frame request.
     wire synth_stream = DIAG_SYNTH_STREAM || (RUNTIME_DIAG && diag_synth_stream);
@@ -138,6 +139,26 @@ module media_frame_reader #(
     wire prefetch_valid;
     wire [31:0] prefetch_data;
     wire pixel_pop = pixel_consume && prefetch_valid;
+    reg diagnostic_started;
+    reg [15:0] diagnostic_underflows_pix;
+    always @(posedge pix_clk or negedge pix_rst_n)
+        if(!pix_rst_n)diagnostic_underflows_pix<=0;
+        else if(pixel_consume && !prefetch_valid && diagnostic_underflows_pix!=16'hffff)
+            diagnostic_underflows_pix<=diagnostic_underflows_pix+1'b1;
+    wire [15:0] underflows_snapshot;
+    frame_config_cdc #(.WIDTH(16)) u_underflows_commit(
+        .src_clk(pix_clk),.src_rst_n(pix_rst_n),.src_data(diagnostic_underflows_pix),
+        .dst_clk(mem_clk),.dst_rst_n(mem_rst_n),.frame_start(1'b1),.dst_data(underflows_snapshot));
+    always @(posedge mem_clk or negedge mem_rst_n)
+        if(!mem_rst_n)begin diagnostic_fifo_min<=511;diagnostic_started<=0;diagnostic_underflows<=0;end
+        else begin
+            diagnostic_underflows<=underflows_snapshot;
+            if(!fifo_reset && fifo_wrusedw>=256)diagnostic_started<=1;
+            // Exclude intentional flushes and the finite frame's natural tail.
+            if(diagnostic_started && !fifo_reset && !reload_pending_mem && reader_busy &&
+                issued_count_mem<IMAGE_WORDS && fifo_wrusedw<diagnostic_fifo_min)
+                diagnostic_fifo_min<=fifo_wrusedw;
+        end
     wire [ADDR_WIDTH:0] inflight_words =
         {{(ADDR_WIDTH+1-INFLIGHT_COUNT_W){1'b0}}, inflight_count_mem};
     wire final_return = returned_count_mem == IMAGE_WORDS - 1;

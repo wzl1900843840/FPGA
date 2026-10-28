@@ -7,7 +7,7 @@ wire init,busy,refresh,rv;wire [31:0] rd;
 reg sw=0;reg [20:0] swa=0;reg [31:0] swd=0;
 wire full,overflow,idle,we;wire [20:0] wa;wire [31:0] wd;wire [3:0] wm;
 wire wrq,wgrant,vrq,vgrant,urgent,crq,cgrant;wire [1:0] owner;
-wire vreturn,creturn,drained;
+wire vreturn,creturn,drained,arbiter_fault;wire [21:0] max_wait;
 media_sdram_write_cdc #(.SHARED_MEMORY(1)) cdc(.src_clk(sc),.src_rst_n(rst),
  .src_wr_en(sw),.src_wr_addr(swa),.src_wr_mask(4'd0),.src_wr_data(swd),
  .src_full(full),.src_overflow(overflow),.dst_clk(mc),.dst_rst_n(rst),
@@ -32,7 +32,7 @@ wire [31:0] awd=owner==3 ? cd : wd;
 media_sdram_arbiter arb(.clk(mc),.rst_n(rst),.controller_busy(busy),.refresh_active(refresh),
  .video_request(vrq),.video_urgent(urgent),.write_request(wrq),.cache_request(crq),.cache_write(cw),
  .app_read(are),.app_write(awe),.rd_valid(rv),.video_grant(vgrant),.write_grant(wgrant),.cache_grant(cgrant),
- .owner(owner),.video_return(vreturn),.cache_return(creturn),.write_drained(drained));
+ .owner(owner),.video_return(vreturn),.cache_return(creturn),.write_drained(drained),.fault(arbiter_fault),.diagnostic_max_wait(max_wait));
 sdram mem(.Clk(mc),.Clk_sft(ms),.Rst(!rst),.Sdr_init_done(init),.Sdr_busy(busy),.Sdr_init_ref_vld(refresh),
  .App_wr_en(awe),.App_wr_addr(awa),.App_wr_dm(4'd0),.App_wr_din(awd),
  .App_rd_en(are),.App_rd_addr(ara),.Sdr_rd_en(rv),.Sdr_rd_dout(rd));

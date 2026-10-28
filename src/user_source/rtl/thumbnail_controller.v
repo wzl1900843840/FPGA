@@ -27,7 +27,8 @@ module thumbnail_controller (
     output reg view_mode,
     output reg [1:0] focus_index, active_index,
     output reg transition_req,
-    output reg selection_committed
+    output reg selection_committed,
+    input wire cancel
 );
     reg pending_mode, pending_transition;
     reg pending_selection;
@@ -42,13 +43,17 @@ module thumbnail_controller (
             selection_committed<=0;
             if(frame_start) begin
                 // 帧边界统一提交：这一帧内所有变化对外同时生效
-                view_mode<=pending_mode; focus_index<=pending_focus;
+                view_mode<=cancel ? 1'b0 : pending_mode; focus_index<=pending_focus;
                 active_index<=pending_active; transition_req<=pending_transition;
                 pending_transition<=0;
-                selection_committed<=pending_selection;pending_selection<=0;
+                selection_committed<=pending_selection && !cancel;pending_selection<=0;
             end
             // 同拍新事件进入下一帧，不被上面的提交清除。
-            if(key_mode) begin pending_mode<=~pending_mode; pending_transition<=1;pending_selection<=0; end
+            if(cancel) begin
+                pending_mode<=0; pending_selection<=0;
+                if(pending_mode) pending_transition<=1;
+            end
+            else if(key_mode) begin pending_mode<=~pending_mode; pending_transition<=1;pending_selection<=0; end
             else if(pending_mode) begin
                 // 缩略图模式下：左右移动焦点（2位自然环绕），确认需目标图已完整
                 if(key_right) pending_focus<=pending_focus+1'b1;

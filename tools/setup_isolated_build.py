@@ -118,6 +118,13 @@ def rewrite_paths(dst_project):
         changed.append(name)
     for prj in sorted((dst_project / f'{PROJECT_NAME}_Runs').rglob('*.prj')):
         text = prj.read_text(encoding='utf-8')
+        # TD's standalone flow opens .prj, not .al. Always derive its source
+        # set from the authoritative project instead of reusing stale GUI runs.
+        al_text=(dst_project/(PROJECT_NAME+'.al')).read_text(encoding='utf-8')
+        block=re.search(r'<Source_Files>.*?</Source_Files>',al_text,re.S)[0]
+        block=block.replace('../user_source/','../../../user_source/').replace('UsedInP&amp;R','UsedInP&R')
+        text=re.sub(r'<Source_Files>.*?</Source_Files>',lambda _:block,text,flags=re.S)
+        prj.write_text(text,encoding='utf-8')
         if old in text:
             prj.write_text(text.replace(old, new), encoding='utf-8')
             changed.append(str(prj.relative_to(dst_project)))
@@ -155,6 +162,12 @@ def main():
     mode = link_user_source(out / 'user_source', args.link_mode)
     changed = rewrite_paths(dst_project)
     strategy = apply_phy_strategy(dst_project)
+    # The synchronous OSD font ROM must retain its configuration bits.
+    # DefaultFlow forwards these documented stage/key/value triples.
+    syn_cfg=run_dir(dst_project, 'syn_1')/'settings.cfg'
+    cfg=syn_cfg.read_text(encoding='utf-8')
+    cfg=re.sub(r'^set synWildParams .*\n?', '', cfg, flags=re.M)
+    syn_cfg.write_text(cfg.rstrip('\n')+'\nset synWildParams {gate eram_init on}\n',encoding='utf-8')
     refs = verify(dst_project)
     print(f'isolated tree : {out}')
     print(f'project copy  : {dst_project}')

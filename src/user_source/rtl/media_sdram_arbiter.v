@@ -25,7 +25,8 @@
 // writes and thumbnail work use the buffered display's spare bandwidth.
 module media_sdram_arbiter #(
     parameter integer BURST_SIZE = 128,
-    parameter integer DRAIN_CYCLES = 16
+    parameter integer DRAIN_CYCLES = 16,
+    parameter integer STALL_LIMIT = 4000000
 ) (
     input wire clk, rst_n,
     input wire controller_busy, refresh_active,
@@ -35,7 +36,8 @@ module media_sdram_arbiter #(
     output wire video_grant, write_grant, cache_grant,
     output wire [1:0] owner,
     output wire video_return, cache_return,
-    output wire write_drained
+    output wire write_drained,output reg fault,
+    output reg [21:0] diagnostic_max_wait
 );
     localparam NONE=2'd0, VIDEO=2'd1, WRITE=2'd2, CACHE=2'd3;
     reg [1:0] active_owner;        // 当前占用总线的路（NONE=空闲）
@@ -43,6 +45,20 @@ module media_sdram_arbiter #(
     reg [$clog2(BURST_SIZE)-1:0] commands, returns;   // 已发出的命令数 / 已收到的读返回数
     reg [$clog2(DRAIN_CYCLES+1)-1:0] drain;           // 排空计数
     reg [1:0] selected;
+    reg [21:0] stall_count,wait_count;
+    always @(posedge clk or negedge rst_n)
+    if(!rst_n)begin fault<=0;stall_count<=0;wait_count<=0;diagnostic_max_wait<=0;end
+    else begin
+        if((active_owner!=NONE && !app_read && !app_write && !rd_valid &&
+            (!retiring || controller_busy || refresh_active)) ||
+           (active_owner==NONE && selected==NONE && (video_request || write_request || cache_request)))begin
+            if(stall_count>=STALL_LIMIT-1)fault<=1;else stall_count<=stall_count+1'b1;
+        end else stall_count<=0;
+        if(video_request && !video_grant)begin
+            if(wait_count!=22'h3fffff)wait_count<=wait_count+1'b1;
+            if(wait_count>diagnostic_max_wait)diagnostic_max_wait<=wait_count;
+        end else wait_count<=0;
+    end
     // 只有总线完全空闲（无占用、控制器不忙、不在刷新）时才产生新的仲裁结果
     always @* begin
         selected=NONE;

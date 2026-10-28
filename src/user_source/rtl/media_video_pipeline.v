@@ -101,7 +101,10 @@ module media_video_pipeline #(
     input  wire       burst_grant,
     output wire       burst_request,
     output wire       read_urgent,
-    output wire       first_tf_pixel
+    output wire       first_tf_pixel,
+    input wire reader_reset_n,
+    output wire [8:0] diagnostic_fifo_min,output wire [15:0] diagnostic_underflows,
+    output wire action_busy
 );
     wire raw_hs;
     wire raw_vs;
@@ -117,6 +120,7 @@ module media_video_pipeline #(
     wire index_commit;
     wire [7:0] control_error;
     wire request_busy;
+    assign action_busy=request_busy;
     wire [31:0] active_period_cycles;
     wire [23:0] reader_rgb;
     wire reader_pixel_valid;
@@ -124,8 +128,7 @@ module media_video_pipeline #(
     wire [2:0] reader_index;
     wire [7:0] reader_error;
     wire player_enable_pix;
-    reg [7:0] reader_error_pix1;
-    reg [7:0] reader_error_pix2;
+    wire [7:0] reader_error_pix2;
     reg [7:0] control_error_pix1;
     reg [7:0] control_error_pix2;
     wire [23:0] selected_rgb =
@@ -161,17 +164,16 @@ module media_video_pipeline #(
 
     always @(posedge pix_clk or negedge pix_rst_n) begin
         if (!pix_rst_n) begin
-            reader_error_pix1 <= 8'd0;
-            reader_error_pix2 <= 8'd0;
             control_error_pix1 <= 8'd0;
             control_error_pix2 <= 8'd0;
         end else begin
-            reader_error_pix1 <= reader_error;
-            reader_error_pix2 <= reader_error_pix1;
             control_error_pix1 <= control_error;
             control_error_pix2 <= control_error_pix1;
         end
     end
+    frame_config_cdc #(.WIDTH(8)) u_reader_error_commit(
+        .src_clk(mem_clk),.src_rst_n(mem_rst_n),.src_data(reader_error),
+        .dst_clk(pix_clk),.dst_rst_n(pix_rst_n && (reader_reset_n !== 1'b0)),.frame_start(frame_start),.dst_data(reader_error_pix2));
 
     // 第1级：产生标准 VGA 时序（640×480，含前后肩和同步脉冲）
     video_timing_ctrl #(
@@ -199,7 +201,7 @@ module media_video_pipeline #(
         .ctrl_clk(ctrl_clk), .ctrl_rst_n(ctrl_rst_n),
         .next_event_in(next_event), .next_event_out(fade_next_event),
         .fade_busy(),
-        .pix_clk(pix_clk), .pix_rst_n(pix_rst_n),
+        .pix_clk(pix_clk), .pix_rst_n(pix_rst_n && (reader_reset_n !== 1'b0)),
         .player_active(player_enable_pix), .frame_start(frame_start),
         .index_commit(index_commit || mode_transition), .active_index(active_index[1:0]),
         .alpha_out(fade_alpha), .fade_active(),
@@ -246,7 +248,7 @@ module media_video_pipeline #(
         .active_period_cycles(active_period_cycles),
         .pending_index(pending_index), .control_error(control_error),
         .request_busy(request_busy), .pix_clk(pix_clk),
-         .pix_rst_n(pix_rst_n), .frame_start(frame_start),
+         .pix_rst_n(pix_rst_n && (reader_reset_n !== 1'b0)), .frame_start(frame_start),
          .emergency_active(emergency_active), .emergency_index(emergency_index),
         .active_index(active_index), .index_commit(index_commit)
     );
@@ -269,13 +271,14 @@ module media_video_pipeline #(
         .controller_busy(controller_busy), .refresh_active(refresh_active),
         .app_rd_en(app_rd_en), .app_rd_addr(reader_address),
         .sdram_rd_valid(sdram_rd_valid), .sdram_rd_data(sdram_rd_data),
-        .pix_clk(pix_clk), .pix_rst_n(pix_rst_n),
+        .pix_clk(pix_clk), .pix_rst_n(pix_rst_n && (reader_reset_n !== 1'b0)),
         .frame_start(frame_start && player_enable_pix), .active_index(view_mode ? 3'd5 : active_index),
         .pixel_consume(raw_de && player_enable_pix), .pixel_rgb(reader_rgb),
         .pixel_valid(reader_pixel_valid), .underflow(reader_underflow),
         .reader_busy(reader_busy), .frame_read_done(reader_done),
         .reader_index(reader_index), .reader_error(reader_error),
-        .burst_grant(burst_grant),.burst_request(burst_request),.read_urgent(read_urgent)
+        .burst_grant(burst_grant),.burst_request(burst_request),.read_urgent(read_urgent),
+        .diagnostic_fifo_min(diagnostic_fifo_min),.diagnostic_underflows(diagnostic_underflows)
     );
 
     // 第5级：转场合成。淡出淡入用 alpha 乘像素；自动轮播用"移动的边界"逐列揭示新图。

@@ -23,13 +23,14 @@ def source_files(root):
     return files
 
 
-def snapshot_hashes(out):
+def snapshot_hashes(out, frozen=False):
     """Hash the actual build inputs; reject a stale copy before invoking TD."""
     hashes = {}
-    for source in sorted(source_files(ROOT)):
+    sources=source_files(ROOT) if not frozen else [ROOT/'src/user_source'/p.relative_to(out/'user_source') for p in (out/'user_source').rglob('*') if p.suffix in ('.v','.vh','.sdc','.adc')]
+    for source in sorted(sources):
         relative = source.relative_to(ROOT / 'src/user_source')
         snapshot = out / 'user_source' / relative
-        if not snapshot.is_file() or digest(snapshot) != digest(source):
+        if not snapshot.is_file() or (not frozen and digest(snapshot) != digest(source)):
             raise SystemExit('isolated source is stale: ' + str(relative))
         hashes[str(source.relative_to(ROOT))] = digest(snapshot)
     return hashes
@@ -58,7 +59,7 @@ def run_flow(td_root, workdir, log, flow=None):
     return [line for line in text.splitlines() if 'WARNING' in line]
 
 
-def check_tree(out):
+def check_tree(out, frozen=False):
     project = out / 'td_project'
     al = project / (NAME + '.al')
     if not al.is_file():
@@ -66,10 +67,19 @@ def check_tree(out):
     pattern = r'<File Path="([^"]+)"'
     isolated = re.findall(pattern, al.read_text(encoding='utf-8'))
     current = re.findall(pattern, (ROOT / 'src/td_project' / (NAME + '.al')).read_text(encoding='utf-8'))
-    if isolated != current:
+    if isolated != current and not frozen:
         raise SystemExit('isolated project is stale; rerun tools/setup_isolated_build.py')
     if not (out / 'user_source').exists():
         raise SystemExit('isolated user_source link is missing; rerun setup_isolated_build.py')
+    expected={str((project/ref).resolve()).lower() for ref in isolated}
+    for stage in ('syn_1','phy_1'):
+        prj=project/f'{NAME}_Runs'/stage/(NAME+'.prj')
+        refs=re.findall(pattern,prj.read_text(encoding='utf-8'))
+        actual={str((prj.parent/ref).resolve()).lower() for ref in refs}
+        if actual!=expected or any(not Path(ref).is_file() for ref in actual):
+            raise SystemExit('run source list mismatches authoritative .al: '+str(prj))
+    if 'gate eram_init on' not in (project/f'{NAME}_Runs/syn_1/settings.cfg').read_text(encoding='utf-8'):
+        raise SystemExit('BRAM font initialization is disabled')
     return project / f'{NAME}_Runs'
 
 
@@ -105,14 +115,15 @@ def publish(out, runs, values, hashes, warnings):
         'sources': hashes,
         'build_inputs': {
             str(p.relative_to(ROOT)): digest(p) for p in
-            [ROOT / 'src/td_project' / (NAME + '.al'),
+            [out / 'td_project' / (NAME + '.al'),
              ROOT / 'tools/build_isolated.py', ROOT / 'tools/setup_isolated_build.py',
              ROOT / 'tools/repair_routed_hold.tcl',
-             runs / 'syn_1/settings.cfg', runs / 'phy_1/settings.cfg']
+             runs / 'syn_1/settings.cfg', runs / 'phy_1/settings.cfg',
+             runs / 'syn_1'/(NAME+'.prj'), runs / 'phy_1'/(NAME+'.prj')]
         },
         'warnings': warnings,
         'hardware_tested': False,
-        'note': 'Built in the isolated build_out tree; src/ was read-only during this run.',
+        'note': 'Source hashes and project describe the actual isolated copy. Tool script hashes describe collection-time tooling.',
     }
     (best / 'validation.json').write_text(json.dumps(report, ensure_ascii=False, indent=2),
                                           encoding='utf-8')
@@ -128,10 +139,11 @@ def main():
                         help='reuse the isolated syn_1 result; only rerun place and route')
     parser.add_argument('--collect', action='store_true',
                         help='verify and publish an already finished isolated run')
+    parser.add_argument('--frozen-source', action='store_true', help='build/check immutable source copy while worktree advances')
     args = parser.parse_args()
     out = args.out.resolve()
-    runs = check_tree(out)
-    hashes = snapshot_hashes(out)
+    runs = check_tree(out,args.frozen_source)
+    hashes = snapshot_hashes(out,args.frozen_source)
     warnings = []
     if not args.collect:
         for stage in (('phy_1',) if args.physical_only else ('syn_1', 'phy_1')):
@@ -155,7 +167,8 @@ def main():
                 raise SystemExit('unreviewed critical warning in: ' + name)
             warnings += [line for line in log.splitlines() if 'WARNING' in line]
     for name, value in hashes.items():
-        if digest(ROOT / name) != value:
+        checked=(out/'user_source'/Path(name).relative_to('src/user_source')) if args.frozen_source else ROOT/name
+        if digest(checked) != value:
             raise SystemExit('source changed during the build: ' + name)
     values = timing_values(runs / 'phy_1' / (NAME + '_pr.timing'))
     if min(values.values()) < 0:

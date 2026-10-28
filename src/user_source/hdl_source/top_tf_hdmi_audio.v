@@ -24,10 +24,10 @@
 //   TF卡扇区 → wav_stream_player(BRAM) → 音量/淡入淡出 → HDMI Data Island 音频包
 //   （PCM_START_LBA=0 时不读卡，音频来自 pcm_media_tone 合成音调）
 //
-// 板上操作：K1复位 / K2下一张 / K3手动自动+长按上一张 / K4音量+长按周期 /
-//           K2+K3同时按3秒保存参数。
-//           SW1缩略图；SW2参数服务界面；SW2=0时SW3进入电梯演示、SW4触发告警；
-//           SW2=1时SW3选择亮度/对比度，SW4不再触发告警；普通媒体模式SW4仍为测试音。
+// 板上操作：K1复位；普通页K2下一张、K3短按自动/手动及长按上一张；
+//           K4短按静音/恢复、长按缩略图；菜单K4逐项选择，K2/K3调节。
+//           K2+K3保持3秒保存，全部释放后重装；页面切换取消未完成按压。
+//           SW1字幕；SW2中文参数菜单；SW3音频波形；SW4本地告警。
 //==============================================================================
 module top #(
     // 音频PCM在卡上的物理起始LBA与总扇区数。两个都为0表示"不读卡音频"，
@@ -36,10 +36,11 @@ module top #(
     parameter [31:0] PCM_TOTAL_SECTORS=0,
     // 置1则上电直接进入"本地图案"诊断模式，完全绕过SD卡与SDRAM读取。
     parameter integer DIAG_LOCAL_PATTERN=0,
-    // 置1时固定进入电梯演示；运行时也可用 SW2=0、SW3=1 进入电梯演示。
-    // 电梯演示下 SW4 是独立告警开关；普通媒体模式下 SW4 保持测试音。
+    parameter integer DIAG_FIFO_PATTERN=0,
+    // 兼容旧仿真参数；电梯主题现为常驻，不再切换拨码含义。
     parameter integer ELEVATOR_DEMO_MODE=0,
     parameter integer SW_DEBOUNCE_CYCLES=1000000,
+    parameter integer UI_CLKS_PER_MS=50000,
     parameter integer ALARM_SOUND_ENABLE=1
 )(
     input wire clk,rst_n,key1,key2,key3,   // 50MHz输入、低有效复位、K2/K3/K4
@@ -62,6 +63,17 @@ module top #(
     wire mem_clk,mem_clk_shift,pixel_clk,pixel_clk_5x,mem_locked;
     wire sys_reset_n,mem_reset_n,pix_reset_n,serial_reset_n;
     wire ext_reset_n=rst_n && mem_locked;
+    wire media_sys_reset_n,media_mem_reset_n,media_pix_reset_n;
+    wire recovery_reset_n,recovery_fallback,recovery_failed,recovery_ack;
+    wire [7:0] recovery_retries;
+    wire arbiter_fault,arbiter_fault_sys;
+    wire [21:0] diagnostic_max_wait;
+    wire [8:0] diagnostic_fifo_min;
+    wire [15:0] diagnostic_underflows;
+    reset_sync u_media_sys_reset(.clk(clk),.ext_rst_n(ext_reset_n && recovery_reset_n),.rst_n_sync(media_sys_reset_n));
+    reset_sync u_media_mem_reset(.clk(mem_clk),.ext_rst_n(ext_reset_n && recovery_reset_n),.rst_n_sync(media_mem_reset_n));
+    reset_sync #(.RELEASE_ON_FALLING_EDGE(1)) u_media_pix_reset(.clk(pixel_clk),
+        .ext_rst_n(ext_reset_n && recovery_reset_n),.rst_n_sync(media_pix_reset_n));
     sys_pll_promax_40 u_mem_pll(.refclk(clk),.reset(~rst_n),.clk0_out(),
         .clk1_out(mem_clk),.clk2_out(mem_clk_shift),.clk3_out(pixel_clk),
         .clk4_out(pixel_clk_5x),.locked(mem_locked));
@@ -74,37 +86,14 @@ module top #(
 
     //--------------------------------------------------------------------------
     // 2. 单变量实板诊断入口
-    //    操作：按住 K4(key2)、把 SW4(sw[3]) 拨到1，再释放 K1 复位。
-    //    复位释放后只采样一次，随后可以松开 K4；下次正常复位自动退出。
-    //    diag_local_sys：输出本地图案，完全不读SDRAM（隔离显示链）。
-    //    diag_fifo_sys ：仍走读取FIFO路径，用于对比"FIFO前/FIFO后"哪个环节花屏。
-    //    这两个标志是系统域单拍量，下面用 sync_2ff 分别同步到内存域和像素域。
+    //    仅通过明确的维护构建参数选择，不复用用户按键或拨码启动手势。
+    //    DIAG_LOCAL_PATTERN隔离存储链，DIAG_FIFO_PATTERN保留FIFO路径。
+    //    默认两个参数均为0，正常构建进入TF媒体启动链。
     //--------------------------------------------------------------------------
-    reg [5:0] diag_boot_count;
-    reg diag_local_sys,diag_fifo_sys;
-    reg [1:0] diag_key_sync,diag_sw_sync,diag_fifo_sw_sync;
-    always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) begin
-            diag_boot_count<=0;diag_local_sys<=0;diag_fifo_sys<=0;diag_fifo_sw_sync<=0;
-            diag_key_sync<=2'b11;diag_sw_sync<=0;
-        end else begin
-            diag_key_sync<={diag_key_sync[0],key2};
-            diag_sw_sync<={diag_sw_sync[0],sw[3]};
-            diag_fifo_sw_sync<={diag_fifo_sw_sync[0],sw[2]};
-            if(diag_boot_count!=63) begin          // 只在复位后的固定窗口内采样一次
-                diag_boot_count<=diag_boot_count+1'b1;
-                if(diag_boot_count==62) begin
-                    // SW4 is an alert control in elevator mode.  Keep the legacy
-                    // reset-time diagnostic entry available only in normal media
-                    // mode so a demo setup cannot accidentally enter diagnostics.
-                    // Holding K4 deliberately selects diagnostics; SW3 then
-                    // selects the FIFO variant. Ordinary SW4 alarm startup
-                    // without K4 never enters either diagnostic mode.
-                    diag_local_sys<=DIAG_LOCAL_PATTERN || (!ELEVATOR_DEMO_MODE && !sw[1] && !diag_key_sync[1] && diag_sw_sync[1]);
-                    diag_fifo_sys<=!DIAG_LOCAL_PATTERN && !ELEVATOR_DEMO_MODE && !sw[1] && !diag_key_sync[1] && diag_sw_sync[1] && diag_fifo_sw_sync[1];
-                end
-            end
-        end
+    // Explicit maintenance build; no hidden boot gestures.
+    wire [5:0] diag_boot_count=63;
+    wire diag_local_sys=(DIAG_LOCAL_PATTERN!=0 || DIAG_FIFO_PATTERN!=0);
+    wire diag_fifo_sys=DIAG_FIFO_PATTERN!=0;
     wire diag_local_pix,diag_local_mem;
     sync_2ff u_diag_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
         .async_in(diag_local_sys),.sync_out(diag_local_pix));
@@ -125,8 +114,8 @@ module top #(
     wire sdram_init,sdram_busy,sdram_refresh,rd_valid;
     wire [31:0] rd_data;
     wire init_sys,cdc_idle,cdc_idle_sys,cdc_full,cdc_overflow;
-    sync_2ff u_init_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(sdram_init),.sync_out(init_sys));
-    sync_2ff u_idle_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(cdc_idle),.sync_out(cdc_idle_sys));
+    sync_2ff u_init_sys(.clk(clk),.rst_n(media_sys_reset_n),.async_in(sdram_init),.sync_out(init_sys));
+    sync_2ff u_idle_sys(.clk(clk),.rst_n(media_sys_reset_n),.async_in(cdc_idle),.sync_out(cdc_idle_sys));
 
     //--------------------------------------------------------------------------
     // 4. 存储装载链：SD卡 → FAT32 → BMP解码 → 写SDRAM
@@ -157,7 +146,7 @@ module top #(
     wire [1:0] memory_owner;
     wire video_return,cache_return;
     wire mem_app_read,mem_app_write;
-    sync_2ff u_write_drained(.clk(clk),.rst_n(sys_reset_n),
+    sync_2ff u_write_drained(.clk(clk),.rst_n(media_sys_reset_n),
         .async_in(write_drained),.sync_out(write_drained_sys));
     wire audio_req,audio_busy,audio_done,audio_valid;
     wire [31:0] audio_lba;
@@ -165,7 +154,7 @@ module top #(
     wire [8:0] audio_byte_index;
     media_storage_ingest_top #(.SPI_CLK_DIV(2),.INIT_STARTUP_DELAY_CYCLES(5000000),.ALLOW_2X_SOURCE(1),.EARLY_DISPLAY(1),
         .PRIORITIZE_EMERGENCY(1)) u_storage(
-        .clk(clk),.rst_n(sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
+        .clk(clk),.rst_n(media_sys_reset_n),.start(ingest_start && !diag_local_sys),.busy(ingest_busy),.done(ingest_done),
         .error_stage(ingest_stage),.error_code(ingest_error),.error_detail(ingest_detail),
         .card_ready(card_ready),.card_high_capacity(),.resource_valid(resource_valid),.scan_complete(scan_complete),
         .image_complete(),.image_ready(image_complete),.image_scale_2x(image_scale),
@@ -189,9 +178,9 @@ module top #(
     wire [20:0] cdc_addr;
     wire [3:0] cdc_mask;
     wire [31:0] cdc_data;
-    media_sdram_write_cdc #(.SHARED_MEMORY(1)) u_write_cdc(.src_clk(clk),.src_rst_n(sys_reset_n),
+    media_sdram_write_cdc #(.SHARED_MEMORY(1)) u_write_cdc(.src_clk(clk),.src_rst_n(media_sys_reset_n),
         .src_wr_en(source_wr),.src_wr_addr(source_addr),.src_wr_mask(source_mask),.src_wr_data(source_data),
-        .src_full(cdc_full),.src_overflow(cdc_overflow),.dst_clk(mem_clk),.dst_rst_n(mem_reset_n),
+        .src_full(cdc_full),.src_overflow(cdc_overflow),.dst_clk(mem_clk),.dst_rst_n(media_mem_reset_n),
         .dst_app_wr_en(cdc_wr),.dst_app_wr_addr(cdc_addr),.dst_app_wr_mask(cdc_mask),
         .dst_app_wr_data(cdc_data),.dst_idle(cdc_idle),
         .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
@@ -203,8 +192,8 @@ module top #(
     //    进入播放有两个条件：至少一张图完整校验通过(image_complete!=0)，
     //    且写入CDC没有溢出。首图校验并排空后即可显示，其余图片继续后台装载。
     //--------------------------------------------------------------------------
-    always @(posedge clk or negedge sys_reset_n) begin
-        if(!sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;cache_ready<=0;end
+    always @(posedge clk or negedge media_sys_reset_n) begin
+        if(!media_sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;cache_ready<=0;end
         else begin
             ingest_start<=0;cache_start<=0;
             // Verified images are published only after file/FAT checking and
@@ -229,29 +218,29 @@ module top #(
     //    启动期把四张图按4:1采样合成到SDRAM第5页(地址1228800起)，
     //    只做一次；cache_start 是系统域单拍脉冲，用 toggle 同步到内存域。
     //--------------------------------------------------------------------------
-    pulse_toggle_sync u_cache_start(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(cache_start),
-        .dst_clk(mem_clk),.dst_rst_n(mem_reset_n),.dst_pulse(cache_start_mem));
+    pulse_toggle_sync u_cache_start(.src_clk(clk),.src_rst_n(media_sys_reset_n),.src_pulse(cache_start),
+        .dst_clk(mem_clk),.dst_rst_n(media_mem_reset_n),.dst_pulse(cache_start_mem));
     wire cache_busy,cache_done,cache_rd,cache_wr;
     wire [7:0] cache_error;
-    sync_2ff u_cache_fault(.clk(clk),.rst_n(sys_reset_n),.async_in(cache_error!=0),.sync_out(cache_failed_sys));
+    sync_2ff u_cache_fault(.clk(clk),.rst_n(media_sys_reset_n),.async_in(cache_error!=0),.sync_out(cache_failed_sys));
     wire [20:0] cache_rd_addr,cache_wr_addr;
     wire [31:0] cache_wr_data;
     wire [3:0] complete_mem;
     genvar cm;
     generate for(cm=0;cm<4;cm=cm+1) begin:g_cache_complete
-        sync_2ff u_sync(.clk(mem_clk),.rst_n(mem_reset_n),.async_in(image_complete[cm]),.sync_out(complete_mem[cm]));
+        sync_2ff u_sync(.clk(mem_clk),.rst_n(media_mem_reset_n),.async_in(image_complete[cm]),.sync_out(complete_mem[cm]));
     end endgenerate
     // image_complete 在 cache_start 握手之前已稳定，仍使用目的域寄存值。
-    thumbnail_cache_builder #(.SHARED_MEMORY(1)) u_cache(.clk(mem_clk),.rst_n(mem_reset_n),.start(cache_start_mem),
+    thumbnail_cache_builder #(.SHARED_MEMORY(1)) u_cache(.clk(mem_clk),.rst_n(media_mem_reset_n),.start(cache_start_mem),
         .image_complete(complete_mem),.busy(cache_busy),.done(cache_done),.error(cache_error),
         .app_rd_en(cache_rd),.app_rd_addr(cache_rd_addr),.rd_valid(rd_valid && cache_return),.rd_data(rd_data),
         .app_wr_en(cache_wr),.app_wr_addr(cache_wr_addr),.app_wr_data(cache_wr_data),
         .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .burst_grant(cache_grant),.burst_request(cache_request),.burst_write(cache_write_request));
-    pulse_toggle_sync u_cache_done(.src_clk(mem_clk),.src_rst_n(mem_reset_n),.src_pulse(cache_done),
-        .dst_clk(clk),.dst_rst_n(sys_reset_n),.dst_pulse(cache_done_sys));
+    pulse_toggle_sync u_cache_done(.src_clk(mem_clk),.src_rst_n(media_mem_reset_n),.src_pulse(cache_done),
+        .dst_clk(clk),.dst_rst_n(media_sys_reset_n),.dst_pulse(cache_done_sys));
     wire player_mem;
-    sync_2ff u_player_mem(.clk(mem_clk),.rst_n(mem_reset_n),.async_in(player_enable),.sync_out(player_mem));
+    sync_2ff u_player_mem(.clk(mem_clk),.rst_n(media_mem_reset_n),.async_in(player_enable),.sync_out(player_mem));
 
     //--------------------------------------------------------------------------
     // 8. SDRAM访问仲裁（内存域）
@@ -261,13 +250,13 @@ module top #(
     //--------------------------------------------------------------------------
     wire video_rd;
     wire [20:0] video_rd_addr;
-    media_sdram_arbiter u_memory_arbiter(.clk(mem_clk),.rst_n(mem_reset_n),
+    media_sdram_arbiter u_memory_arbiter(.clk(mem_clk),.rst_n(media_mem_reset_n),
         .controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .video_request(video_request),.video_urgent(video_urgent),
         .write_request(write_request),.cache_request(cache_request),.cache_write(cache_write_request),
         .app_read(mem_app_read),.app_write(mem_app_write),.rd_valid(rd_valid),
         .video_grant(video_grant),.write_grant(write_grant),.cache_grant(cache_grant),
-        .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained));
+        .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained),.fault(arbiter_fault),.diagnostic_max_wait(diagnostic_max_wait));
     // 诊断本地图案时切断应用侧读写，让SDRAM只做初始化和刷新
     assign mem_app_write=!diag_local_mem && ((memory_owner==3 && cache_wr) || (memory_owner==2 && cdc_wr));
     assign mem_app_read=!diag_local_mem && ((memory_owner==3 && cache_rd) || (memory_owner==1 && video_rd));
@@ -277,7 +266,7 @@ module top #(
     //    地址单位是32位字，容量2M字；读写通道由 owner 多路选择。
     //    Clk_sft 是移相时钟，只用于内部采样，不参与逻辑时钟树。
     //--------------------------------------------------------------------------
-    sdram U3(.Clk(mem_clk),.Clk_sft(mem_clk_shift),.Rst(~mem_reset_n),
+    sdram U3(.Clk(mem_clk),.Clk_sft(mem_clk_shift),.Rst(~media_mem_reset_n),
         .Sdr_init_done(sdram_init),.Sdr_init_ref_vld(sdram_refresh),.Sdr_busy(sdram_busy),
         .App_wr_en(mem_app_write),.App_wr_addr(memory_owner==3?cache_wr_addr:cdc_addr),
         .App_wr_dm(memory_owner==3?4'd0:cdc_mask),.App_wr_din(memory_owner==3?cache_wr_data:cdc_data),
@@ -286,148 +275,111 @@ module top #(
 
     //--------------------------------------------------------------------------
     // 10. 按键、菜单、拨码与参数持久化（系统域）
-    //     dual_key_chord_router：K2/K3 短按、K3长按1秒、K2+K3同时按3秒保存；
-    //     param_menu_controller：K4 短按改音量、长按1秒改周期；
-    //     sw[1]=1 时进入参数服务界面，sw[2] 选亮度或对比度；
-    //     sw[1]=0 且 sw[2]=1 时进入独立电梯演示模式；
-    //     player_config_persistence：把周期/音量/自动模式存进U33用户Flash。
-    //     注意：本版 DEFAULT_VOLUME=0 且 RESTORE_VOLUME_ON_BOOT=0，
-    //     即上电和K1复位后音量一定为0，但周期与自动模式仍从Flash恢复。
+    //     demo_ui_controller统一按键、菜单焦点与维护二次确认。
+    //     demo_switch_filter消抖；ui_command_cdc有界握手并丢弃过期页面命令。
+    //     参数Flash存四参数；上电/复位手动静音，保留非零记忆音量。
     //--------------------------------------------------------------------------
-    wire next_sys,auto_sys,previous_sys,save_event;
     wire cfg_ready,cfg_busy,cfg_apply,cfg_load_done,cfg_save_done,cfg_fatal;
-    wire [7:0] cfg_error,volume,mode;
+    wire [7:0] cfg_error,volume,mode,brightness,contrast,memory_volume;
     wire [31:0] period_ms,period_cycles;
-    wire menu_update,menu_event;
+    wire menu_update,menu_event,save_event,save_unchanged;
     wire [31:0] menu_period;
-    wire [7:0] menu_volume;
-    wire [1:0] menu_kind;
-    wire [3:0] menu_level;
-    dual_key_chord_router #(.HOLD_CYCLES(150000000)) u_keys(.clk(clk),.rst_n(sys_reset_n),
-        .save_enabled(cfg_ready),.key2_n(key1),.key3_n(key3),.key2_event(next_sys),
-        .key3_event(auto_sys),.key3_long_event(previous_sys),.save_event(save_event),
-        .save_locked(),.key2_stable_n(),.key3_stable_n());
-    param_menu_controller u_menu(.clk(clk),.rst_n(sys_reset_n),.key4_n(key2),.service_ready(cfg_ready || cfg_fatal),
-        .live_volume(volume),.live_period_ms(period_ms),.cfg_update_valid(menu_update),
-        .cfg_period_ms(menu_period),.cfg_volume(menu_volume),.menu_event(menu_event),
-        .menu_kind(menu_kind),.menu_level(menu_level));
-    wire auto_enabled;
-    wire auto_status_sys;
-    sync_2ff u_auto_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(auto_enabled),.sync_out(auto_status_sys));
-    reg [3:0] sw_sync1,sw_sync2;
-    reg sw4_stable;
-    reg local_alert_latched;
+    wire [7:0] menu_volume,menu_brightness,menu_contrast;
+    wire [2:0] menu_field;
+    wire [1:0] menu_diag;
+    wire [3:0] menu_feedback;
+    wire menu_dirty,reload_confirm,reload_request,reload_busy;
+    wire [1:0] menu_kind=menu_field==3?1:0;
+    wire ui_command_valid,ui_command_busy,ui_auto;
+    wire [2:0] ui_command;
+    wire fade_active,video_action_busy;
+    wire next_sys=ui_command_valid && ui_command==1;
+    wire auto_sys=1'b0,previous_sys=ui_command_valid && ui_command==3;
+    wire [3:0] sw_sync2;
+    wire tick_ms,params_busy;
+    wire local_alert_latched=sw_sync2[3];
     wire elev_alert_request_sys;
-    reg [19:0] sw4_debounce_count;
-    always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) begin sw4_stable<=0;sw4_debounce_count<=0;end
-        else if(sw_sync2[3]==sw4_stable) sw4_debounce_count<=0;
-        else if(sw4_debounce_count>=SW_DEBOUNCE_CYCLES-1) begin
-            sw4_stable<=sw_sync2[3];sw4_debounce_count<=0;
-        end else sw4_debounce_count<=sw4_debounce_count+1'b1;
-    reg [7:0] brightness,contrast;
-    // SW3 is deliberately mode-dependent: it selects the parameter field
-    // while SW2 is on, and becomes the elevator-demo enable while SW2 is off.
-    // This keeps the four physical switches useful without sharing an active
-    // control between the public demo and the service menu.
-    wire elevator_demo_switch_sys=!sw_sync2[1] && sw_sync2[2];
-    wire elevator_demo_active_sys=ELEVATOR_DEMO_MODE || elevator_demo_switch_sys;
-    always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) local_alert_latched<=0;
-        else if(!sw4_stable) local_alert_latched<=0;
-        else if(elevator_demo_active_sys) local_alert_latched<=1;
-    always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) begin sw_sync1<=0;sw_sync2<=0;brightness<=255;contrast<=128;end
-        else begin
-            sw_sync1<=sw;sw_sync2<=sw_sync1;   // 拨码两级同步
-            // SW2=1 进入参数调节：SW3=1 调对比度，否则调亮度；K2加16、K3短按减16。
-            if(sw_sync2[1]) begin
-                if(sw_sync2[2]) begin
-                    if(next_sys) contrast<=contrast>239?255:contrast+16;
-                    else if(auto_sys) contrast<=contrast<16?0:contrast-16;
-                end else begin
-                    if(next_sys) brightness<=brightness>239?255:brightness+16;
-                    else if(auto_sys) brightness<=brightness<16?0:brightness-16;
-                end
-            end
-        end
-    wire view_sys,view_mode;
-    // view_sys is consumed by the 50 MHz configuration logic: synchronize
-    // into that destination, never back into the source pixel clock.
+    wire elevator_demo_active_sys=1'b1;
+    wire view_sys,view_mode,auto_enabled,auto_status_sys;
+    wire transition_sys;
     sync_2ff u_view_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(view_mode),.sync_out(view_sys));
-    // 参数调节模式下 K3 短按改的是"自动/手动"开关，而不是减亮度
-    wire mode_update=auto_sys && !sw_sync2[1] && !view_sys && !elev_alert_request_sys;
-    player_config_persistence #(.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(.clk(clk),.rst_n(sys_reset_n),
-        .cfg_update_valid(((menu_update && !view_sys) || mode_update) && !elev_alert_request_sys),.cfg_period_ms(menu_update?menu_period:period_ms),
-        .cfg_volume(menu_update?menu_volume:volume),.cfg_mode(mode_update?{7'd0,~mode[0]}:mode),.save_request(save_event),
+    sync_2ff u_auto_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(auto_enabled),.sync_out(auto_status_sys));
+    sync_2ff u_transition_sys(.clk(clk),.rst_n(sys_reset_n),.async_in(fade_active),.sync_out(transition_sys));
+    demo_switch_filter #(.STABLE_MS((SW_DEBOUNCE_CYCLES+UI_CLKS_PER_MS-1)/UI_CLKS_PER_MS)) u_switches(
+        .clk(clk),.rst_n(sys_reset_n),.tick_ms(tick_ms),.raw(sw),.stable(sw_sync2));
+    demo_ui_controller #(.CLKS_PER_MS(UI_CLKS_PER_MS)) u_ui(
+        .clk(clk),.rst_n(sys_reset_n),.keys_n({key2,key3,key1}),.switches(sw_sync2),
+        .alert_active(elev_alert_request_sys || reload_busy),.view_mode(view_sys),.apply_busy(params_busy),
+        .command_busy(ui_command_busy),.transition_busy(transition_sys),
+        .cfg_busy(cfg_busy),.cfg_ready(cfg_ready),.cfg_fatal(cfg_fatal),
+        .load_done(cfg_load_done),.save_done(cfg_save_done),.save_unchanged(save_unchanged),.media_ready(image_complete[3:0]!=0),
+        .live_brightness(brightness),.live_contrast(contrast),.live_volume(volume),.memory_volume(memory_volume),
+        .live_period_ms(period_ms),.cache_ready(cache_ready),.reload_busy(reload_busy),
+        .cfg_update(menu_update),.cfg_brightness(menu_brightness),.cfg_contrast(menu_contrast),.cfg_volume(menu_volume),
+        .cfg_period_ms(menu_period),.save_request(save_event),.reload_request(reload_request),
+        .command_valid(ui_command_valid),.command(ui_command),.auto_mode(ui_auto),
+        .field(menu_field),.diag_page(menu_diag),.reload_confirm(reload_confirm),
+        .feedback(menu_feedback),.dirty(menu_dirty),.tick_ms(tick_ms));
+    assign menu_event=menu_update;
+    player_config_persistence #(.EXTENDED_UI(1),.DEFAULT_VOLUME(8'd0),.RESTORE_VOLUME_ON_BOOT(0)) u_config(
+        .clk(clk),.rst_n(sys_reset_n),.cfg_update_valid(menu_update),.cfg_period_ms(menu_period),
+        .cfg_volume(menu_volume),.cfg_brightness(menu_brightness),.cfg_contrast(menu_contrast),.cfg_mode(8'd0),.save_request(save_event),
         .service_ready(cfg_ready),.busy(cfg_busy),.load_done(cfg_load_done),.save_done(cfg_save_done),
         .apply_valid(cfg_apply),.config_rejected(),.fatal_error(cfg_fatal),.error_code(cfg_error),
         .request_dropped(),.stored_config_valid(),.active_version(),.live_period_ms(period_ms),
         .live_period_cycles(period_cycles),.live_volume(volume),.live_mode(mode),
+        .live_brightness(brightness),.live_contrast(contrast),.memory_volume(memory_volume),.save_unchanged(save_unchanged),
         .jedec_id(),.status1(),.status2(),.status3(),.flash_miso(flash_miso),
-        .flash_cs_n(flash_cs_n),.flash_sclk(flash_sclk),.flash_mosi(flash_mosi),
-        .flash_wp_n(flash_wp_n),.flash_hold_n(flash_hold_n));
-
-    //--------------------------------------------------------------------------
-    // 11. 系统域 → 像素域的单拍事件
-    //     按键/菜单事件在50MHz产生，显示逻辑在25MHz消费，
-    //     用 pulse_toggle_sync 转成像素域单拍脉冲。
-    //     SW2=1 时按键用于调参数，所以不产生切图事件。
-    //--------------------------------------------------------------------------
-    wire frame_start,next_pix,auto_pix,previous_pix,confirm_pix;
-    pulse_toggle_sync u_next(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(next_sys && !sw_sync2[1]),
-        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(next_pix));
-    pulse_toggle_sync u_auto(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(auto_sys && !sw_sync2[1]),
-        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(auto_pix));
-    pulse_toggle_sync u_previous(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(previous_sys && !sw_sync2[1]),
-        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(previous_pix));
-    pulse_toggle_sync u_confirm(.src_clk(clk),.src_rst_n(sys_reset_n),.src_pulse(menu_event && view_sys),
-        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.dst_pulse(confirm_pix));
-
-    //--------------------------------------------------------------------------
-    // 12. 多位参数的跨域提交
-    //     拨码、模式、对比度、亮度、音量、周期打包成64位，用 frame_config_cdc
-    //     在帧边界整体更新，避免参数在画面中间变化造成撕裂。
-    //--------------------------------------------------------------------------
+        .flash_cs_n(flash_cs_n),.flash_sclk(flash_sclk),.flash_mosi(flash_mosi),.flash_wp_n(flash_wp_n),.flash_hold_n(flash_hold_n));
+    wire reload_display_pix;
+    wire frame_start;
+    sync_2ff u_recovery_fault(.clk(clk),.rst_n(sys_reset_n),.async_in(arbiter_fault),.sync_out(arbiter_fault_sys));
+    media_recovery_manager u_recovery(.clk(clk),.rst_n(sys_reset_n),.tick_ms(tick_ms),
+        .manual_request(reload_request),
+        .transaction_fault(arbiter_fault_sys || cdc_overflow || cache_failed_sys || (ingest_done && image_complete==0)),
+        .boot_ready(diag_local_sys || (boot_state==4 && image_complete!=0 && cache_ready)),
+        .display_ack(recovery_ack),.media_reset_n(recovery_reset_n),
+        .display_fallback(recovery_fallback),.busy(reload_busy),.failed(recovery_failed),.retries(recovery_retries));
+    frame_config_cdc #(.WIDTH(1)) u_recovery_display(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data(recovery_fallback),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
+        .frame_start(frame_start),.dst_data(reload_display_pix));
+    sync_2ff u_recovery_ack(.clk(clk),.rst_n(sys_reset_n),.async_in(reload_display_pix),.sync_out(recovery_ack));
     wire [63:0] config_pix;
     frame_config_cdc #(.WIDTH(64),.RESET_VALUE({4'd0,4'd0,8'd128,8'd255,8'd0,32'd5000})) u_params(
-        .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({sw_sync2,3'd0,mode[0],contrast,brightness,volume,period_ms}),
-        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(config_pix));
+        .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({sw_sync2,3'd0,ui_auto,contrast,brightness,volume,period_ms}),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(config_pix),.src_busy(params_busy));
     wire [7:0] contrast_pix=config_pix[55:48],bright_pix=config_pix[47:40],volume_pix=config_pix[39:32];
     wire [3:0] switches_pix=config_pix[63:60];
-    // The mode select is committed with the rest of the switch snapshot so
-    // the public demo cannot change halfway through a video frame.
-    wire elevator_demo_active_pix=ELEVATOR_DEMO_MODE || (!switches_pix[1] && switches_pix[2]);
-    // SW2 is the service-menu/display switch.  The public viewer sees only
-    // the floor/alert line unless this switch is intentionally enabled.
+    wire elevator_demo_active_pix=1'b1;
     wire show_info_pix=switches_pix[1] && !elevator_alert_pix_state;
     wire cache_ready_pix;
-    sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),
-        .async_in(cache_ready),.sync_out(cache_ready_pix));
-    // SW1 enters thumbnails only in normal media mode.  SW2 (service menu)
-    // and the elevator demo have priority, so the controls never overlap.
-    wire thumbnail_switch=switches_pix[0] && !switches_pix[1] &&
-        !elevator_demo_active_pix && cache_ready_pix;
-
-    //--------------------------------------------------------------------------
-    // 13. 缩略图模式控制（像素域）
-    //     缓存未就绪时 SW1 无效；模式切换沿、左右移动、确认选择都交给
-    //     thumbnail_controller，它输出焦点格 focus_index 和已确认的 active_index。
-    //--------------------------------------------------------------------------
-    reg mode_seen;
+    sync_2ff u_cache_ready_pix(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(cache_ready),.sync_out(cache_ready_pix));
+    wire command_valid_pix;
+    wire [2:0] command_pix;
+    ui_command_cdc u_command(.src_clk(clk),.src_rst_n(sys_reset_n),.src_valid(ui_command_valid),
+        .src_command(ui_command),.src_page({elev_alert_request_sys || sw_sync2[1] || reload_busy,view_sys}),.src_busy(ui_command_busy),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),
+        .dst_ready(!fade_active && !video_action_busy),
+        .dst_page({elevator_alert_pix || switches_pix[1] || reload_display_pix,view_mode}),.dst_valid(command_valid_pix),.dst_command(command_pix));
+    wire next_pix=command_valid_pix && command_pix==1;
+    wire auto_pix=command_valid_pix && command_pix==2;
+    wire previous_pix=command_valid_pix && command_pix==3;
+    wire confirm_pix=command_valid_pix && command_pix==5;
     wire [1:0] focus_index,selected_index;
     wire [2:0] selected_media_index={1'b0,selected_index};
     wire thumb_transition,thumbnail_select;
-    wire [4:0] complete_pix;
-    genvar k;
-    generate for(k=0;k<5;k=k+1) begin:g_complete
-        sync_2ff u_sync(.clk(pixel_clk),.rst_n(pix_reset_n),.async_in(image_complete[k]),.sync_out(complete_pix[k]));
-    end endgenerate
-    always @(posedge pixel_clk or negedge pix_reset_n)
-        if(!pix_reset_n) mode_seen<=0;else if(!elevator_alert_pix && !elevator_alert_pix_state) mode_seen<=thumbnail_switch;
+    wire [9:0] resources_pix;
+    wire [4:0] complete_pix=resources_pix[4:0],image_scale_pix=resources_pix[9:5];
+    frame_config_cdc #(.WIDTH(10)) u_resource_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data({image_scale,image_complete}),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
+        .frame_start(frame_start),.dst_data(resources_pix));
+    wire thumb_cancel=switches_pix[1] || reload_display_pix;
     thumbnail_controller u_thumbnail(.clk(pixel_clk),.rst_n(pix_reset_n),
-        .key_right(next_pix && !elevator_alert_pix),.key_left(auto_pix && !elevator_alert_pix),.key_confirm(confirm_pix && !elevator_alert_pix),
-        .key_mode(!elevator_alert_pix && !elevator_alert_pix_state && ((thumbnail_switch && !mode_seen) || (!thumbnail_switch && mode_seen && view_mode))),.image_complete(complete_pix[3:0]),.frame_start(frame_start && !elevator_alert_pix && !elevator_alert_pix_state),
+        .key_right(next_pix && !elevator_alert_pix),.key_left(auto_pix && !elevator_alert_pix),
+        .key_confirm(confirm_pix && !elevator_alert_pix),
+        .key_mode(command_valid_pix && command_pix==4 && !elevator_alert_pix && !switches_pix[1] && cache_ready_pix),
+        .cancel(thumb_cancel),
+        .image_complete(complete_pix[3:0]),.frame_start(frame_start && !elevator_alert_pix && !elevator_alert_pix_state),
         .view_mode(view_mode),.focus_index(focus_index),.active_index(selected_index),
         .transition_req(thumb_transition),.selection_committed(thumbnail_select));
 
@@ -442,13 +394,16 @@ module top #(
     wire [9:0] video_x,video_y;
     wire [2:0] active_index;
     wire [7:0] video_error,fade_alpha;
-    wire fade_active;
     reg [31:0] last_period;
-    always @(posedge pixel_clk or negedge pix_reset_n)
-        if(!pix_reset_n) last_period<=5000;
+    always @(posedge pixel_clk or negedge media_pix_reset_n)
+        if(!media_pix_reset_n) last_period<=0;
         else last_period<=config_pix[31:0];
     reg display_view,last_cfg_mode,last_display_view,selection_wait;
-    wire effective_display_view=display_view && !elevator_alert_pix_state;
+    wire effective_auto=config_pix[56] && !display_view && !switches_pix[1] && !reload_display_pix;
+    reg last_effective_auto;
+    always @(posedge pixel_clk or negedge media_pix_reset_n)
+        if(!media_pix_reset_n)last_effective_auto<=0;else last_effective_auto<=effective_auto;
+    wire effective_display_view=display_view && !elevator_alert_pix_state && !reload_display_pix;
     always @(posedge pixel_clk or negedge pix_reset_n)
         if(!pix_reset_n) begin display_view<=0;last_cfg_mode<=0;last_display_view<=0;selection_wait<=0;end
         else begin
@@ -483,7 +438,7 @@ module top #(
         .startup_ready(complete_pix[3:0] != 4'd0),
         .media_fault(media_fault_pix),
         .alert_request(elevator_alert_pix),
-        .alert_page_available(complete_pix[4] && active_index==4 && !media_fault_pix_bus[0] && !(video_error>=8'h61 && video_error<=8'h64)),
+        .alert_page_available(!reload_display_pix && complete_pix[4] && active_index==4 && !media_fault_pix_bus[0] && !(video_error>=8'h61 && video_error<=8'h64)),
         .alert_active(elevator_alert_pix_state),
         .alert_fallback(elevator_alert_fallback),
         .alert_page_index(elevator_alert_page), .state_code(elevator_state_code));
@@ -491,20 +446,22 @@ module top #(
     media_video_pipeline #(.RUNTIME_DIAG(1),.SHARED_MEMORY(1),.FADE_FRAMES(16),.ENABLE_COLOR_ADJUST(1),.DEFAULT_PERIOD_CYCLES(125000000),
         .MIN_PERIOD_CYCLES(25000000),.MAX_PERIOD_CYCLES(1500000000)) u_video(
         .diag_fifo_pix(diag_fifo_pix),.diag_fifo_mem(diag_fifo_mem),
-        .ctrl_clk(pixel_clk),.ctrl_rst_n(pix_reset_n),.next_event(next_pix && !effective_display_view && !elevator_alert_pix),
+        .ctrl_clk(pixel_clk),.ctrl_rst_n(media_pix_reset_n),.next_event(next_pix && !effective_display_view && !elevator_alert_pix),
         .previous_event(previous_pix && !effective_display_view && !elevator_alert_pix),.select_valid(thumbnail_select && !elevator_alert_pix),
         .select_index(selected_media_index),.view_mode(effective_display_view),.mode_transition(!elevator_alert_pix_state && display_view!=last_display_view),.focus_index(focus_index),
         .transition_alpha(fade_alpha),.transition_active(fade_active),.video_y(video_y),
         .toggle_auto_event(1'b0),.period_cfg_valid(last_period!=config_pix[31:0]),
-        .period_cfg_cycles(config_pix[31:0]*32'd25000),.auto_cfg_valid(display_view || last_display_view!=display_view || last_cfg_mode!=config_pix[56]),.auto_cfg_enabled(config_pix[56] && !display_view),
+        .period_cfg_cycles(config_pix[31:0]*32'd25000),.auto_cfg_valid(last_effective_auto!=effective_auto),.auto_cfg_enabled(effective_auto),
         .image_complete(complete_pix),.emergency_active(elevator_alert_pix),.emergency_index(elevator_alert_page),
-         .player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (effective_display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(mem_reset_n),
+         .player_enable(diag_fifo_pix || (player_enable && !diag_local_pix && (effective_display_view || complete_pix[active_index]))),.mem_clk(mem_clk),.mem_rst_n(media_mem_reset_n),
         .controller_init_done(sdram_init && player_mem),.controller_busy(sdram_busy),.refresh_active(sdram_refresh),
         .app_rd_en(video_rd),.app_rd_addr(video_rd_addr),.sdram_rd_valid(rd_valid && video_return && !diag_local_mem),.sdram_rd_data(rd_data),
         .burst_grant(video_grant),.burst_request(video_request),.read_urgent(video_urgent),
         .brightness(bright_pix),.contrast(contrast_pix),.pix_clk(pixel_clk),.pix_rst_n(pix_reset_n),.video_clk(),.video_hs(hs),.video_vs(vs),
         .video_de(de),.video_rgb(video_rgb),.video_x(video_x),.active_index(active_index),.pending_index(),
-        .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error),.first_tf_pixel(first_tf_pixel));
+        .auto_enabled(auto_enabled),.frame_start(frame_start),.reader_busy(),.reader_underflow(),.video_error(video_error),.first_tf_pixel(first_tf_pixel),
+        .reader_reset_n(media_pix_reset_n),.diagnostic_fifo_min(diagnostic_fifo_min),
+        .diagnostic_underflows(diagnostic_underflows),.action_busy(video_action_busy));
 
     //--------------------------------------------------------------------------
     // 16. 叠加层第一级：缩略图焦点框
@@ -525,12 +482,12 @@ module top #(
     // timing generator continues to run even when player_enable is low, so a
     // small FPGA-generated pattern can be shown without BRAM or a full frame
     // buffer.  Normal media mode keeps the existing black/diagnostic behavior.
-    wire elevator_startup_page = elevator_demo_active_pix &&
-        ((elevator_state_code==3'd0) || (elevator_state_code==3'd4));
+    wire elevator_startup_page = reload_display_pix || (elevator_demo_active_pix &&
+        ((elevator_state_code==3'd0) || (elevator_state_code==3'd4)));
     wire [23:0] startup_page_rgb =
         ((x_adjust[7:5] ^ y_adjust[7:5]) ? 24'h102a43 : 24'h071521) ^
         ((x_adjust[5] && !y_adjust[8]) ? 24'h001018 : 24'h000000);
-    wire [23:0] focus_rgb=elevator_alert_fallback ? alert_fallback_rgb :
+    wire [23:0] focus_rgb=(elevator_alert_fallback || (reload_display_pix && elevator_alert_pix_state)) ? alert_fallback_rgb :
         elevator_startup_page ? startup_page_rgb :
         ((effective_display_view && focus_border)?24'hffff00:adjusted_rgb);
 
@@ -543,17 +500,15 @@ module top #(
     wire [23:0] text_rgb,final_rgb;
     wire rescue_queue_overflow;
     wire rescue_ack_valid;wire[15:0]rescue_ack_id,rescue_event_id;wire[1:0]rescue_comm_state;
-    wire [7:0] system_error=rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
+    wire [7:0] system_error=recovery_failed?8'h89:arbiter_fault_sys?8'h88:rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
-    wire [7:0] system_error_pix;
-    frame_config_cdc #(.WIDTH(8)) u_error_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
-        .src_data(system_error),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
-        .frame_start(frame_start),.dst_data(system_error_pix));
-    wire [7:0] error_pix=video_error!=0 ? video_error : system_error_pix;
-    wire [7:0] detail_pix;
-    frame_config_cdc #(.WIDTH(8)) u_error_detail_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
-        .src_data(ingest_detail),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
-        .frame_start(frame_start),.dst_data(detail_pix));
+    wire [15:0] error_snapshot;
+    wire [7:0] system_detail=(system_error==ingest_error && ingest_error!=0)?ingest_detail:8'd0;
+    frame_config_cdc #(.WIDTH(16)) u_error_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data({system_error,system_detail}),.dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),
+        .frame_start(frame_start),.dst_data(error_snapshot));
+    wire [7:0] error_pix=video_error!=0 && !reload_display_pix ? video_error : error_snapshot[15:8];
+    wire [7:0] detail_pix=video_error!=0 && !reload_display_pix ? 8'd0 : error_snapshot[7:0];
 
     //--------------------------------------------------------------------------
     // 18. 串口与字幕（系统域解析，像素域显示）
@@ -577,9 +532,8 @@ module top #(
     reg [3:0] elev_floor_tens_sys,elev_floor_ones_sys;
     reg [1:0] elev_direction_sys,elev_door_sys;
     reg elev_signal_lost_sys;
-    // In elevator demo mode SW4 is the local, independent alert switch.
-    // Outside that mode SW4 remains the audio test switch and cannot assert
-    // an emergency page by accident.
+    reg [12:0] floor_age_ms;
+    // SW4仅控制本地告警来源；远端有效告警不会被SW4解除。
     assign elev_alert_request_sys=elev_alert_sys || local_alert_latched;
     wire [15:0] elev_status_src={elev_alert_request_sys,elev_signal_lost_sys,
         elev_floor_basement_sys,elev_direction_sys,elev_door_sys,
@@ -603,7 +557,7 @@ module top #(
     reg [5:0] live_length;
     reg live_subtitle;
     always @(posedge clk or negedge sys_reset_n)
-        if(!sys_reset_n) begin live_text<=0;live_length<=0;live_subtitle<=0;end
+        if(!sys_reset_n) begin live_text<=96'h0000000000454d4f434c4557;live_length<=7;live_subtitle<=1;end
         else if(subtitle_commit) begin live_text<=subtitle_text;live_length<=subtitle_length;live_subtitle<=subtitle_enable;end
     always @(posedge clk or negedge sys_reset_n) begin
         if(!sys_reset_n) begin
@@ -611,9 +565,14 @@ module top #(
             elev_floor_basement_sys<=1'b0; elev_floor_sys<=8'd0;
             elev_floor_tens_sys<=4'd0; elev_floor_ones_sys<=4'd0;
             elev_direction_sys<=2'd0; elev_door_sys<=2'd0;
-            elev_signal_lost_sys<=1'b1;
+            elev_signal_lost_sys<=1'b1;floor_age_ms<=0;
         end else begin
+            if(tick_ms && elev_status_valid_sys)begin
+                if(floor_age_ms<5000)floor_age_ms<=floor_age_ms+1'b1;
+                if(floor_age_ms>=4999)elev_signal_lost_sys<=1;
+            end
             if (elev_update_valid) begin
+                floor_age_ms<=0;
                 elev_alert_sys<=elev_alert_value;
                 elev_status_valid_sys<=1'b1;
                 elev_floor_basement_sys<=elev_floor_basement;
@@ -685,17 +644,35 @@ module top #(
     frame_config_cdc #(.WIDTH(18)) u_rescue_status_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({rescue_event_id,rescue_comm_state}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(rescue_status_pix));
-    promax_text_overlay u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
-        .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.show_info(show_info_pix),.subtitle_enable(subtitle_pix[102]),
+    wire [46:0] diagnostics_sys;
+    wire [63:0] diagnostics_pix;
+    wire [63:0] diagnostics_page=menu_diag==0 ? {23'd0,diagnostics_sys[46:38],16'd0,diagnostics_sys[37:22]} :
+        menu_diag==1 ? {10'd0,diagnostics_sys[21:0],24'd0,recovery_retries} :
+        menu_diag==2 ? {boot_sd_ms,boot_scan_ms,boot_tf_ms,boot_pic5_ms} :
+        {16'h0201,16'd0,16'd0,4'd0,recovery_failed,boot_state,3'd0,card_ready,scan_complete,cache_ready,cdc_overflow,cfg_fatal};
+    frame_config_cdc #(.WIDTH(47)) u_diagnostics_sys(.src_clk(mem_clk),.src_rst_n(media_mem_reset_n),
+        .src_data({diagnostic_fifo_min,diagnostic_underflows,diagnostic_max_wait}),
+        .dst_clk(clk),.dst_rst_n(media_sys_reset_n),.frame_start(1'b1),.dst_data(diagnostics_sys));
+    frame_config_cdc #(.WIDTH(64)) u_diagnostics_pix(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data(diagnostics_page),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(diagnostics_pix));
+    wire [21:0] ui_status_pix;
+    frame_config_cdc #(.WIDTH(22)) u_ui_status_commit(.src_clk(clk),.src_rst_n(sys_reset_n),
+        .src_data({menu_field,menu_diag,reload_confirm,cfg_busy?4'd1:cfg_fatal?4'd4:save_unchanged?4'd6:menu_feedback,menu_dirty,memory_volume,3'd0}),
+        .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(ui_status_pix));
+    promax_text_overlay #(.MENU_ENABLE(1),.FONT_BRAM(1)) u_text(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(vs_adjust),.de(de_adjust),
+        .rgb_in(focus_rgb),.pixel_x(x_adjust),.pixel_y(y_adjust),.enable(1'b1),.show_info(show_info_pix),.subtitle_enable(subtitle_pix[102] && switches_pix[0] && !elevator_alert_pix_state),
         .subtitle_text(subtitle_pix[95:0]),.subtitle_length(subtitle_pix[101:96]),.brightness(bright_pix),
         .contrast(contrast_pix),.volume(volume_pix),.period_ms(config_pix[31:0]),.auto_enabled(auto_enabled),
-        .source_scale_2x(image_scale[active_index]),.active_index(active_index),
+        .source_scale_2x(image_scale_pix[active_index]),.active_index(active_index),
         .loading(complete_pix[3:0]!=4'hf || !cache_ready_pix),.error_code(error_pix),.error_detail(detail_pix),
         .elevator_status_valid(elevator_status_valid_pix),.elevator_signal_lost(elevator_signal_lost_pix),
         .elevator_floor_basement(elevator_floor_basement_pix),.elevator_floor_tens(elevator_floor_tens_pix),
         .elevator_floor_ones(elevator_floor_ones_pix),.elevator_direction(elevator_direction_pix),
         .elevator_door(elevator_door_pix),.elevator_alert(elevator_alert_pix_state),
-        .rgb_out(text_rgb),.overlay_active(),.rescue_event_id(rescue_status_pix[17:2]),.rescue_comm_state(rescue_status_pix[1:0]));
+        .rgb_out(text_rgb),.overlay_active(),.rescue_event_id(rescue_status_pix[17:2]),.rescue_comm_state(rescue_status_pix[1:0]),
+        .menu_field(ui_status_pix[21:19]),.menu_diag(ui_status_pix[18:17]),.menu_confirm(ui_status_pix[16]),
+        .menu_feedback(ui_status_pix[15:12]),.menu_dirty(ui_status_pix[11]),.memory_volume(ui_status_pix[10:3]),.diagnostic_data(diagnostics_pix));
 
     //--------------------------------------------------------------------------
     // 20. 流水线级：文字查找与波形合成之间
@@ -705,8 +682,16 @@ module top #(
     wire pcm_tap_valid;
     wire signed [15:0] pcm_tap_left;
     // Pipeline the entire bundle between text lookup and waveform composition.
+    reg [23:0] font_diag_rgb,diag_rgb;
+    reg [9:0] font_x,font_y;
+    reg font_hs,font_vs,font_de;
+    always @(posedge pixel_clk or negedge pix_reset_n)
+        if(!pix_reset_n)begin font_diag_rgb<=0;font_x<=0;font_y<=0;font_hs<=1;font_vs<=1;font_de<=0;end
+        else begin
+            font_diag_rgb<=diag_fifo_pix?video_rgb:diag_rgb;
+            font_x<=x_adjust;font_y<=y_adjust;font_hs<=hs_adjust;font_vs<=vs_adjust;font_de<=de_adjust;
+        end
     reg [23:0] text_stage_rgb,diag_stage_rgb;
-    reg [23:0] diag_rgb;
     reg [9:0] text_stage_x,text_stage_y;
     reg text_stage_hs,text_stage_vs,text_stage_de;
     always @(posedge pixel_clk or negedge pix_reset_n)
@@ -714,8 +699,8 @@ module top #(
             text_stage_rgb<=0;diag_stage_rgb<=0;text_stage_x<=0;text_stage_y<=0;
             text_stage_hs<=1;text_stage_vs<=1;text_stage_de<=0;
         end else begin
-            text_stage_rgb<=text_rgb;diag_stage_rgb<=diag_fifo_pix?video_rgb:diag_rgb;
-            text_stage_x<=x_adjust;text_stage_y<=y_adjust;text_stage_hs<=hs_adjust;text_stage_vs<=vs_adjust;text_stage_de<=de_adjust;
+            text_stage_rgb<=text_rgb;diag_stage_rgb<=font_diag_rgb;
+            text_stage_x<=font_x;text_stage_y<=font_y;text_stage_hs<=font_hs;text_stage_vs<=font_vs;text_stage_de<=font_de;
         end
 
     //--------------------------------------------------------------------------
@@ -723,7 +708,7 @@ module top #(
     //     PIPELINE_OUTPUT=1 表示内部再寄存一拍输出，所以下面还有一级流水线。
     //--------------------------------------------------------------------------
     promax_audio_waveform #(.PIPELINE_OUTPUT(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
-        .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(!elevator_alert_pix_state),.pcm_tap_valid(pcm_tap_valid),
+        .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(switches_pix[2] && !show_info_pix && !elevator_alert_pix_state),.pcm_tap_valid(pcm_tap_valid),
         .pcm_tap_left(pcm_tap_left),.rgb_out(final_rgb),.waveform_active());
 
     //--------------------------------------------------------------------------
@@ -735,11 +720,11 @@ module top #(
     //--------------------------------------------------------------------------
     wire sample_tick,wav_valid,wav_ready,wav_active;
     wire signed [15:0] wav_sample;
-    wav_stream_player u_wav(.wr_clk(clk),.wr_rst_n(sys_reset_n),
+    wav_stream_player u_wav(.wr_clk(clk),.wr_rst_n(media_sys_reset_n),
         .play_enable(player_enable && boot_state==4 && PCM_START_LBA!=0 && PCM_TOTAL_SECTORS!=0),
         .start_lba(PCM_START_LBA),.total_sectors(PCM_TOTAL_SECTORS),.sd_req(audio_req),.sd_lba(audio_lba),
         .sd_busy(audio_busy),.sd_valid(audio_valid),.sd_byte(audio_byte),.sd_byte_index(audio_byte_index),
-        .sd_done(audio_done),.sd_error(audio_error),.rd_clk(pixel_clk),.rd_rst_n(pix_reset_n),
+        .sd_done(audio_done),.sd_error(audio_error),.rd_clk(pixel_clk),.rd_rst_n(media_pix_reset_n),
         .sample_tick(sample_tick),.sample_out(wav_sample),.sample_valid(wav_valid),.sample_ready(wav_ready),
         .sample_counter(),.stream_active(wav_active),.stream_end(),.buffer_low());
 
@@ -808,7 +793,7 @@ module top #(
     media_hdmi_audio_bridge #(.ALARM_SOUND_ENABLE(ALARM_SOUND_ENABLE)) u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
         .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
         .media_id(active_index[1:0]),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
-        .force_test(switches_pix[3] && !elevator_demo_active_pix),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
+        .force_test(1'b0),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),
         .sequence_error(),.tone_overflow(),.pcm_contract_error(),.blip_active(),
         .pcm_tap_valid(pcm_tap_valid),.pcm_tap_left(pcm_tap_left),.alarm_active(elevator_alert_pix));

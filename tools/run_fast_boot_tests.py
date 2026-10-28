@@ -71,7 +71,7 @@ groups = [(['-suppress', '2121', '+incdir+'+str(INC)],
            [INC/n for n in ('sdr_as_ram.enc.v', 'sdr_init_ref.enc.v', 'sdr_wrrd.enc.v')] +
            [ROOT/'src/user_source/hdl_source/SD/sdram.v', CHIP, ROOT/'tests/sdram_chip_model.v']),
           (['-sv'], [RTL/(m+'.v') for m in ('afifo_32_16_256', 'fifo_prefetch_2',
-                       'media_frame_reader', 'media_sdram_write_cdc', 'media_sdram_arbiter', 'thumbnail_cache_builder')] +
+                       'frame_config_cdc', 'media_frame_reader', 'media_sdram_write_cdc', 'media_sdram_arbiter', 'thumbnail_cache_builder')] +
            [ROOT/'tests/lut1_model.v', ROOT/'tests/tb_vendor_shared.v', ROOT/'tests/tb_vendor_shared_cache.v'])]
 with (OUT/'vendor_compile.log').open('w') as log:
     for flags, files in groups:

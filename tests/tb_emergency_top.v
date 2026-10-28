@@ -1,9 +1,9 @@
 `timescale 1ns/1ps
 module tb_emergency_top;
 reg clk=0,rst=0;always #10 clk=~clk;reg[3:0]sw=0;reg fs=0;
-reg [4:0] images=31; reg [63:0] cfg={4'd1,4'd0,8'd128,8'd255,8'd0,32'd5000};
+reg [4:0] images=31; reg [63:0] cfg={4'd0,4'd0,8'd128,8'd255,8'd0,32'd5000};
 reg uart_alarm=0,right=0;
-top #(.SW_DEBOUNCE_CYCLES(100)) d(.clk(clk),.rst_n(rst),.key1(1'b1),.key2(1'b1),.key3(1'b1),
+top #(.SW_DEBOUNCE_CYCLES(100),.UI_CLKS_PER_MS(10)) d(.clk(clk),.rst_n(rst),.key1(1'b1),.key2(1'b1),.key3(1'b1),
  .sw(sw),.uart_rx(1'b1),.sd_miso(1'b1),.flash_miso(1'b1));
 task frame;begin repeat(20)@(negedge d.pixel_clk);fs=1;@(negedge d.pixel_clk);fs=0;repeat(4)@(negedge d.pixel_clk);end endtask
 integer i;reg[1:0]saved_focus;
@@ -31,7 +31,12 @@ initial begin
  repeat(10)@(negedge clk);if(d.boot_elapsed_ms!=65535)$fatal(1,"elapsed counter wrapped");
  $display("PASS boot milestones: five sticky timestamps, synchronized first TF pixel, freeze after capture");$finish;
  `endif
- if(!d.display_view || !d.effective_display_view)$fatal(1,"thumbnail entry failed");
+ // Exercise the new K4 action at its pixel command boundary. Physical
+ // debounce/long press is covered separately by tb_demo_ui.
+ force d.command_valid_pix=1'b1;force d.command_pix=3'd4;
+ @(negedge d.pixel_clk);release d.command_valid_pix;release d.command_pix;
+ frame;frame;frame;
+ if(!d.display_view || !d.effective_display_view)$fatal(1,"thumbnail entry failed pending%b visible%b cancel%b alert%b reload%b",d.u_thumbnail.pending_mode,d.view_mode,d.thumb_cancel,d.elevator_alert_pix,d.reload_display_pix);
  right=1;@(negedge d.pixel_clk);right=0;frame;saved_focus=d.focus_index;
  uart_alarm=1;repeat(5)@(negedge d.pixel_clk);frame;
  if(!d.elevator_alert_pix_state || d.effective_display_view || d.show_info_pix)$fatal(1,"thumbnail emergency takeover failed");
