@@ -262,7 +262,9 @@ module media_player_control #(
                 end
             end else if (frame_start && commit_pending_pix) begin
                 // A request already in flight cannot bring PIC5 back after clear.
-                if (requested_index_pix < 4 && requested_index_pix != active_index) begin
+                // Every accepted normal request completes, including a same-page
+                // commit. Fade HOLD must receive completion even with one image.
+                if (requested_index_pix < 4 && complete_pix2[requested_index_pix]) begin
                     active_index <= requested_index_pix; index_commit <= 1'b1;
                 end
                 commit_pending_pix <= 1'b0;

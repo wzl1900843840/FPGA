@@ -161,6 +161,7 @@ module media_frame_reader #(
     reg fifo_reservation_ok_q;
     assign read_urgent=fifo_wrusedw <= FIFO_DEPTH/2;
     assign burst_request = !synth_stream && reader_busy && controller_init_done &&
+                       !reload_pending_mem && request_sync2_mem == request_seen_mem &&
                        fifo_ready_mem[1] && !burst_active_mem &&
                        !controller_busy && !refresh_active &&
                        burst_gap_count_mem == 0 &&
@@ -325,21 +326,21 @@ module media_frame_reader #(
                 end
             endcase
 
-            // 收到换图请求（toggle 变化）：如果上一帧还没读完，报 ERR_FRAME_OVERRUN 并强制停下
+            // Reload stops NEW grants only. An authorized burst must still issue
+            // all words and receive every return before the FIFO is flushed.
             if (request_sync2_mem != request_seen_mem) begin
                 request_seen_mem <= request_sync2_mem;
                 reload_pending_mem <= 1'b1;
                 reload_index_mem <= index_sync2_mem;
                 if (reader_busy || !inflight_empty_mem) begin
-                    reader_busy <= 1'b0;
-                    burst_active_mem <= 1'b0;
                     reader_error <= ERR_FRAME_OVERRUN;
                 end
             end
 
             // 等在飞数据全部返回（inflight_empty）才真正换图：
             // 清计数器、复位FIFO、切换图号，然后开始读新的一帧
-            if (reload_pending_mem && inflight_empty_mem) begin
+            if (reload_pending_mem && inflight_empty_mem && !burst_active_mem &&
+                !app_rd_en && request_sync2_mem == request_seen_mem) begin
                 reload_pending_mem <= 1'b0;
                 reader_index <= reload_index_mem;
                 issued_count_mem <= 0;
@@ -381,8 +382,8 @@ module media_frame_reader #(
             if (!synth_stream && sdram_rd_valid) begin
                 returned_count_mem <= returned_count_mem + 1'b1;
                 if (fifo_full) begin
-                    reader_busy <= 1'b0;
-                    burst_active_mem <= 1'b0;
+                    // Flag/drop overflow but finish ownership; truncating the
+                    // granted burst would strand the shared arbiter forever.
                     reader_error <= ERR_FIFO_OVERFLOW;
                 end else if (final_return) begin
                     reader_busy <= 1'b0;

@@ -55,6 +55,9 @@ module dual_key_long_hold_guard #(
             locked <= 1'b0;
         end else begin
             trigger <= 1'b0;
+            // A new gesture is armed only after BOTH debounced keys release.
+            if (key2_stable_n && key3_stable_n)
+                locked <= 1'b0;
             if (key2_sync2 == key2_stable_n)
                 key2_count <= {DB_BITS{1'b0}};
             else if (key2_count + 1 >= DEBOUNCE_CYCLES) begin

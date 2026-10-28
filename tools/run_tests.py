@@ -1,8 +1,11 @@
 """Run self-checking portable RTL tests; nonzero exit means failure."""
 from pathlib import Path
-import subprocess,json,time
+import subprocess,json,time,argparse,os
 root=Path(__file__).resolve().parents[1]
-out=root/'tests/results';out.mkdir(parents=True,exist_ok=True)
+parser=argparse.ArgumentParser()
+parser.add_argument('--out',type=Path,default=root/'tests/results')
+args=parser.parse_args()
+out=args.out.resolve();out.mkdir(parents=True,exist_ok=True)
 rtl=root/'src/user_source/rtl'
 cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_controller'],'fade':['video_fade_transition'],'uart':['uart_rx_byte','uart_tx_byte','subtitle_uart_controller','uart_status_reporter'],'bmp':['bmp24_decoder'],'pixels':['brightness_contrast_adjust'],'thumbnail':['thumbnail_controller'],
 'seg7':['seg7_panel'],'thumbnail_layout':['thumbnail_layout'],'cache':['thumbnail_cache_builder'],'wav':['wav_stream_player'],
@@ -19,6 +22,9 @@ cases={'keys':['dual_key_chord_router','dual_key_long_hold_guard','param_menu_co
 'reader_reset':['media_frame_reader','fifo_prefetch_2','afifo_32_16_256'],
 'reset_sync':['reset_sync'],
 'emergency_osd':['promax_text_overlay'],
+'fix_single_image':['video_fade_transition','media_player_control'],
+'fix_burst_abort':['media_frame_reader','media_sdram_arbiter','fifo_prefetch_2','afifo_32_16_256'],
+'fix_repeat_save':['dual_key_chord_router','dual_key_long_hold_guard'],
 'sd_protocol':['sd_media_service','sd_spi_init','sd_spi_command','sd_spi_byte_engine','sd_spi_sector_reader']}
 results=[]
 for name,modules in cases.items():
