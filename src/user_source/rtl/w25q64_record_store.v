@@ -77,14 +77,19 @@ module w25q64_record_store #(
     reg [5:0] state;
     reg [23:0] address_latched;
     reg op_write_latched;
-    reg [RECORD_BYTES*8-1:0] write_data_latched;
     reg [RECORD_BYTES*8-1:0] record_shift;
-    reg [7:0] byte_index;
+    // Range-sized counters compare before incrementing, including powers of two.
+    localparam integer BYTE_W=RECORD_BYTES<=1 ? 1 : $clog2(RECORD_BYTES);
+    localparam integer INTERVAL_W=POLL_INTERVAL_CYCLES<=1 ? 1 : $clog2(POLL_INTERVAL_CYCLES);
+    localparam integer GAP_W=CS_HIGH_CYCLES<=1 ? 1 : $clog2(CS_HIGH_CYCLES);
+    localparam [31:0] MAX_TIMEOUT=ERASE_TIMEOUT_CYCLES>PROGRAM_TIMEOUT_CYCLES ?
+                                ERASE_TIMEOUT_CYCLES : PROGRAM_TIMEOUT_CYCLES;
+    localparam integer ELAPSED_W=MAX_TIMEOUT<=1 ? 1 : $clog2({1'b0,MAX_TIMEOUT}+33'd1);
+    reg [BYTE_W-1:0] byte_index;
     reg [1:0] address_index;
-    reg [31:0] poll_elapsed_count;
-    reg [31:0] poll_timeout_limit;
-    reg [31:0] poll_interval_count;
-    reg [31:0] cs_high_count;
+    reg [ELAPSED_W-1:0] poll_elapsed_count;
+    reg [INTERVAL_W-1:0] poll_interval_count;
+    reg [GAP_W-1:0] cs_high_count;
     reg [5:0] cs_gap_return_state;
     reg wel_for_program;
     reg poll_for_program;
@@ -99,6 +104,11 @@ module w25q64_record_store #(
     wire byte_done;
     wire [7:0] byte_rx;
     wire address_allowed;
+    wire [31:0] poll_timeout_limit=poll_for_program ? PROGRAM_TIMEOUT_CYCLES : ERASE_TIMEOUT_CYCLES;
+    // Rotate once per program byte. After a full record the original snapshot
+    // is restored and can be reused for verification without a second copy.
+    wire [RECORD_BYTES*8-1:0] record_rotate=(record_shift<<8) |
+                                             (record_shift>>((RECORD_BYTES-1)*8));
 
     initial begin
         if (RECORD_BYTES < 1 || RECORD_BYTES > 256 ||
@@ -171,12 +181,10 @@ module w25q64_record_store #(
             state              <= ST_IDLE;
             address_latched    <= 24'd0;
             op_write_latched   <= 1'b0;
-            write_data_latched <= {RECORD_BYTES*8{1'b0}};
             record_shift       <= {RECORD_BYTES*8{1'b0}};
             byte_index         <= 4'd0;
             address_index      <= 2'd0;
             poll_elapsed_count <= 32'd0;
-            poll_timeout_limit <= 32'd0;
             poll_interval_count<= 32'd0;
             cs_high_count      <= 32'd0;
             cs_gap_return_state<= ST_IDLE;
@@ -202,7 +210,7 @@ module w25q64_record_store #(
             request_dropped <= 1'b0;
             byte_start      <= 1'b0;
 
-            if (poll_active)
+            if (poll_active && poll_elapsed_count<MAX_TIMEOUT)
                 poll_elapsed_count <= poll_elapsed_count + 1'b1;
 
             if (start && busy)
@@ -226,7 +234,6 @@ module w25q64_record_store #(
                             busy               <= 1'b1;
                             address_latched    <= address;
                             op_write_latched   <= op_write;
-                            write_data_latched <= write_data;
                             record_shift       <= write_data;
                             read_data          <= {RECORD_BYTES*8{1'b0}};
                             verify_read        <= op_write;
@@ -236,7 +243,6 @@ module w25q64_record_store #(
                             poll_active        <= 1'b1;
                             saw_wip_high       <= 1'b0;
                             poll_elapsed_count <= 32'd0;
-                            poll_timeout_limit <= ERASE_TIMEOUT_CYCLES;
                             poll_interval_count<= 32'd0;
                             state <= ST_POLL_CMD_ISSUE;
                         end
@@ -301,7 +307,6 @@ module w25q64_record_store #(
                         poll_active      <= 1'b1;
                         saw_wip_high     <= 1'b0;
                         poll_elapsed_count <= 32'd0;
-                        poll_timeout_limit <= ERASE_TIMEOUT_CYCLES;
                         poll_interval_count <= 32'd0;
                         begin_cs_gap(ST_POLL_CMD_ISSUE);
                     end else begin
@@ -349,7 +354,6 @@ module w25q64_record_store #(
                             byte_index  <= 4'd0;
                             read_data   <= {RECORD_BYTES*8{1'b0}};
                             verify_read <= 1'b1;
-                            record_shift <= write_data_latched;
                             begin_cs_gap(ST_READ_CMD_ISSUE);
                         end else begin
                             wel_for_program <= 1'b1;
@@ -378,7 +382,6 @@ module w25q64_record_store #(
                 ST_PROG_ADR_WAIT: if (byte_done) begin
                     if (address_index == 2'd2) begin
                         byte_index <= 4'd0;
-                        record_shift <= write_data_latched;
                         state <= ST_PROG_DAT_ISSUE;
                     end else begin
                         address_index <= address_index + 1'b1;
@@ -391,14 +394,13 @@ module w25q64_record_store #(
                     state      <= ST_PROG_DAT_WAIT;
                 end
                 ST_PROG_DAT_WAIT: if (byte_done) begin
-                    record_shift <= {record_shift[RECORD_BYTES*8-9:0],8'd0};
-                    if (byte_index + 1 >= RECORD_BYTES) begin
+                    record_shift <= record_rotate;
+                    if (byte_index >= RECORD_BYTES-1) begin
                         poll_for_program <= 1'b1;
                         preflight_poll   <= 1'b0;
                         poll_active      <= 1'b1;
                         saw_wip_high     <= 1'b0;
                         poll_elapsed_count <= 32'd0;
-                        poll_timeout_limit <= PROGRAM_TIMEOUT_CYCLES;
                         poll_interval_count <= 32'd0;
                         begin_cs_gap(ST_POLL_CMD_ISSUE);
                     end else begin
@@ -437,21 +439,21 @@ module w25q64_record_store #(
                     state      <= ST_READ_DAT_WAIT;
                 end
                 ST_READ_DAT_WAIT: if (byte_done) begin
-                    read_data <= {read_data[RECORD_BYTES*8-9:0],byte_rx};
+                    read_data <= (read_data<<8) | byte_rx;
                     if (verify_read && byte_rx != record_shift[RECORD_BYTES*8-1 -: 8]) begin
                         finish_error(ERR_VERIFY);
-                    end else if (byte_index + 1 >= RECORD_BYTES) begin
+                    end else if (byte_index >= RECORD_BYTES-1) begin
                         finish_success();
                     end else begin
                         if (verify_read)
-                            record_shift <= {record_shift[RECORD_BYTES*8-9:0],8'd0};
+                            record_shift <= record_rotate;
                         byte_index <= byte_index + 1'b1;
                         state <= ST_READ_DAT_ISSUE;
                     end
                 end
                 ST_CS_HIGH_WAIT: begin
                     spi_cs_n <= 1'b1;
-                    if (cs_high_count + 1 >= CS_HIGH_CYCLES) begin
+                    if (cs_high_count >= CS_HIGH_CYCLES-1) begin
                         cs_high_count <= 32'd0;
                         state <= cs_gap_return_state;
                     end else begin
@@ -467,7 +469,7 @@ module w25q64_record_store #(
                             finish_error(ERR_PROG_TIMEOUT);
                         else
                             finish_error(ERR_ERASE_TIMEOUT);
-                    end else if (poll_interval_count + 1 >= POLL_INTERVAL_CYCLES) begin
+                    end else if (poll_interval_count >= POLL_INTERVAL_CYCLES-1) begin
                         poll_interval_count <= 32'd0;
                         state <= ST_POLL_CMD_ISSUE;
                     end else begin

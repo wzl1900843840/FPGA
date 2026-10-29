@@ -196,6 +196,30 @@ module uart_status_reporter #(
         end
     endfunction
 
+    // Select the numeric nibble first, then use one shared ASCII converter.
+    // UART pacing leaves ample time; all report bytes and event semantics stay identical.
+    reg [3:0] numeric_nibble;
+    always @* begin
+        numeric_nibble=0;
+        case(kind_q)
+            K_VOL,K_ERR,K_BRT: numeric_nibble=send_index==4 ? val8_q[7:4] : val8_q[3:0];
+            K_PRD: case(send_index)
+                4:numeric_nibble=val32_q[19:16];5:numeric_nibble=val32_q[15:12];
+                6:numeric_nibble=val32_q[11:8];7:numeric_nibble=val32_q[7:4];
+                default:numeric_nibble=val32_q[3:0];
+            endcase
+            K_RESCUE: case(send_index)
+                10:numeric_nibble=report_id[15:12];11:numeric_nibble=report_id[11:8];
+                12:numeric_nibble=report_id[7:4];13:numeric_nibble=report_id[3:0];
+                21:numeric_nibble=report_tens;22:numeric_nibble=report_ones;
+                39:numeric_nibble=report_error[7:4];40:numeric_nibble=report_error[3:0];
+                default: ;
+            endcase
+            default: ;
+        endcase
+    end
+    wire [7:0] numeric_ascii=hex_digit(numeric_nibble);
+
     function [7:0] msg_char;
         input [2:0] kind;
         input [5:0] idx;
@@ -222,19 +246,19 @@ module uart_status_reporter #(
             K_VOL: case (idx)
                 0: msg_char = "V"; 1: msg_char = "O"; 2: msg_char = "L";
                 3: msg_char = " ";
-                4: msg_char = hex_digit(val8_q[7:4]);
-                5: msg_char = hex_digit(val8_q[3:0]);
+                4: msg_char = numeric_ascii;
+                5: msg_char = numeric_ascii;
                 6: msg_char = CR; 7: msg_char = LF;
                 default: msg_char = 8'h00;
             endcase
             K_PRD: case (idx)
                 0: msg_char = "P"; 1: msg_char = "R"; 2: msg_char = "D";
                 3: msg_char = " ";
-                4: msg_char = hex_digit(val32_q[19:16]);
-                5: msg_char = hex_digit(val32_q[15:12]);
-                6: msg_char = hex_digit(val32_q[11:8]);
-                7: msg_char = hex_digit(val32_q[7:4]);
-                8: msg_char = hex_digit(val32_q[3:0]);
+                4: msg_char = numeric_ascii;
+                5: msg_char = numeric_ascii;
+                6: msg_char = numeric_ascii;
+                7: msg_char = numeric_ascii;
+                8: msg_char = numeric_ascii;
                 9: msg_char = "m"; 10: msg_char = "s";
                 11: msg_char = CR; 12: msg_char = LF;
                 default: msg_char = 8'h00;
@@ -242,16 +266,16 @@ module uart_status_reporter #(
             K_ERR: case (idx)
                 0: msg_char = "E"; 1: msg_char = "R"; 2: msg_char = "R";
                 3: msg_char = " ";
-                4: msg_char = hex_digit(val8_q[7:4]);
-                5: msg_char = hex_digit(val8_q[3:0]);
+                4: msg_char = numeric_ascii;
+                5: msg_char = numeric_ascii;
                 6: msg_char = CR; 7: msg_char = LF;
                 default: msg_char = 8'h00;
             endcase
             K_BRT: case (idx)
                 0: msg_char = "B"; 1: msg_char = "R"; 2: msg_char = "T";
                 3: msg_char = " ";
-                4: msg_char = hex_digit(val8_q[7:4]);
-                5: msg_char = hex_digit(val8_q[3:0]);
+                4: msg_char = numeric_ascii;
+                5: msg_char = numeric_ascii;
                 6: msg_char = CR; 7: msg_char = LF;
                 default: msg_char = 8'h00;
             endcase
@@ -259,16 +283,16 @@ module uart_status_reporter #(
                 0:msg_char="R"; 1:msg_char="E"; 2:msg_char="S";
                 3:msg_char="C"; 4:msg_char="U"; 5:msg_char="E";
                 6:msg_char=","; 7:msg_char="I"; 8:msg_char="D"; 9:msg_char="=";
-                10:msg_char=hex_digit(report_id[15:12]);
-                11:msg_char=hex_digit(report_id[11:8]);
-                12:msg_char=hex_digit(report_id[7:4]);
-                13:msg_char=hex_digit(report_id[3:0]);
+                10:msg_char=numeric_ascii;
+                11:msg_char=numeric_ascii;
+                12:msg_char=numeric_ascii;
+                13:msg_char=numeric_ascii;
                 14:msg_char=","; 15:msg_char="A"; 16:msg_char="=";
                 17:msg_char=report_alert ? "1" : "0";
                 18:msg_char=","; 19:msg_char="F"; 20:msg_char="=";
                 21:msg_char=!report_floor_valid ? "-" :
-                    (report_basement ? "B" : hex_digit(report_tens));
-                22:msg_char=!report_floor_valid ? "-" : hex_digit(report_ones);
+                    (report_basement ? "B" : numeric_ascii);
+                22:msg_char=!report_floor_valid ? "-" : numeric_ascii;
                 23:msg_char=","; 24:msg_char="D"; 25:msg_char="=";
                 26:msg_char=report_direction==1 ? "U" : (report_direction==2 ? "D" : "S");
                 27:msg_char=","; 28:msg_char="D"; 29:msg_char="O"; 30:msg_char="=";
@@ -276,8 +300,8 @@ module uart_status_reporter #(
                 32:msg_char=","; 33:msg_char="S"; 34:msg_char="=";
                 35:msg_char=report_sources==2 ? "L" : (report_sources==3 ? "B" : "U");
                 36:msg_char=","; 37:msg_char="E"; 38:msg_char="=";
-                39:msg_char=hex_digit(report_error[7:4]);
-                40:msg_char=hex_digit(report_error[3:0]);
+                39:msg_char=numeric_ascii;
+                40:msg_char=numeric_ascii;
                 41:msg_char=CR; 42:msg_char=LF;
                 default:msg_char=8'h00;
             endcase

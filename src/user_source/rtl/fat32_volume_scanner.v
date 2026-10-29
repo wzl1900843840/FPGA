@@ -13,9 +13,8 @@
 //      记录各自的起始簇号和文件大小；
 //   4) 根目录如果跨了多个扇区/簇，还要顺着 FAT 表找下一个簇继续扫。
 //
-// 关键设计：内部有一个 512 字节的 sector_buffer，把整个扇区先收下来再解析。
-// 这样解析逻辑可以随便回头取任意偏移的字节，不用跟串行到来的字节流抢时序；
-// le16/le32 两个函数就是从缓冲区里按小端序取出16/32位字段。
+// 关键设计：按固定偏移流式采集BPB字段和MBR候选，不保存整扇区。
+// 分区项按卡上顺序处理，保留首个有效FAT32分区；目录与FAT也流式解析。
 //
 // 对外结果：resource_valid[4:0] 表示哪几张图找到了（注意：找到 ≠ 内容正确），
 // resourceN_cluster/size 给后面的读取器用；fs_error 是错误码
@@ -84,7 +83,12 @@ module fat32_volume_scanner (
     wire [8:0] root_fat_offset={root_cluster[6:0],2'b00};
     wire [31:0] next_root_cluster=root_fat_entry & 32'h0fffffff;
     reg [3:0] state;
-    reg [7:0] sector_buffer [0:511];
+    reg [7:0] boot_jump, bpb_spc, bpb_fats, signature_low, signature_high;
+    reg [15:0] bpb_bytes, bpb_reserved, bpb_root_entries, bpb_fat16;
+    reg [31:0] bpb_total, bpb_fat_size, bpb_root_cluster;
+    reg partition_found, partition_type_valid, partition_size_nonzero;
+    reg [31:0] first_fat32_lba, partition_candidate_lba;
+    wire [8:0] partition_offset = sector_byte_index - 9'd446;
     reg [4:0] directory_entry_index;
     reg [31:0] total_sectors;
     reg [31:0] fat_sectors;
@@ -113,22 +117,6 @@ module fat32_volume_scanner (
 
     assign scan_busy = (state != ST_IDLE);
 
-    // 整个扇区先缓存下来再解析，解析时可以任意回头取偏移，不受字节流时序限制
-    function [15:0] le16;
-        input integer offset;
-        begin
-            le16 = {sector_buffer[offset+1], sector_buffer[offset]};
-        end
-    endfunction
-
-    function [31:0] le32;
-        input integer offset;
-        begin
-            le32 = {sector_buffer[offset+3], sector_buffer[offset+2],
-                    sector_buffer[offset+1], sector_buffer[offset]};
-        end
-    endfunction
-
     function valid_spc;
         input [7:0] value;
         begin
@@ -153,56 +141,10 @@ module fat32_volume_scanner (
     endfunction
 
     // MBR也可能以EB/E9跳转开头，不能只用第一个字节区分裸BPB。
-    wire valid_bpb = {sector_buffer[12],sector_buffer[11]}==512 && valid_spc(sector_buffer[13]) &&
-                     {sector_buffer[15],sector_buffer[14]}!=0 && (sector_buffer[16]==1 || sector_buffer[16]==2) &&
-                     {sector_buffer[18],sector_buffer[17]}==0 && {sector_buffer[23],sector_buffer[22]}==0 && {sector_buffer[35],sector_buffer[34],sector_buffer[33],sector_buffer[32]}!=0 &&
-                     {sector_buffer[39],sector_buffer[38],sector_buffer[37],sector_buffer[36]}!=0 && {sector_buffer[47],sector_buffer[46],sector_buffer[45],sector_buffer[44]}>=2;
-    reg partition_found;
-    reg [31:0] first_fat32_lba;
-    integer partition_slot;
-    always @* begin
-        partition_found=0;first_fat32_lba=0;
-        for(partition_slot=0;partition_slot<4;partition_slot=partition_slot+1)
-            if(!partition_found &&
-               (sector_buffer[450+16*partition_slot]==8'h0b || sector_buffer[450+16*partition_slot]==8'h0c) &&
-               le32(454+16*partition_slot)!=0 && le32(458+16*partition_slot)!=0) begin
-                partition_found=1;
-                first_fat32_lba=le32(454+16*partition_slot);
-            end
-    end
-
-    function [2:0] matching_resource;
-        input integer base;
-        begin
-            if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
-                sector_buffer[base+2] == "C" && sector_buffer[base+3] == "1" &&
-                sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
-                sector_buffer[base+10] == "P")
-                matching_resource = 3'd0;
-            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
-                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "2" &&
-                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
-                     sector_buffer[base+10] == "P")
-                matching_resource = 3'd1;
-            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
-                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "3" &&
-                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
-                     sector_buffer[base+10] == "P")
-                matching_resource = 3'd2;
-            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
-                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "4" &&
-                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
-                     sector_buffer[base+10] == "P")
-                matching_resource = 3'd3;
-            else if (sector_buffer[base+0] == "P" && sector_buffer[base+1] == "I" &&
-                     sector_buffer[base+2] == "C" && sector_buffer[base+3] == "5" &&
-                     sector_buffer[base+8] == "B" && sector_buffer[base+9] == "M" &&
-                     sector_buffer[base+10] == "P")
-                matching_resource = 3'd4;
-            else
-                matching_resource = 3'd7;
-        end
-    endfunction
+    wire valid_bpb = bpb_bytes==16'd512 && valid_spc(bpb_spc) &&
+                     bpb_reserved!=0 && (bpb_fats==1 || bpb_fats==2) &&
+                     bpb_root_entries==0 && bpb_fat16==0 && bpb_total!=0 &&
+                     bpb_fat_size!=0 && bpb_root_cluster>=2;
 
     task finish_with_error;
         input [7:0] code;
@@ -212,51 +154,15 @@ module fat32_volume_scanner (
         end
     endtask
 
-    task accept_directory_entry;
-        input integer base;
-        reg [2:0] resource_index;
-        reg [31:0] first_cluster;
-        reg [31:0] file_size;
-        begin
-            resource_index = matching_resource(base);
-            first_cluster = {sector_buffer[base+21], sector_buffer[base+20],
-                             sector_buffer[base+27], sector_buffer[base+26]};
-            file_size = le32(base+28);
-            case (resource_index)
-                3'd0: begin
-                    resource0_cluster <= first_cluster;
-                    resource0_size <= file_size;
-                    resource_valid[0] <= 1'b1;
-                end
-                3'd1: begin
-                    resource1_cluster <= first_cluster;
-                    resource1_size <= file_size;
-                    resource_valid[1] <= 1'b1;
-                end
-                3'd2: begin
-                    resource2_cluster <= first_cluster;
-                    resource2_size <= file_size;
-                    resource_valid[2] <= 1'b1;
-                end
-                3'd3: begin
-                    resource3_cluster <= first_cluster;
-                    resource3_size <= file_size;
-                    resource_valid[3] <= 1'b1;
-                end
-                3'd4: begin
-                    resource4_cluster <= first_cluster;
-                    resource4_size <= file_size;
-                    resource_valid[4] <= 1'b1;
-                end
-                default: begin end
-            endcase
-        end
-    endtask
-
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= ST_IDLE;
             root_fat_entry<=0;
+            boot_jump<=0; bpb_spc<=0; bpb_fats<=0; signature_low<=0; signature_high<=0;
+            bpb_bytes<=0; bpb_reserved<=0; bpb_root_entries<=0; bpb_fat16<=0;
+            bpb_total<=0; bpb_fat_size<=0; bpb_root_cluster<=0;
+            partition_found<=0; partition_type_valid<=0; partition_size_nonzero<=0;
+            first_fat32_lba<=0; partition_candidate_lba<=0;
             scan_done <= 1'b0;
             fs_error <= ERR_NONE;
             partition_lba <= 32'd0;
@@ -306,9 +212,54 @@ module fat32_volume_scanner (
         end else begin
             scan_done <= 1'b0;
             sector_req <= 1'b0;
-            // BPB仅需固定偏移；根目录/FAT流式提取，避免512字节多路异步读阵列。
-            if (sector_valid && (state==ST_READ0_WAIT || state==ST_BOOT_WAIT))
-                sector_buffer[sector_byte_index] <= sector_byte;
+            // Only required fixed BPB fields are stored.
+            // sector_done follows the final valid byte, per sector service contract.
+            if (sector_valid && (state==ST_READ0_WAIT || state==ST_BOOT_WAIT)) begin
+                case (sector_byte_index)
+                    9'd0: boot_jump <= sector_byte;
+                    9'd11: bpb_bytes[7:0] <= sector_byte;
+                    9'd12: bpb_bytes[15:8] <= sector_byte;
+                    9'd13: bpb_spc <= sector_byte;
+                    9'd14: bpb_reserved[7:0] <= sector_byte;
+                    9'd15: bpb_reserved[15:8] <= sector_byte;
+                    9'd16: bpb_fats <= sector_byte;
+                    9'd17: bpb_root_entries[7:0] <= sector_byte;
+                    9'd18: bpb_root_entries[15:8] <= sector_byte;
+                    9'd22: bpb_fat16[7:0] <= sector_byte;
+                    9'd23: bpb_fat16[15:8] <= sector_byte;
+                    9'd32: bpb_total[7:0] <= sector_byte;
+                    9'd33: bpb_total[15:8] <= sector_byte;
+                    9'd34: bpb_total[23:16] <= sector_byte;
+                    9'd35: bpb_total[31:24] <= sector_byte;
+                    9'd36: bpb_fat_size[7:0] <= sector_byte;
+                    9'd37: bpb_fat_size[15:8] <= sector_byte;
+                    9'd38: bpb_fat_size[23:16] <= sector_byte;
+                    9'd39: bpb_fat_size[31:24] <= sector_byte;
+                    9'd44: bpb_root_cluster[7:0] <= sector_byte;
+                    9'd45: bpb_root_cluster[15:8] <= sector_byte;
+                    9'd46: bpb_root_cluster[23:16] <= sector_byte;
+                    9'd47: bpb_root_cluster[31:24] <= sector_byte;
+                    9'd510: signature_low <= sector_byte;
+                    9'd511: signature_high <= sector_byte;
+                    default: ;
+                endcase
+                if (state==ST_READ0_WAIT && sector_byte_index>=9'd446 && sector_byte_index<9'd510) begin
+                    case (partition_offset[3:0])
+                        4'd4: partition_type_valid <= sector_byte==8'h0b || sector_byte==8'h0c;
+                        4'd8: partition_candidate_lba[7:0] <= sector_byte;
+                        4'd9: partition_candidate_lba[15:8] <= sector_byte;
+                        4'd10: partition_candidate_lba[23:16] <= sector_byte;
+                        4'd11: partition_candidate_lba[31:24] <= sector_byte;
+                        4'd12: partition_size_nonzero <= sector_byte!=0;
+                        4'd13,4'd14: partition_size_nonzero <= partition_size_nonzero || sector_byte!=0;
+                        4'd15: if (!partition_found && partition_type_valid &&
+                                  partition_candidate_lba!=0 && (partition_size_nonzero || sector_byte!=0)) begin
+                            partition_found<=1'b1; first_fat32_lba<=partition_candidate_lba;
+                        end
+                        default: ;
+                    endcase
+                end
+            end
             if(sector_valid && state==ST_ROOT_FAT_WAIT) begin
                 if(sector_byte_index==root_fat_offset) root_fat_entry[7:0]<=sector_byte;
                 if(sector_byte_index==root_fat_offset+9'd1) root_fat_entry[15:8]<=sector_byte;
@@ -393,6 +344,7 @@ module fat32_volume_scanner (
             case (state)
                 ST_IDLE: if (scan_start) begin
                     fs_error <= ERR_NONE;
+                    partition_found<=0; first_fat32_lba<=0;
                     partition_lba <= 32'd0;
                     resource_valid <= 5'd0;
                     state <= ST_READ0_REQ; root_sector_offset<=0;root_cluster_count<=0;root_end<=0;
@@ -405,9 +357,9 @@ module fat32_volume_scanner (
                 ST_READ0_WAIT: if (sector_done) begin
                     if (sector_error != 0)
                         finish_with_error(ERR_SECTOR);
-                    else if (sector_buffer[510] != 8'h55 || sector_buffer[511] != 8'haa)
+                    else if (signature_low != 8'h55 || signature_high != 8'haa)
                         finish_with_error(ERR_BOOT_SIGNATURE);
-                    else if (valid_bpb && (sector_buffer[0] == 8'heb || sector_buffer[0] == 8'he9)) begin
+                    else if (valid_bpb && (boot_jump == 8'heb || boot_jump == 8'he9)) begin
                         partition_lba <= 32'd0;
                         state <= ST_BOOT_PARSE;
                     end else if (partition_found) begin
@@ -425,7 +377,7 @@ module fat32_volume_scanner (
                 ST_BOOT_WAIT: if (sector_done) begin
                     if (sector_error != 0)
                         finish_with_error(ERR_SECTOR);
-                    else if (sector_buffer[510] != 8'h55 || sector_buffer[511] != 8'haa)
+                    else if (signature_low != 8'h55 || signature_high != 8'haa)
                         finish_with_error(ERR_BOOT_SIGNATURE);
                     else
                         state <= ST_BOOT_PARSE;
@@ -434,15 +386,15 @@ module fat32_volume_scanner (
                     if (!valid_bpb) begin
                         finish_with_error(ERR_UNSUPPORTED_BPB);
                     end else begin
-                        sectors_per_cluster <= sector_buffer[13];
-                        reserved_sectors <= le16(14);
-                        fat_count <= sector_buffer[16];
-                        total_sectors <= le32(32);
-                        fat_sectors <= le32(36);
-                        root_cluster <= le32(44);
-                        sectors_per_cluster_shift <= spc_shift(sector_buffer[13]);
-                        fat_span <= sector_buffer[16] == 2 ? (le32(36) << 1) : le32(36);
-                        fat_start_lba <= partition_lba + le16(14);
+                        sectors_per_cluster <= bpb_spc;
+                        reserved_sectors <= bpb_reserved;
+                        fat_count <= bpb_fats;
+                        total_sectors <= bpb_total;
+                        fat_sectors <= bpb_fat_size;
+                        root_cluster <= bpb_root_cluster;
+                        sectors_per_cluster_shift <= spc_shift(bpb_spc);
+                        fat_span <= bpb_fats == 2 ? (bpb_fat_size << 1) : bpb_fat_size;
+                        fat_start_lba <= partition_lba + bpb_reserved;
                         state <= ST_BOOT_LAYOUT;
                     end
                 end

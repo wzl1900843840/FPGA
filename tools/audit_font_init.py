@@ -36,7 +36,9 @@ blocks = re.findall(r'EG_PHY_BRAM\s*#\((.*?)\);', netlist, re.S)
 records = []
 covered = set()
 for block in blocks:
-    if 'u_text/ramread0_syn_' not in block:
+    # Synthesis numbering changes when another RAM is added. Select by the
+    # observable font output, never by an unstable ramread instance suffix.
+    if 'u_text/' not in block or not re.search(r'font_word\s*\[', block):
         continue
     bit_match = re.search(r'font_word\s*\[(\d+):(\d+)\]', block)
     assert bit_match, 'font output mapping is missing'

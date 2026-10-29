@@ -44,8 +44,6 @@ module promax_audio_waveform #(
     reg [11:0] line_y;
     reg de_q,vs_q;
     wire frame_start=vs_q && !vsync;
-    reg signed [7:0] sample_bank0[0:SAMPLE_COUNT-1];
-    reg signed [7:0] sample_bank1[0:SAMPLE_COUNT-1];
     reg write_bank,display_bank,display_valid;
     reg [6:0] capture_count;
     reg [7:0] decimate_count,peak_bank0,peak_bank1;
@@ -105,10 +103,8 @@ module promax_audio_waveform #(
                 // 于是每 DECIMATE 个有效样本采一个点，64 个点正好铺满面板宽度。
                 if(decimate_count==0) begin
                     if(write_bank) begin
-                        sample_bank1[capture_count[5:0]]<=pcm_tap_left[15:8];
                         if(sample_abs>peak_bank1) peak_bank1<=sample_abs;
                     end else begin
-                        sample_bank0[capture_count[5:0]]<=pcm_tap_left[15:8];
                         if(sample_abs>peak_bank0) peak_bank0<=sample_abs;
                     end
                     capture_count<=capture_count+1'b1;decimate_count<=DECIMATE-1;
@@ -119,10 +115,25 @@ module promax_audio_waveform #(
     // ===== 显示段：面板区域判定与波形几何 =====
     // local_x/local_y 是相对面板原点的坐标；panel 条件里额外加了 24 像素，
     // 因为面板右侧还要留出音量柱的位置；最外圈 3 像素是边框，挖空后由边框色填充。
-    wire [9:0] local_x=pixel_x-WAVE_X;
-    wire [6:0] local_y=line_y-WAVE_Y;
-    wire panel=enable && de && pixel_x>=WAVE_X && pixel_x<WAVE_X+WAVE_WIDTH+24 &&
-        line_y>=WAVE_Y && line_y<WAVE_Y+WAVE_HEIGHT &&
+    // Synchronous sample reads share the existing one-cycle video output
+    // latency. Coordinates, frame state and background travel with the reads.
+    // Two 128x8 copies provide current/previous ports using spare BRAM.
+    wire [9:0] render_x;
+    wire [11:0] render_y;
+    wire render_enable,render_de,render_valid;
+    wire [7:0] render_peak,render_held;
+    wire [2:0] render_silence;
+    wire [23:0] render_rgb;
+    wire signed [7:0] sample_current,sample_previous;
+    wire capture_write=rst_n && !frame_start && enable && pcm_tap_valid &&
+                       capture_count<SAMPLE_COUNT && decimate_count==0;
+    wire [9:0] read_local_x=pixel_x-WAVE_X;
+    wire [5:0] read_index=read_local_x/SAMPLE_SPACING;
+    wire [5:0] read_previous=read_index==0 ? 0 : read_index-1'b1;
+    wire [9:0] local_x=render_x-WAVE_X;
+    wire [6:0] local_y=render_y-WAVE_Y;
+    wire panel=render_enable && render_de && render_x>=WAVE_X && render_x<WAVE_X+WAVE_WIDTH+24 &&
+        render_y>=WAVE_Y && render_y<WAVE_Y+WAVE_HEIGHT &&
         !((local_x<3 || local_x>=WAVE_WIDTH+21) && (local_y<3 || local_y>=WAVE_HEIGHT-3));
     // sample_index 把横向像素映射到第几个采样点（WAVE_WIDTH/64 = 8 像素一个点），
     // previous_index 是它左边相邻的点，两者之间的连线靠插值补齐。
@@ -175,17 +186,17 @@ module promax_audio_waveform #(
         sample_y=CENTER;previous_y=CENTER;trace_y=CENTER;amplitude=0;
         delta=0;interpolated_delta=0;
         distance=local_y>=CENTER ? local_y-CENTER : CENTER-local_y;
-        level=display_peak>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : display_peak;
-        marker=held_peak>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : held_peak;
+        level=render_peak>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : render_peak;
+        marker=render_held>WAVE_HEIGHT-8 ? WAVE_HEIGHT-8 : render_held;
         trace=0;glow=0;fill=0;grid=0;border=0;meter=0;
         effect_color=24'h142c4c;quarter_mix=0;solid=0;
         if(panel) begin
             // 边框：面板四边各 1 像素；网格：横向每 64 像素一条、纵向每 16 行一条。
             border=local_y==0 || local_y==WAVE_HEIGHT-1 || local_x==0 || local_x==WAVE_WIDTH+23;
             grid=local_x<WAVE_WIDTH && (local_x[5:0]==0 || local_y[3:0]==0);
-            if(local_x<WAVE_WIDTH && display_valid) begin
-                selected_sample=display_bank ? sample_bank1[sample_index] : sample_bank0[sample_index];
-                previous_sample=display_bank ? sample_bank1[previous_index] : sample_bank0[previous_index];
+            if(local_x<WAVE_WIDTH && render_valid) begin
+                selected_sample=sample_current;
+                previous_sample=sample_previous;
                 // 样本是 8bit 有符号，右移 1 位当作纵向偏移（满幅约占面板一半高度）；
                 // 超界时钳到 DISP_MAX/DISP_MIN，保证波形不画到边框外；
                 // silence_shift 的右移就是静音衰减：移位越多波形越贴零轴。
@@ -195,8 +206,8 @@ module promax_audio_waveform #(
                 else if(displacement<DISP_MIN) displacement=DISP_MIN;
                 if(previous_displacement>DISP_MAX) previous_displacement=DISP_MAX;
                 else if(previous_displacement<DISP_MIN) previous_displacement=DISP_MIN;
-                displacement=displacement >>> silence_shift;
-                previous_displacement=previous_displacement >>> silence_shift;
+                displacement=displacement >>> render_silence;
+                previous_displacement=previous_displacement >>> render_silence;
                 sample_y=CENTER-displacement;previous_y=CENTER-previous_displacement;
                 // Eight-pixel linear interpolation uses three shift/add terms.
                 // Sample spacing is fixed at eight pixels in the production panel.
@@ -233,20 +244,59 @@ module promax_audio_waveform #(
             if(border) begin effect_color=24'h365468;quarter_mix=0;end
             if(local_y==0 && local_x>=8 && local_x<96) begin effect_color=24'h42e6b5;solid=1;end
         end
-        color=solid ? effect_color : blend(rgb_in,effect_color,quarter_mix);
+        color=solid ? effect_color : blend(render_rgb,effect_color,quarter_mix);
     end
     generate if(PIPELINE_OUTPUT) begin:g_output_stage
-        reg [23:0] photo_q,effect_q;
-        reg panel_q,quarter_q,solid_q;
-        always @(posedge clk or negedge rst_n)
-            if(!rst_n) begin photo_q<=0;effect_q<=0;panel_q<=0;quarter_q<=0;solid_q<=0;end
-            else begin
-                photo_q<=rgb_in;effect_q<=effect_color;panel_q<=panel;
-                quarter_q<=quarter_mix;solid_q<=solid;
+        reg signed [7:0] sample_ram0[0:127] /* fehdl force_ram=1, ram_style="bram" */;
+        reg signed [7:0] sample_ram1[0:127] /* fehdl force_ram=1, ram_style="bram" */;
+        reg signed [7:0] current_q,previous_q;
+        reg [23:0] photo_q;
+        reg [9:0] x_q;
+        reg [11:0] y_q;
+        reg enable_q,de_q,valid_q;
+        reg [7:0] peak_q,held_q;
+        reg [2:0] silence_q;
+        // No reset on RAM or RAM output registers: valid_q gates startup data.
+        always @(posedge clk) begin
+            if(capture_write) begin
+                sample_ram0[{write_bank,capture_count[5:0]}]<=pcm_tap_left[15:8];
+                sample_ram1[{write_bank,capture_count[5:0]}]<=pcm_tap_left[15:8];
             end
-        assign waveform_active=panel_q;
-        assign rgb_out=panel_q ? (solid_q ? effect_q : blend(photo_q,effect_q,quarter_q)) : photo_q;
+            current_q<=sample_ram0[{display_bank,read_index}];
+            previous_q<=sample_ram1[{display_bank,read_previous}];
+        end
+        always @(posedge clk or negedge rst_n)
+            if(!rst_n) begin
+                photo_q<=0;x_q<=0;y_q<=0;enable_q<=0;de_q<=0;valid_q<=0;
+                peak_q<=0;held_q<=0;silence_q<=0;
+            end else begin
+                photo_q<=rgb_in;x_q<=pixel_x;y_q<=line_y;
+                enable_q<=enable;de_q<=de;valid_q<=display_valid;
+                peak_q<=display_peak;held_q<=held_peak;silence_q<=silence_shift;
+            end
+        assign render_x=x_q;assign render_y=y_q;
+        assign render_enable=enable_q;assign render_de=de_q;assign render_valid=valid_q;
+        assign render_peak=peak_q;assign render_held=held_q;assign render_silence=silence_q;
+        assign render_rgb=photo_q;
+        assign sample_current=current_q;assign sample_previous=previous_q;
+        // Preserve existing debug observation names used by pixel scoreboards.
+        wire [23:0] effect_q=effect_color;
+        wire quarter_q=quarter_mix,solid_q=solid,panel_q=panel;
+        assign waveform_active=panel;
+        assign rgb_out=panel ? color : photo_q;
     end else begin:g_combinational
+        reg signed [7:0] sample_bank0[0:SAMPLE_COUNT-1];
+        reg signed [7:0] sample_bank1[0:SAMPLE_COUNT-1];
+        always @(posedge clk) if(capture_write) begin
+            if(write_bank) sample_bank1[capture_count[5:0]]<=pcm_tap_left[15:8];
+            else sample_bank0[capture_count[5:0]]<=pcm_tap_left[15:8];
+        end
+        assign render_x=pixel_x;assign render_y=line_y;
+        assign render_enable=enable;assign render_de=de;assign render_valid=display_valid;
+        assign render_peak=display_peak;assign render_held=held_peak;assign render_silence=silence_shift;
+        assign render_rgb=rgb_in;
+        assign sample_current=display_bank ? sample_bank1[sample_index] : sample_bank0[sample_index];
+        assign sample_previous=display_bank ? sample_bank1[previous_index] : sample_bank0[previous_index];
         assign waveform_active=panel;
         assign rgb_out=panel ? color : rgb_in;
     end endgenerate
