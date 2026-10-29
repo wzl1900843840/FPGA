@@ -1,0 +1,210 @@
+{
+  "created_at": "2026-10-29T16:09:15.135617+08:00",
+  "target": "C:\\Users\\wzl123\\.config\\micu-image\\output\\tijian_sunburst_20261029_141512\\bmp_fpga",
+  "backup": "C:\\Users\\wzl123\\.config\\micu-image\\output\\tijian_sunburst_20261029_141512\\bmp_fpga_before_anlogic_20261029_160915_135617.zip",
+  "backup_sha256": "e5882c4d6c096338417a972b4c91360cf2939a43cf1d20f055e17bfd6081dff2",
+  "records": [
+    {
+      "file": "PIC1.BMP",
+      "before_sha256": "428ad3111f5b28a6df8090bbde15222c3ed8e71aae124b7c4bc7877806f7b8c6",
+      "sha256": "3f5d8a46b391fac227c7fd67f649a844eb4a0d1cf73f751b5d0f9437e56e6387",
+      "format": {
+        "signature": "BM",
+        "file_size": 921654,
+        "actual_bytes": 921654,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 640,
+        "height": 480,
+        "planes": 1,
+        "bpp": 24,
+        "compression": 0,
+        "bottom_up": true
+      },
+      "logo": {
+        "source": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\elevator_photo_pack\\anlogic_logo.png",
+        "sha256": "ff793fbf187ae075e0e909bb2dbf68e84b92484eb99339b0a5a7b3afb4caf717",
+        "source_position": [
+          16,
+          16
+        ],
+        "source_size": [
+          63,
+          41
+        ],
+        "display_position": [
+          16,
+          16
+        ],
+        "display_size": [
+          63,
+          41
+        ]
+      },
+      "outside_logo_unchanged": true,
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC2.BMP",
+      "before_sha256": "b39fced48cce3d3cb87bfc18fcee89b948e0f5ac93a4e27d24f1be983e09a058",
+      "sha256": "29c12cc1bbef3a2275d00d6e5cbae5435f9137062e8f54b7fbaae51dfeda05a5",
+      "format": {
+        "signature": "BM",
+        "file_size": 921654,
+        "actual_bytes": 921654,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 640,
+        "height": 480,
+        "planes": 1,
+        "bpp": 24,
+        "compression": 0,
+        "bottom_up": true
+      },
+      "logo": {
+        "source": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\elevator_photo_pack\\anlogic_logo.png",
+        "sha256": "ff793fbf187ae075e0e909bb2dbf68e84b92484eb99339b0a5a7b3afb4caf717",
+        "source_position": [
+          16,
+          16
+        ],
+        "source_size": [
+          63,
+          41
+        ],
+        "display_position": [
+          16,
+          16
+        ],
+        "display_size": [
+          63,
+          41
+        ]
+      },
+      "outside_logo_unchanged": true,
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC3.BMP",
+      "before_sha256": "a5bba6621b298edec9cab39a827f427cf6a1240edafeba19681dff91333865bc",
+      "sha256": "c3b42d897b55367cffda2ecb85af13528ed14245b625bcb91cdd4a29f6ac5abc",
+      "format": {
+        "signature": "BM",
+        "file_size": 921654,
+        "actual_bytes": 921654,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 640,
+        "height": 480,
+        "planes": 1,
+        "bpp": 24,
+        "compression": 0,
+        "bottom_up": true
+      },
+      "logo": {
+        "source": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\elevator_photo_pack\\anlogic_logo.png",
+        "sha256": "ff793fbf187ae075e0e909bb2dbf68e84b92484eb99339b0a5a7b3afb4caf717",
+        "source_position": [
+          16,
+          16
+        ],
+        "source_size": [
+          63,
+          41
+        ],
+        "display_position": [
+          16,
+          16
+        ],
+        "display_size": [
+          63,
+          41
+        ]
+      },
+      "outside_logo_unchanged": true,
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC4.BMP",
+      "before_sha256": "3010704cc0fa70d5e91c9e870aac797b7628f3a1113cdc4bf7580d18c8631e84",
+      "sha256": "9550200760ed55cad0a2669b6288cbb76689eb97e5701ee1cbb5302bc6669b3a",
+      "format": {
+        "signature": "BM",
+        "file_size": 3686454,
+        "actual_bytes": 3686454,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 1280,
+        "height": 960,
+        "planes": 1,
+        "bpp": 24,
+        "compression": 0,
+        "bottom_up": true
+      },
+      "logo": {
+        "source": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\elevator_photo_pack\\anlogic_logo.png",
+        "sha256": "ff793fbf187ae075e0e909bb2dbf68e84b92484eb99339b0a5a7b3afb4caf717",
+        "source_position": [
+          32,
+          32
+        ],
+        "source_size": [
+          126,
+          82
+        ],
+        "display_position": [
+          16,
+          16
+        ],
+        "display_size": [
+          63,
+          41
+        ]
+      },
+      "outside_logo_unchanged": true,
+      "pixel_round_trip": true
+    },
+    {
+      "file": "PIC5.BMP",
+      "before_sha256": "e32bf876751a39e39c1705c8e681a9036b4a615d8024b28aa663e4a009a13d0f",
+      "sha256": "e11b27a674577740b974f37a406fb50ff84ea4f0d6cbe76033eab3474e6cc4b0",
+      "format": {
+        "signature": "BM",
+        "file_size": 921654,
+        "actual_bytes": 921654,
+        "pixel_offset": 54,
+        "dib_size": 40,
+        "width": 640,
+        "height": 480,
+        "planes": 1,
+        "bpp": 24,
+        "compression": 0,
+        "bottom_up": true
+      },
+      "logo": {
+        "source": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\media\\elevator_photo_pack\\anlogic_logo.png",
+        "sha256": "ff793fbf187ae075e0e909bb2dbf68e84b92484eb99339b0a5a7b3afb4caf717",
+        "source_position": [
+          16,
+          16
+        ],
+        "source_size": [
+          63,
+          41
+        ],
+        "display_position": [
+          16,
+          16
+        ],
+        "display_size": [
+          63,
+          41
+        ]
+      },
+      "outside_logo_unchanged": true,
+      "pixel_round_trip": true
+    }
+  ],
+  "preview": "C:\\Users\\wzl123\\.config\\micu-image\\output\\tijian_sunburst_20261029_141512\\bmp_fpga\\preview_anlogic.png",
+  "verification": "All 5 persisted BMPs checked; no FPGA hardware test performed"
+}
