@@ -57,6 +57,9 @@ module promax_text_overlay #(
     // 每 3 帧才推进一步（scroll_div 计数），所以滚动速度与帧率无关地保持匀速。
     localparam integer CELL_W=12, CELL_H=16, PARAM_CHARS=32, FLOOR_X=96;
     localparam integer SUBTITLE_CELL_W=18, SCROLL_CYCLE=H_ACTIVE+128;
+    // 告警背景左侧面板底部留白，坐标基于解码后的 640x480 画布。
+    // 两种输入图片分辨率共用该位置，不随 source_scale_2x 移动。
+    localparam integer ALERT_TEXT_X=144, ALERT_STATUS_Y=340, ALERT_HINT_Y=364, ALERT_ID_Y=388;
     reg vs_q;
     wire frame_start=vs_q && !vsync;
     reg [9:0] scroll_pos;
@@ -1499,14 +1502,14 @@ module promax_text_overlay #(
                 if(mr!=15)begin ch=menu_char(mr,cell_idx);found=1;sub=1;end
             end else if(MENU_ENABLE && !show_info_frame && !alert_frame && menu_feedback!=0 && px>=56 && px<584 && py>=360 && py<378)begin
                 lx=px-56;ly=py-360;cell_idx=lx>>4;col=lx[3:0];ch=menu_char(9,cell_idx);found=1;sub=1;
-            end else if((alert_frame || clear_frames!=0) && px>=96 && px<240 && py>=104 && py<122) begin
-                lx=px-96;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-104;
+            end else if((alert_frame || clear_frames!=0) && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+144 && py>=ALERT_STATUS_Y && py<ALERT_STATUS_Y+18) begin
+                lx=px-ALERT_TEXT_X;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-ALERT_STATUS_Y;
                 ch=rescue_status_char(cell_idx);found=1;sub=1;
-            end else if(alert_frame && px>=96 && px<168 && py>=128 && py<146) begin
-                lx=px-96;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-128;
+            end else if(alert_frame && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+72 && py>=ALERT_HINT_Y && py<ALERT_HINT_Y+18) begin
+                lx=px-ALERT_TEXT_X;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-ALERT_HINT_Y;
                 ch=8'h80+5'd27+cell_idx;found=1;sub=1;
-            end else if((alert_frame || clear_frames!=0) && px>=96 && px<180 && py>=152 && py<168) begin
-                lx=px-96;cell_idx=lx/CELL_W;col=(lx-cell_idx*CELL_W)>>1;ly=py-152;
+            end else if((alert_frame || clear_frames!=0) && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+84 && py>=ALERT_ID_Y && py<ALERT_ID_Y+16) begin
+                lx=px-ALERT_TEXT_X;cell_idx=lx/CELL_W;col=(lx-cell_idx*CELL_W)>>1;ly=py-ALERT_ID_Y;
                 case(cell_idx)
                     0:ch="I";1:ch="D";2:ch=":";
                     3:ch=hex_char(event_frame[15:12]);4:ch=hex_char(event_frame[11:8]);
@@ -1620,7 +1623,11 @@ module promax_text_overlay #(
     wire selected_box=menu_card && compose_x>=44 && compose_x<596 && compose_y>=124+{menu_field,5'b0} && compose_y<152+{menu_field,5'b0};
     wire menu_accent=selected_box && compose_x<48;
     wire menu_rule=menu_card && compose_x>=56 && compose_x<584 && (compose_y==115 || compose_y==343);
+    // PIC5 的浅色留白使用深色字与浅色描边；其他区域保持原来的配色。
+    wire alert_text_area=(alert_frame || clear_frames!=0) && !menu_card &&
+        compose_x>=ALERT_TEXT_X && compose_x<=ALERT_TEXT_X+144 &&
+        compose_y>=ALERT_STATUS_Y && compose_y<=ALERT_ID_Y+16;
     assign overlay_active=ink || shadow || menu_card;
-    assign rgb_out=menu_accent ? 24'hffdc40 : ink ? (menu_card && compose_y<106 ? 24'hffdc40 : 24'heef6fa) :
-        shadow ? 24'h162430 : selected_box ? 24'h30495c : menu_rule ? 24'h3a5060 : menu_card ? 24'h1c2e3b : compose_rgb;
+    assign rgb_out=menu_accent ? 24'hffdc40 : ink ? (alert_text_area ? 24'h244536 : menu_card && compose_y<106 ? 24'hffdc40 : 24'heef6fa) :
+        shadow ? (alert_text_area ? 24'hfffdf3 : 24'h162430) : selected_box ? 24'h30495c : menu_rule ? 24'h3a5060 : menu_card ? 24'h1c2e3b : compose_rgb;
 endmodule
