@@ -1,12 +1,11 @@
 # 历史资料归档
 
-本目录不参加当前 FPGA 编译。当前工程与下载文件见 [主 README](../README.md)。
+这里不是当前 FPGA 编译或下载入口。当前入口见 [根 README](../README.md)。
 
-| 目录 | 内容 |
-| --- | --- |
-| releases/release_before_refresh_fix | SDRAM 刷新修复前输出 |
-| releases/release_before_read_alignment | 读数据对齐修复前输出 |
-| releases/release_demo_pcm_previous | 旧演示 PCM 镜像配套输出 |
-| reference | 原始 DOCX 与历史演示视频 |
+|目录|内容|
+|---|---|
+|releases/|刷新/读对齐修复前的历史固件和输出|
+|reference/|原始 DOCX 与历史演示视频|
+|maintenance/legacy_netlist/|原根 netlist 下两个过时占位文件，按原字节迁入|
 
-仅移动资料，未删除文件或改变文件内容。历史 manifest 中的时间和散列保持原样，它们是当时构建记录。演示视频保存在完整 ZIP 中，按原有策略不进入 Git。
+历史 manifest、时间、散列保持原样。演示视频保留一份，已核对与父目录旧参考工程副本完全相同。历史版本也可用 Git 标签与外部备份恢复；本次备份与清理清单见 [整理报告](../doc/maintenance/20261029_workspace/README.md)。

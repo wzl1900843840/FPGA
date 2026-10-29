@@ -1,0 +1,58 @@
+{
+  "created_at": "2026-10-29T17:28:29.806623+08:00",
+  "backup": {
+    "directory": "D:\\FPGA\\anlu\\example_code111\\backups\\workspace_cleanup_20261029_171953",
+    "archive": "D:\\FPGA\\anlu\\example_code111\\backups\\workspace_cleanup_20261029_171953\\project_before.zip",
+    "manifest": "D:\\FPGA\\anlu\\example_code111\\backups\\workspace_cleanup_20261029_171953\\backup_manifest.json",
+    "verified_members": 15839
+  },
+  "deleted_files": 11996,
+  "deleted_bytes": 2418523161,
+  "external_duplicate_bytes": 261438503,
+  "kept_build_directories": [
+    "alert_layout_20261029",
+    "fullchain_I_20261029",
+    "gui_20261029_145246",
+    "gui_verified_20261029",
+    "maintenance_logs",
+    "repair_stage6_final_20261028",
+    "rescue_cdc_20261028",
+    "resource_R2E_20261029",
+    "seg7_block_swap",
+    "thumbnail_center",
+    "workspace_cleanup_20261029"
+  ],
+  "moves": [
+    {
+      "from": "netlist/tb_fade.log",
+      "to": "archive/maintenance/legacy_netlist/tb_fade.log",
+      "sha256": "09c742efd52e049a0f79466300ded3a472f13b49066e12d48d863d898d3225a2"
+    },
+    {
+      "from": "netlist/tb_fade.ys",
+      "to": "archive/maintenance/legacy_netlist/tb_fade.ys",
+      "sha256": "8c1c0abfa57f2840cd477ae9539fc0ac931f909446a19dee4f1af92f3f11ed3f"
+    }
+  ],
+  "external_operations": [
+    {
+      "operation": "move",
+      "from": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf.zip",
+      "to": "D:\\FPGA\\anlu\\example_code111\\backups\\imported\\lab_ex4_tf.zip",
+      "sha256": "836fdd086880494c0e2bb32f55a2fc435d32254f73ff78f1c796d4b0c5fc80b2"
+    },
+    {
+      "operation": "move",
+      "from": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf (2).zip",
+      "to": "D:\\FPGA\\anlu\\example_code111\\backups\\imported\\lab_ex4_tf (2).zip",
+      "sha256": "98265a0230c77e02e2dff7b5ac316a3b99fb863cb0557dc8902e6640e4319362"
+    },
+    {
+      "operation": "delete_exact_duplicate",
+      "from": "D:\\FPGA\\anlu\\example_code111\\lab_ex5_i2s\\演示视频\\VID_20260428_143508.mp4",
+      "retained": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\archive\\reference\\演示视频\\VID_20260428_143508.mp4",
+      "sha256": "003bb02976bdf85679e5e20e8c960ec17eff0157ed32f31454e90e6b1e235a87",
+      "bytes": 261438503
+    }
+  ]
+}

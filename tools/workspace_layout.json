@@ -1,0 +1,10 @@
+{
+  "project": "src/td_project/lab_ex5_i2s_v1.0.al",
+  "top": "src/user_source/hdl_source/top_tf_hdmi_audio.v",
+  "constraints": ["src/user_source/constraints_source/pin.adc", "src/user_source/constraints_source/timing.sdc"],
+  "launchers": ["build_verified.cmd", "start_console.cmd"],
+  "current_media": "C:/Users/wzl123/.config/micu-image/output/tijian_sunburst_20261029_141512/bmp_fpga",
+  "previous_verified_build": "build_out/gui_verified_20261029/best_result",
+  "previous_verified_bit_sha256": "0c4667910053e867772bbf67ae24856400924f64f697248445798d6e9e3bbca9",
+  "note": "Previous accepted BIT predates emergency OSD commit 79930d3. Source changes require a fresh accepted build. Native TD GUI and build_verified.cmd are separate flows."
+}

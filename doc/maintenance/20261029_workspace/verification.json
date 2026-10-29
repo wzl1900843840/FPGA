@@ -1,0 +1,64 @@
+{
+  "created_at": "2026-10-29T17:48:23.106399+08:00",
+  "passed": true,
+  "errors": [],
+  "preexisting_files_checked": 15839,
+  "unchanged_files": 3835,
+  "declared_deleted_files": 11996,
+  "declared_moved_files": 2,
+  "declared_document_rewrites": 6,
+  "unexpected_missing_files": 0,
+  "backup": {
+    "path": "D:\\FPGA\\anlu\\example_code111\\backups\\workspace_cleanup_20261029_171953\\project_before.zip",
+    "sha256": "ca83fd9046a3eb11cb7124d21d59d02e205348864fc4190beaf33246ecca6d00",
+    "members": 15839,
+    "all_member_hashes_verified_before_deletion": true,
+    "bundle_verified": true
+  },
+  "junctions": [
+    {
+      "path": "build_out/seg7_block_swap/user_source",
+      "target": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\src\\user_source",
+      "passed": true
+    },
+    {
+      "path": "build_out/thumbnail_center/user_source",
+      "target": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\src\\user_source",
+      "passed": true
+    }
+  ],
+  "external_material_files_unchanged": 5,
+  "after_project_excluding_git_and_junction_duplicates": {
+    "files": 3885,
+    "bytes": 1172290539
+  },
+  "working_directory_redundancy_removed_bytes": 2679961664,
+  "checks_observed": [
+    {
+      "command": "python -B tools/build_gui.py --help",
+      "exit_code": 0,
+      "tool_result": "51c250"
+    },
+    {
+      "command": "python -B tools/launch_console.py --check",
+      "exit_code": 0,
+      "tool_result": "b2b634"
+    },
+    {
+      "command": "python -B -m unittest discover -s tests -p test_final_timing_gate.py",
+      "tests": 3,
+      "passed": true,
+      "tool_result": "000da1"
+    },
+    {
+      "command": "python -B -m unittest discover -s tests -p test_host_app.py",
+      "tests": 41,
+      "passed": true,
+      "tool_result": "418102"
+    }
+  ],
+  "limitations": [
+    "No new synthesis, physical implementation, flashing or hardware test",
+    "Separate read-only workspace_doctor.json records final navigation and project checks"
+  ]
+}

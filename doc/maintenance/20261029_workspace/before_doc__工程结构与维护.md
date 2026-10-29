@@ -1,0 +1,60 @@
+# 工程结构与维护
+
+## 整理原则
+
+本轮仅整理历史资料、文档导航和 Git 忽略路径。`src/`、`tools/`、`tests/` 内文件路径与内容不变，不修改 RTL、端口、时序、约束或 `.al` 工程引用。不新增工程入口。
+
+## 源码目录职责
+
+| 路径 | 职责 |
+| --- | --- |
+| src/td_project/lab_ex5_i2s_v1.0.al | 正式 TD 工程 |
+| src/user_source/hdl_source/top_tf_hdmi_audio.v | 顶层集成，模块名 top |
+| src/user_source/hdl_source | 原工程 HDMI 物理层、SDRAM 控制及厂商加密模块等；是否参与编译以 .al 为准 |
+| src/user_source/rtl | 教程整合的存储、视频、音频、交互和诊断模块 |
+| src/user_source/ip_source | 原有 IP 资源，保留原路径 |
+| src/user_source/constraints_source | pin.adc 引脚约束、timing.sdc 时序约束 |
+| src/td_project/lab_ex5_i2s_v1.0_Runs | 正式工程综合和布局布线目录；best_result 为当前下载位置 |
+
+不要因为文件名相似直接删除文件。尤其 FIFO 文件名与内部模块名可能不同，应按工程引用和实际模块定义判断。目录中的文件不一定都参与综合；本轮保留原有 AutoExcluded 等属性。
+
+## RTL 功能索引
+
+下表用于定位代码，不表示所有模块均同时启用；具体实例与参数以顶层及工程配置为准。
+
+| 责任层 | 主要文件或前缀 |
+| --- | --- |
+| SD、FAT32、BMP | sd_spi_*、sd_media_service、fat32_*、bmp24_decoder、media_ingest_* |
+| 帧缓存与跨时钟 | media_frame_loader、media_frame_reader、media_sdram_write_cdc、afifo_32_16_256、fifo_prefetch_2 |
+| 视频时序和效果 | video_timing_ctrl、media_video_pipeline、brightness_contrast_adjust、video_fade_transition、thumbnail_* |
+| 文字和状态叠加 | promax_text_overlay、status_osd_overlay、timestamp_osd、frame_config_cdc |
+| 音频和 HDMI 编码 | pcm_*、audio_source_mux、media_hdmi_audio_bridge、hdmi_*、promax_audio_waveform |
+| 按键与参数 | media_player_control、param_menu_controller、dual_key_*、player_config_persistence、w25q64_* |
+| 串口 | uart_rx_byte、subtitle_uart_controller、uart_status_reporter、uart_tx_byte |
+
+## 工具入口
+
+| 工具 | 用途 |
+| --- | --- |
+| tools/build_gui.py | 使用现有 TD GUI 工程运行流程，检查时序后发布 best_result；日常构建优先使用 |
+| tools/setup_isolated_build.py、tools/build_isolated.py | 隔离构建：在 `build_out/` 内派生工程并跑完整 TD 流程，过程文件不再写入 `src/`；见 [隔离构建区](隔离构建区.md) |
+| tools/build.py | 旧脚本构建流程，输出 release；保留供追溯，非当前默认发布入口 |
+| tools/run_tests.py | 模块自检仿真 |
+| tools/run_local_pattern_test.py | 本地图案隔离仿真；--fifo 检查跨时钟 FIFO 图案路径 |
+| tools/run_vendor_tests.py、run_vendor_chain.py | 厂商模型与全链路仿真 |
+| tools/inspect_card.py、verify_card_files.py | TF 卡和图片检查；使用前查看参数，确认目标盘 |
+| tools/prepare_media.py、make_audio_corpus.py | 素材准备，使用前核对目标路径 |
+
+Python 和仿真、TD 工具位置沿用现有脚本配置。`build_gui.py --physical-only` 仅适用于综合结果已与源码一致的情况。当前布局策略位于 phy_1/settings.cfg；GUI 重建设置后需重新检查策略与时序报告。
+
+## 归档与历史证据
+
+根目录三个 `release_before_*` / `release_demo_pcm_previous` 目录已迁移至 `archive/releases/`；原始 DOCX 和演示视频迁移至 `archive/reference/`。
+
+保留 `doc/original_baseline/`、`doc/project_entry_archive/`、`doc/migration_scripts/` 和 TD 内旧运行目录原位，以避免破坏历史路径与脚本证据。这些目录不是日常入口，不重复执行迁移脚本。`release/` 仍由旧构建脚本使用，因此保留原路径并明确历史用途。
+
+## 版本与验证
+
+整理前完整 ZIP 位于工程外 `../backups/lab_ex4_tf_full_20260928_162404.zip`。Git 标签 `snapshot-20260928-uart-crlf` 是整理前恢复点。
+
+本轮验证项目引用存在、受保护文件 SHA256 不变、资料移动前后内容一致、Markdown 链接有效及 Git 差异。没有改变硬件实现，不重跑综合以免覆盖当前已通过实板验证的固件。本轮没有新增上板验证。
