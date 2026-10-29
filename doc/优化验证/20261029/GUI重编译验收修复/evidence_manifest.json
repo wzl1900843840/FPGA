@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-29",
+  "build_fix_commit": "488d81e5a09b58955ac32d484f892224b7d5fb36",
+  "source_baseline": "resource-R2E-20261029",
+  "delivery_tag": "gui-build-verified-20261029",
+  "timing_ns": {
+    "SWNS": 1.185,
+    "STNS": 0.0,
+    "HWNS": 0.021,
+    "HTNS": 0.0
+  },
+  "bit_sha256": "0c4667910053e867772bbf67ae24856400924f64f697248445798d6e9e3bbca9",
+  "hardware_tested": false,
+  "evidence_files": {
+    "baseline.json": "9cddc6ce4b62ac3deaa4a7ee2e21cdcd61e98d30aadb0c269df19ee9148029ec",
+    "gui_before/font_init_audit.json": "d37bb72a8c70253677672b7be45af7e68ec244202bac791231db60e246f7aa34",
+    "gui_before/phy_1_final_timing.rpt": "3e2faee75dbece07c41df455fa7abe5368489a7ad2fcd35b54e650a5f548a9c0",
+    "gui_before/phy_1_lab_ex5_i2s_v1.0_phy.ts": "4c13be535bc8ca040909d866067713d6117b5b7507325bfd5f0bba56fdb01aa8",
+    "gui_before/phy_1_route.qor": "db9c79dab4c0a467deef2a2ee62bbd97e09dbfb41836f04672cebdf0728d19f6",
+    "gui_before/phy_1_run.log": "03d24b394389ebf044d9c8efa277964c38f20a3bdbcf976274745b203b63f52e",
+    "gui_before/phy_1_settings.cfg": "72fa96201f32a2b53d3e096024c5609a6e63792112a6ab3ffe0aef7126e1e39f",
+    "gui_before/syn_1_run.log": "f0b02c8c4279f6191330b8107d2920d82606fb05c7e94ee3c212fdb91cb86e58",
+    "gui_before/syn_1_settings.cfg": "0ffe4b332d4d98d2125ba965370a821c8ba7b1c4a2ec515611833fae724f37bc",
+    "launcher_help.log": "b4c86e23e92fe39753b314903483dd590c7566c625b9f3742ad3e86b67000894",
+    "launcher_reject.log": "fa3d4b46da7edaa9927eb3e77635835ecd41e41cb5dae57bb0ac8d630c2f3b55",
+    "new_font_init_audit.json": "b58748066117eab92c68d04e9cf57623017a55372e664fce1581ab63d91cf476",
+    "timing_gate_tests.log": "e6262e9e2ad087fb053c28c19d79435df102f4dae657f185ddd6279045b40264",
+    "verified_candidate/build_project.al": "042276498dbd5a11ec585f3f8983146baebd82a51957393ba29f56138c53bc76",
+    "verified_candidate/final_timing.rpt": "67d45deedaade01373554aebb29aba346eb63ed1570349c9f31bbde752617255",
+    "verified_candidate/hold_parameters.txt": "591c5d507698524cefb51a77194fab46a501064b32fb6291946142be892a7692",
+    "verified_candidate/hold_repair.log": "a99b98ee3d289a8b443ffe848520985d1dd53c944dff0dc2cde24723d02e2fb3",
+    "verified_candidate/lab_ex5_i2s_v1.0.bit": "0c4667910053e867772bbf67ae24856400924f64f697248445798d6e9e3bbca9",
+    "verified_candidate/lab_ex5_i2s_v1.0_phy.area": "3b4f0f0f4b80842247c2a388190acb5e8a75735b9625ea95a477fba588f41fc7",
+    "verified_candidate/lab_ex5_i2s_v1.0_phy.ts": "36c1d8bf83bae2409556c6fe2805bc852e3031317a31b703ceb16fabe6e015c4",
+    "verified_candidate/phy_1_build.log": "85371514429499be81b71b1fc95ded6b5115e813e25d8a2e09f31f1a3ee435bf",
+    "verified_candidate/phy_1_settings.cfg": "21ccb419fd4289e4d8e9e805707fca4b59cfc35501f1e2bb4b4b9cf93ae1a2af",
+    "verified_candidate/place.qor": "529cdc4ec3f4ff49ce0a0c91c7028d50b8a7872cb4e5f5659734411983cedcb5",
+    "verified_candidate/route.qor": "185c9f6fc50777f1738a2fd5880bd0ffd4d6f9ac99c7bead0596536ac6d28879",
+    "verified_candidate/route_flow.status": "2c3f2d3930e07ce083152b84d9ab254aee684d8e7c474c2d59737616f5c2af61",
+    "verified_candidate/syn_1_build.log": "b9a17e3c8a7c88eed64cd275f447a5c3b48b0e78774324d8013f36ffbab6d98a",
+    "verified_candidate/syn_1_settings.cfg": "3c2c910ff1dd55855c0432592a9c10b9e05801ca9492e5e906548f1684d6fc83",
+    "verified_candidate/timing_checks.rpt": "6b243299550871f0caee7b3512fe12597187413f57e45693cff92827ee04d9c9",
+    "verified_candidate/validation.json": "977b63b87368e0c658c0ac2bfc06fb88212666e06f1e2f33ff3ebb5297b0a4c4",
+    "处理说明.md": "e3bc22847c8c1a537f420bc0e925a276a70f05faf29f45ef77e66aeb658ce745"
+  },
+  "notes": [
+    "New full synthesis/place/route/fix_hold/bitgen; 120 RTL and constraint inputs unchanged.",
+    "Native TD GUI buttons do not invoke the repository build_verified.cmd wrapper.",
+    "Original GUI failed BIT retained in src and external ZIP; this verified BIT is a separate candidate.",
+    "Current .al explicit gate eram_init on restored to tracked state; reload project before later GUI use."
+  ]
+}

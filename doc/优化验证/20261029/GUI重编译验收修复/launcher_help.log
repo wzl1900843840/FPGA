@@ -1,0 +1,15 @@
+usage: build_gui.py [-h] [--out OUT] [--physical-only]
+
+Compatibility build entry: freeze sources and run the verified isolated flow.
+Outputs remain under build_out; the historical src/best_result is preserved.
+TD's native GUI button does not call this script. Use build_verified.cmd or
+this script for the complete final hold-repair and acceptance sequence.
+
+options:
+  -h, --help       show this help message and exit
+  --out OUT
+  --physical-only
+
+[DONE] Command completed. A verified build prints its accepted candidate path.
+The native GUI run table is separate from the acceptance report.
+Press any key to continue . . . 

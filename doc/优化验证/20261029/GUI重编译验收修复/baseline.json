@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-29",
+  "backup": "D:/FPGA/anlu/example_code111/backups/gui_hold_before_20261029_122542.zip",
+  "backup_sha256": "25d83c45e22aa287b19544f885f4c36ec00f1f046c4c871001c124495eea1169",
+  "gui_bit_sha256": "1df46b07b8b1fc5e414f4e1f57b51226780a0155392ae2579e8de4ae5308ed17",
+  "before_timing_ns": {
+    "SWNS": 1.185,
+    "STNS": 0,
+    "HWNS": -0.061,
+    "HTNS": -0.145
+  },
+  "gui_gate_eram_init": "off",
+  "hardware_tested": false
+}

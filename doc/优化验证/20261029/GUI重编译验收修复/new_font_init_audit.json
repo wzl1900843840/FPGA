@@ -1,0 +1,73 @@
+{
+  "netlist_sha256": "62ce10c739dc84c8f10aef325fc118a20f8b338b5a9aa308761769fdba41b497",
+  "rtl_sha256": "33ddf9b6f9531f1c1ec014cae17804dc0394c1b9b78d87e4472f5c1fcc5b9c1a",
+  "reference_words": 4096,
+  "all_4096_words_match_mapped_init": true,
+  "mapped_init_comparison": [
+    {
+      "font_bits": [
+        5,
+        4
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        7,
+        6
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        9,
+        8
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        11,
+        10
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        13,
+        12
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        15,
+        14
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        1,
+        0
+      ],
+      "mismatches": 0,
+      "first": []
+    },
+    {
+      "font_bits": [
+        3,
+        2
+      ],
+      "mismatches": 0,
+      "first": []
+    }
+  ],
+  "scope": "Mapped ROM content only; not hardware acceptance or post-route simulation."
+}

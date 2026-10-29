@@ -1,0 +1,5 @@
+
+[FAILED] Build or final timing rejected. Do not use an intermediate BIT.
+Press any key to continue . . . 
+usage: build_gui.py [-h] [--out OUT] [--physical-only]
+build_gui.py: error: --physical-only requires --out pointing at a prepared isolated tree
