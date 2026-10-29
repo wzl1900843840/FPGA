@@ -1,6 +1,8 @@
 """Compatibility build entry: freeze sources and run the verified isolated flow.
 
 Outputs remain under build_out; the historical src/best_result is preserved.
+TD's native GUI button does not call this script. Use build_verified.cmd or
+this script for the complete final hold-repair and acceptance sequence.
 """
 from pathlib import Path
 import argparse,datetime,subprocess,sys
@@ -15,3 +17,5 @@ if not a.physical_only:
     subprocess.run([sys.executable,str(ROOT/'tools/setup_isolated_build.py'),'--out',str(out),'--link-mode','copy'],cwd=ROOT,check=True)
 subprocess.run([sys.executable,str(ROOT/'tools/build_isolated.py'),'--out',str(out),'--frozen-source']+(['--physical-only'] if a.physical_only else []),cwd=ROOT,check=True)
 print('Verified candidate: '+str(out/'best_result'))
+print('Final timing is in best_result/final_timing.rpt and validation.json.')
+print('The native TD GUI run table belongs to its separate src/.../phy_1 run.')
