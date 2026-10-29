@@ -1,0 +1,2 @@
+PASS resource store N=256: random records, circular reuse/readback, input snapshot, busy rejection, address protection, timeout, WEL and recovery
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_resource_store.v:38: $finish called at 1009670000 (1ps)

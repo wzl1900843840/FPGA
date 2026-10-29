@@ -1,0 +1,2 @@
+PASS resource config: 256 randomized load/save vectors, CRC compatibility, version wrap/tie, snapshots and reset cancellation
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_resource_config.v:57: $finish called at 92470000 (1ps)

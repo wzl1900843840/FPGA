@@ -1,0 +1,2 @@
+PASS resource UART: 57344 report bytes exactly match I baseline across every message kind/index
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_resource_uart.v:24: $finish called at 57344000 (1ps)

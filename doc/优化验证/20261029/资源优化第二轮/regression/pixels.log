@@ -1,0 +1,2 @@
+PASS pixels: 6400 saturation/identity vectors and blanking
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_pixels.v:22: $finish called at 64026000 (1ps)

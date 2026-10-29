@@ -1,0 +1,2 @@
+PASS alarm HDMI: real 48kHz/packet/symbol timing, default mute/fade bypass, amplitude limit, smooth clear and normal mute restore
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_alarm_hdmi.v:25: $finish called at 16687660000 (1ps)

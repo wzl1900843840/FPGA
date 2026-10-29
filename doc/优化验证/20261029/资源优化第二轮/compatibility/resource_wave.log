@@ -1,0 +1,2 @@
+PASS resource waveform: 2473043 cycles match baseline including all RGB pixels, bank swap, full-scale, silence decay and enable
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_resource_wave.v:30: $finish called at 24730470000 (1ps)

@@ -1,0 +1,2 @@
+PASS switches: all 16 combinations, independent stable sampling, bounce rejection
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_demo_switches.v:8: $finish called at 9860000 (1ps)

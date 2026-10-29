@@ -1,0 +1,2 @@
+PASS Flash: W25X64 SPI ID, default load, dual-slot save/readback, reboot restore, corrupt-slot fallback
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_flash.v:22: $finish called at 146205000 (1ps)

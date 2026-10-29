@@ -1,0 +1,12 @@
+Model Technology ModelSim ALTERA vlog 10.3c Compiler 2014.09 Sep 20 2014
+Start time: 11:13:20 on Oct 29,2026
+vlog -sv -work D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\work E:\Anlogic\TD_6.2.1_Engineer_6.2.168.116\sim_release\eg4\eg_phy_glbl.v E:\Anlogic\TD_6.2.1_Engineer_6.2.168.116\sim_release\eg4\eg_phy_bram.v D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_resource_bram.v 
+-- Compiling module glbl
+-- Compiling module EG_PHY_BRAM
+-- Compiling module tb_resource_bram
+
+Top level modules:
+	glbl
+	tb_resource_bram
+End time: 11:13:20 on Oct 29,2026, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0

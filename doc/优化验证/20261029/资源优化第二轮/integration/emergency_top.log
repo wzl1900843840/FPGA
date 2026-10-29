@@ -1,0 +1,2 @@
+PASS emergency top: thumbnail/menu takeover and restore, saved focus, two-edge debounce, overlapping sources, mode-change latch
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency_top.v:64: $finish called at 43460000 (1ps)

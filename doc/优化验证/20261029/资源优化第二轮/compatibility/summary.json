@@ -1,0 +1,42 @@
+[
+  {
+    "test": "resource_config",
+    "passed": true,
+    "seconds": 0.49
+  },
+  {
+    "test": "resource_uart",
+    "passed": true,
+    "seconds": 0.61
+  },
+  {
+    "test": "resource_fat32",
+    "passed": true,
+    "seconds": 0.59
+  },
+  {
+    "test": "resource_store_1",
+    "passed": true,
+    "seconds": 0.22
+  },
+  {
+    "test": "resource_store_12",
+    "passed": true,
+    "seconds": 0.26
+  },
+  {
+    "test": "resource_store_16",
+    "passed": true,
+    "seconds": 0.31
+  },
+  {
+    "test": "resource_store_256",
+    "passed": true,
+    "seconds": 0.73
+  },
+  {
+    "test": "resource_wave",
+    "passed": true,
+    "seconds": 124.89
+  }
+]

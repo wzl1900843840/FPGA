@@ -1,0 +1,2 @@
+PASS demo menu: six aligned Chinese fields, spaced rows, removed footer, save chord and 307200 known RGB pixels
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_demo_menu.v:19: $finish called at 3077253000 (1ps)

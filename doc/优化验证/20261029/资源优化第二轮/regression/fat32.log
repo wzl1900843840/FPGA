@@ -1,0 +1,2 @@
+PASS FAT32: raw BPB, MBR with EB jump and FAT32 in each of four slots, fragmented root chain
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_fat32.v:33: $finish called at 149816000 (1ps)

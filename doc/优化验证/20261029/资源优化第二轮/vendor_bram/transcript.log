@@ -1,0 +1,12 @@
+# vsim -c -onfinish exit -lib D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\work tb_resource_bram glbl -l D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\transcript.log -do "run -all; quit -f" 
+# Start time: 11:13:21 on Oct 29,2026
+# Loading sv_std.std
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\work.tb_resource_bram
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\work.EG_PHY_BRAM
+# Loading D:\FPGA\anlu\example_code111\lab_ex4_tf\build_out\resource_vendor_bram\work.glbl
+# run -all
+# PASS vendor resource BRAM: 4097 two-port synchronous reads, bank isolation and swaps
+# ** Note: $finish    : D:/FPGA/anlu/example_code111/lab_ex4_tf/tests/tb_resource_bram.v(44)
+#    Time: 42350 ns  Iteration: 1  Instance: /tb_resource_bram
+# End time: 11:13:23 on Oct 29,2026, Elapsed time: 0:00:02
+# Errors: 0, Warnings: 0

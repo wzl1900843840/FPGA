@@ -1,0 +1,2 @@
+PASS CDC: stable bundle, busy coalescing, frame-only commit
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_cdc.v:10: $finish called at 2102000 (1ps)
