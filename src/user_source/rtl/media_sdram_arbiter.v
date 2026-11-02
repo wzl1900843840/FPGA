@@ -37,7 +37,9 @@ module media_sdram_arbiter #(
     output wire [1:0] owner,
     output wire video_return, cache_return,
     output wire write_drained,output reg fault,
-    output reg [21:0] diagnostic_max_wait
+    output reg [21:0] diagnostic_max_wait,
+    output reg [21:0] diagnostic_write_wait,
+    output reg [21:0] diagnostic_cache_wait
 );
     localparam NONE=2'd0, VIDEO=2'd1, WRITE=2'd2, CACHE=2'd3;
     reg [1:0] active_owner;        // 当前占用总线的路（NONE=空闲）
@@ -45,9 +47,13 @@ module media_sdram_arbiter #(
     reg [$clog2(BURST_SIZE)-1:0] commands, returns;   // 已发出的命令数 / 已收到的读返回数
     reg [$clog2(DRAIN_CYCLES+1)-1:0] drain;           // 排空计数
     reg [1:0] selected;
-    reg [21:0] stall_count,wait_count;
+    reg [21:0] stall_count,wait_count,write_wait_count,cache_wait_count;
+    reg [1:0] last_background;
     always @(posedge clk or negedge rst_n)
-    if(!rst_n)begin fault<=0;stall_count<=0;wait_count<=0;diagnostic_max_wait<=0;end
+    if(!rst_n)begin
+        fault<=0;stall_count<=0;wait_count<=0;write_wait_count<=0;cache_wait_count<=0;
+        diagnostic_max_wait<=0;diagnostic_write_wait<=0;diagnostic_cache_wait<=0;
+    end
     else begin
         if((active_owner!=NONE && !app_read && !app_write && !rd_valid &&
             (!retiring || controller_busy || refresh_active)) ||
@@ -58,14 +64,25 @@ module media_sdram_arbiter #(
             if(wait_count!=22'h3fffff)wait_count<=wait_count+1'b1;
             if(wait_count>diagnostic_max_wait)diagnostic_max_wait<=wait_count;
         end else wait_count<=0;
+        if(write_request && !write_grant)begin
+            if(write_wait_count!=22'h3fffff)write_wait_count<=write_wait_count+1'b1;
+            if(write_wait_count>diagnostic_write_wait)diagnostic_write_wait<=write_wait_count;
+        end else write_wait_count<=0;
+        if(cache_request && !cache_grant)begin
+            if(cache_wait_count!=22'h3fffff)cache_wait_count<=cache_wait_count+1'b1;
+            if(cache_wait_count>diagnostic_cache_wait)diagnostic_cache_wait<=cache_wait_count;
+        end else cache_wait_count<=0;
     end
     // 只有总线完全空闲（无占用、控制器不忙、不在刷新）时才产生新的仲裁结果
     always @* begin
         selected=NONE;
         if(active_owner==NONE && !controller_busy && !refresh_active) begin
-            // 视频紧急（FIFO快空）最高优先；否则写>缓存>视频兜底
+            // Video low watermark is absolute priority. Background clients
+            // alternate when both are ready; an authorized burst is never cut.
             if(video_request && (video_urgent || (!write_request && !cache_request)))
                 selected=VIDEO;
+            else if(write_request && cache_request)
+                selected=last_background==WRITE ? CACHE : WRITE;
             else if(write_request) selected=WRITE;
             else if(cache_request) selected=CACHE;
             else if(video_request) selected=VIDEO;
@@ -81,12 +98,13 @@ module media_sdram_arbiter #(
 
     always @(posedge clk or negedge rst_n) begin
         if(!rst_n) begin
-            active_owner<=NONE;active_write<=0;retiring<=0;
+            active_owner<=NONE;active_write<=0;retiring<=0;last_background<=CACHE;
             commands<=0;returns<=0;drain<=0;
         end else if(active_owner==NONE) begin
             // 空闲：一旦选中某一路就接管总线，并记住本笔是读还是写
             if(selected!=NONE) begin
                 active_owner<=selected;
+                if(selected==WRITE || selected==CACHE)last_background<=selected;
                 active_write<=selected==WRITE || (selected==CACHE && cache_write);
                 // The CDC client presents its first word on the grant edge.
                 commands<=app_write ? 1 : 0;   // 写入方在授权那一拍就已经给出第一个字，这里先记1

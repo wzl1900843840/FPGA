@@ -1,0 +1,896 @@
+{
+  "method": "Python / Matplotlib; deterministic text and routing",
+  "model_originals": "gpt-image-2.5-sunburst; preserved separately",
+  "figures": [
+    {
+      "stem": "图2-1_系统硬件拓扑与数据控制流",
+      "nodes": [
+        "tf",
+        "read",
+        "decode",
+        "cdc",
+        "memory",
+        "thumb",
+        "reader",
+        "video",
+        "osd",
+        "hdmi",
+        "display",
+        "tone",
+        "wave",
+        "keys",
+        "flash",
+        "param",
+        "alarm",
+        "uart",
+        "pc",
+        "sw4"
+      ],
+      "edges": [
+        {
+          "from": "tf",
+          "to": "read",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              170,
+              262.5
+            ],
+            [
+              235,
+              262.5
+            ]
+          ]
+        },
+        {
+          "from": "read",
+          "to": "decode",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              425,
+              262.5
+            ],
+            [
+              475,
+              262.5
+            ]
+          ]
+        },
+        {
+          "from": "decode",
+          "to": "cdc",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              710,
+              262.5
+            ],
+            [
+              760,
+              262.5
+            ]
+          ]
+        },
+        {
+          "from": "cdc",
+          "to": "memory",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              915,
+              262.5
+            ],
+            [
+              960,
+              262.5
+            ]
+          ]
+        },
+        {
+          "from": "memory",
+          "to": "thumb",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1160.0,
+              340
+            ],
+            [
+              1160,
+              392
+            ],
+            [
+              1010,
+              392.5
+            ]
+          ]
+        },
+        {
+          "from": "memory",
+          "to": "reader",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1300.0,
+              340
+            ],
+            [
+              1300,
+              455
+            ],
+            [
+              330,
+              455
+            ],
+            [
+              330.0,
+              485
+            ]
+          ]
+        },
+        {
+          "from": "reader",
+          "to": "video",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              425,
+              537.5
+            ],
+            [
+              475,
+              537.5
+            ]
+          ]
+        },
+        {
+          "from": "video",
+          "to": "osd",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              710,
+              537.5
+            ],
+            [
+              760,
+              537.5
+            ]
+          ]
+        },
+        {
+          "from": "osd",
+          "to": "hdmi",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1015,
+              537.5
+            ],
+            [
+              1065,
+              537.5
+            ]
+          ]
+        },
+        {
+          "from": "hdmi",
+          "to": "display",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1360,
+              537.5
+            ],
+            [
+              1430,
+              537.5
+            ]
+          ]
+        },
+        {
+          "from": "thumb",
+          "to": "osd",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              880.0,
+              425
+            ],
+            [
+              880,
+              449
+            ],
+            [
+              887.5,
+              449
+            ],
+            [
+              887.5,
+              475
+            ]
+          ]
+        },
+        {
+          "from": "tone",
+          "to": "hdmi",
+          "bidirectional": false,
+          "kind": "purple",
+          "route": [
+            [
+              1277.4,
+              675
+            ],
+            [
+              1277.4,
+              590
+            ]
+          ]
+        },
+        {
+          "from": "hdmi",
+          "to": "wave",
+          "bidirectional": false,
+          "kind": "purple",
+          "route": [
+            [
+              1118.1,
+              590
+            ],
+            [
+              1118.1,
+              635
+            ],
+            [
+              938.5,
+              635
+            ],
+            [
+              938.5,
+              675
+            ]
+          ]
+        },
+        {
+          "from": "wave",
+          "to": "osd",
+          "bidirectional": false,
+          "kind": "purple",
+          "route": [
+            [
+              798.25,
+              675
+            ],
+            [
+              798.25,
+              600
+            ]
+          ]
+        },
+        {
+          "from": "keys",
+          "to": "param",
+          "bidirectional": false,
+          "kind": "orange",
+          "route": [
+            [
+              170,
+              867.5
+            ],
+            [
+              235,
+              877.5
+            ]
+          ]
+        },
+        {
+          "from": "flash",
+          "to": "param",
+          "bidirectional": true,
+          "kind": "orange",
+          "route": [
+            [
+              170,
+              695.0
+            ],
+            [
+              190,
+              695
+            ],
+            [
+              190,
+              877.5
+            ],
+            [
+              235,
+              877.5
+            ]
+          ]
+        },
+        {
+          "from": "sw4",
+          "to": "alarm",
+          "bidirectional": false,
+          "kind": "orange",
+          "route": [
+            [
+              170,
+              972.5
+            ],
+            [
+              190,
+              972.5
+            ],
+            [
+              190,
+              990
+            ],
+            [
+              705,
+              990
+            ],
+            [
+              705.0,
+              920
+            ]
+          ]
+        },
+        {
+          "from": "pc",
+          "to": "uart",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1430,
+              877.5
+            ],
+            [
+              1360,
+              877.5
+            ]
+          ]
+        },
+        {
+          "from": "uart",
+          "to": "alarm",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1090,
+              877.5
+            ],
+            [
+              860,
+              877.5
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "stem": "图2-3_FPGA与PC上位机协同架构",
+      "nodes": [
+        "rx",
+        "gate",
+        "parse",
+        "demo",
+        "command",
+        "sw4",
+        "state",
+        "av",
+        "report",
+        "crc",
+        "tx",
+        "query",
+        "ui",
+        "journal",
+        "core",
+        "protocol",
+        "transport",
+        "step1",
+        "step2",
+        "step3",
+        "step4",
+        "step5",
+        "step6",
+        "step7"
+      ],
+      "edges": [
+        {
+          "from": "rx",
+          "to": "gate",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              450,
+              230.0
+            ],
+            [
+              420,
+              230.0
+            ]
+          ]
+        },
+        {
+          "from": "gate",
+          "to": "parse",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              230,
+              230.0
+            ],
+            [
+              200,
+              230.0
+            ]
+          ]
+        },
+        {
+          "from": "parse",
+          "to": "demo",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              132.5,
+              275
+            ],
+            [
+              132.5,
+              300
+            ],
+            [
+              180,
+              300
+            ],
+            [
+              180.0,
+              325
+            ]
+          ]
+        },
+        {
+          "from": "parse",
+          "to": "command",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              132.5,
+              275
+            ],
+            [
+              132.5,
+              300
+            ],
+            [
+              472.5,
+              300
+            ],
+            [
+              472.5,
+              325
+            ]
+          ]
+        },
+        {
+          "from": "sw4",
+          "to": "state",
+          "bidirectional": false,
+          "kind": "orange",
+          "route": [
+            [
+              295,
+              505.0
+            ],
+            [
+              350,
+              505.0
+            ]
+          ]
+        },
+        {
+          "from": "command",
+          "to": "state",
+          "bidirectional": false,
+          "kind": "orange",
+          "route": [
+            [
+              472.5,
+              410
+            ],
+            [
+              472.5,
+              440
+            ]
+          ]
+        },
+        {
+          "from": "state",
+          "to": "av",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              411.25,
+              570
+            ],
+            [
+              411.25,
+              590
+            ],
+            [
+              180,
+              590
+            ],
+            [
+              180.0,
+              610
+            ]
+          ]
+        },
+        {
+          "from": "state",
+          "to": "report",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              472.5,
+              570
+            ],
+            [
+              472.5,
+              610
+            ]
+          ]
+        },
+        {
+          "from": "report",
+          "to": "crc",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              472.5,
+              690
+            ],
+            [
+              472.5,
+              715
+            ]
+          ]
+        },
+        {
+          "from": "crc",
+          "to": "tx",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              472.5,
+              765
+            ],
+            [
+              472.5,
+              780
+            ],
+            [
+              522.5,
+              780
+            ],
+            [
+              522.5,
+              795
+            ]
+          ]
+        },
+        {
+          "from": "gate",
+          "to": "query",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              325.0,
+              285
+            ],
+            [
+              325,
+              310
+            ],
+            [
+              45,
+              310
+            ],
+            [
+              45,
+              797.5
+            ],
+            [
+              65,
+              797.5
+            ]
+          ]
+        },
+        {
+          "from": "query",
+          "to": "tx",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              295,
+              797.5
+            ],
+            [
+              320,
+              797.5
+            ],
+            [
+              320,
+              820
+            ],
+            [
+              450,
+              820.0
+            ]
+          ]
+        },
+        {
+          "from": "demo",
+          "to": "av",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              65,
+              367.5
+            ],
+            [
+              53,
+              367.5
+            ],
+            [
+              53,
+              657.5
+            ],
+            [
+              65,
+              657.5
+            ]
+          ]
+        },
+        {
+          "from": "ui",
+          "to": "core",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1172.5,
+              310
+            ],
+            [
+              1172.5,
+              375
+            ],
+            [
+              1172.41,
+              435
+            ]
+          ]
+        },
+        {
+          "from": "journal",
+          "to": "core",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1442.5,
+              310
+            ],
+            [
+              1442.585,
+              435
+            ]
+          ]
+        },
+        {
+          "from": "core",
+          "to": "protocol",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1282.5,
+              545
+            ],
+            [
+              1282.5,
+              605
+            ]
+          ]
+        },
+        {
+          "from": "protocol",
+          "to": "transport",
+          "bidirectional": true,
+          "kind": "teal",
+          "route": [
+            [
+              1282.5,
+              700
+            ],
+            [
+              1282.5,
+              760
+            ]
+          ]
+        },
+        {
+          "from": "transport",
+          "to": "rx",
+          "bidirectional": false,
+          "kind": "orange",
+          "route": [
+            [
+              1030,
+              777.0
+            ],
+            [
+              950,
+              777
+            ],
+            [
+              950,
+              230
+            ],
+            [
+              595,
+              230.0
+            ]
+          ]
+        },
+        {
+          "from": "tx",
+          "to": "transport",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              595,
+              820.0
+            ],
+            [
+              800,
+              820
+            ],
+            [
+              800,
+              828
+            ],
+            [
+              1030,
+              828.0
+            ]
+          ]
+        },
+        {
+          "from": "step1",
+          "to": "step2",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              240,
+              1007.5
+            ],
+            [
+              260,
+              1007.5
+            ]
+          ]
+        },
+        {
+          "from": "step2",
+          "to": "step3",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              460,
+              1007.5
+            ],
+            [
+              480,
+              1007.5
+            ]
+          ]
+        },
+        {
+          "from": "step3",
+          "to": "step4",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              680,
+              1007.5
+            ],
+            [
+              700,
+              1007.5
+            ]
+          ]
+        },
+        {
+          "from": "step4",
+          "to": "step5",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              900,
+              1007.5
+            ],
+            [
+              920,
+              1007.5
+            ]
+          ]
+        },
+        {
+          "from": "step5",
+          "to": "step6",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1120,
+              1007.5
+            ],
+            [
+              1140,
+              1007.5
+            ]
+          ]
+        },
+        {
+          "from": "step6",
+          "to": "step7",
+          "bidirectional": false,
+          "kind": "blue",
+          "route": [
+            [
+              1340,
+              1007.5
+            ],
+            [
+              1360,
+              1007.5
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

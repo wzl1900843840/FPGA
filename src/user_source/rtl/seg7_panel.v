@@ -13,7 +13,7 @@
 // the board's physical left-to-right order (selects 0..7).
 //   PIC:  _ _ _ _ _ P I C n     n = 1..4
 //   VOL:  V O L _ _ _ d d d     volume 0..255 in decimal
-//   PRD:  P R D _ _ _ d d S     period seconds and unit
+//   SEC:  S E C _ _ _ d d       period in seconds
 module seg7_panel #(
     parameter integer CLK_HZ = 50000000,
     parameter integer SCAN_STEP_CYCLES = 8192,
@@ -37,8 +37,10 @@ module seg7_panel #(
     localparam [2:0] PAGE_PRD = 3'd2;
 
     reg [12:0] scan_cnt;
-    reg [31:0] page_timer;
-    reg [31:0] hold_timer;
+    localparam integer PAGE_TIMER_BITS = PAGE_PERIOD_CYCLES < 2 ? 1 : $clog2(PAGE_PERIOD_CYCLES + 1);
+    localparam integer HOLD_TIMER_BITS = HOLD_CYCLES < 2 ? 1 : $clog2(HOLD_CYCLES + 1);
+    reg [PAGE_TIMER_BITS-1:0] page_timer;
+    reg [HOLD_TIMER_BITS-1:0] hold_timer;
     reg [2:0]  page;
     reg        holding;
 
@@ -133,9 +135,7 @@ module seg7_panel #(
                 5'h10+3: seg_font = 7'h39;  // C
                 5'h10+4: seg_font = 7'h3e;  // V
                 5'h10+5: seg_font = 7'h38;  // L
-                5'h10+6: seg_font = 7'h50;  // R
-                5'h10+7: seg_font = 7'h5e;  // d
-                5'h10+8: seg_font = 7'h6d;  // S
+                5'h10+6: seg_font = 7'h79;  // E
                 default: seg_font = 7'h00;
             endcase
         end
@@ -147,9 +147,8 @@ module seg7_panel #(
     localparam [4:0] F_C     = 5'h13;
     localparam [4:0] F_V     = 5'h14;
     localparam [4:0] F_L     = 5'h15;
-    localparam [4:0] F_R     = 5'h16;
-    localparam [4:0] F_D     = 5'h17;
-    localparam [4:0] F_S     = 5'h18;
+    localparam [4:0] F_E     = 5'h16;
+    localparam [4:0] F_S     = 5'd5;  // S shares the digit 5 glyph
 
     // digit 0 = rightmost .. digit 7 = leftmost
     reg [4:0] symbols [0:7];
@@ -173,12 +172,11 @@ module seg7_panel #(
             symbols[0] = {1'b0, vol_bcd[3:0]};
         end
         PAGE_PRD: begin
-            symbols[7] = F_P;
-            symbols[6] = F_R;
-            symbols[5] = F_D;
-            symbols[2] = prd_tens;
-            symbols[1] = prd_ones;
-            symbols[0] = F_S;
+            symbols[7] = F_S;
+            symbols[6] = F_E;
+            symbols[5] = F_C;
+            symbols[1] = prd_tens;
+            symbols[0] = prd_ones;
         end
         default: ;
         endcase

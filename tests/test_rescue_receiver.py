@@ -2,12 +2,18 @@
 import importlib.util
 from pathlib import Path
 import tempfile
+import uuid
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
+UNIT_OUT=ROOT/"build_out"/"receiver_unit"
+UNIT_OUT.mkdir(parents=True,exist_ok=True)
 spec=importlib.util.spec_from_file_location("rescue_receiver",ROOT/"tools/rescue_receiver.py")
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
-REPORT=b"RESCUE,ID=0001,A=1,F=05,D=U,DO=C,S=L,E=00\r\n"
+BODY=b"RESCUE,ID=0001,A=1,F=05,D=U,DO=C,S=L,E=00"
+REPORT=BODY+f"*{module.crc16_ccitt_false(BODY):04X}\r\n".encode()
+def rescue_line(body):
+    return body+f"*{module.crc16_ccitt_false(body):04X}\r\n".encode()
 
 class FakeJournal:
     def __init__(self):self.rows=[];self.fail=False
@@ -20,6 +26,7 @@ class ReceiverTests(unittest.TestCase):
         log=FakeJournal();events=[];sent=[]
         engine=module.Receiver(log,sent.append,events.append)
         engine.new_session("test")
+        sent.clear()
         engine.receive(b"BOOT,SD=0065,SC=00DC,P1=033E,TF=0352,P5=05DC,V=1F\r\n")
         self.assertEqual(events[-1]["kind"],"boot_metrics")
         self.assertEqual(events[-1]["tf_ms"],850)
@@ -30,6 +37,7 @@ class ReceiverTests(unittest.TestCase):
         self.log=FakeJournal();self.sent=[];self.events=[];self.now=0
         self.receiver=module.Receiver(self.log,self.sent.append,self.events.append,lambda:self.now)
         self.receiver.new_session("test")
+        self.sent.clear()
 
     def test_persist_then_ack_and_duplicate(self):
         def send(data):
@@ -38,7 +46,8 @@ class ReceiverTests(unittest.TestCase):
         self.receiver.send=send
         self.receiver.receive(REPORT);self.receiver.poll()
         self.receiver.receive(REPORT);self.receiver.poll()
-        self.assertEqual(self.sent,[b"ACK=0001\r\n"]*2)
+        self.assertEqual(self.sent,[module.secure_frame(self.receiver.session,1,"ACK=0001"),
+                                    module.secure_frame(self.receiver.session,2,"ACK=0001")])
         self.assertEqual(len(self.receiver.seen),1)
         self.assertTrue(self.events[-2]["duplicate"])
 
@@ -59,16 +68,24 @@ class ReceiverTests(unittest.TestCase):
         self.assertEqual(len(self.sent),1)
         self.assertEqual(self.events[-1]["kind"],"invalid")
 
+    def test_crc_bitflip_never_schedules_ack(self):
+        damaged=REPORT.replace(b"F=05",b"F=06")
+        self.receiver.receive(damaged)
+        self.receiver.poll()
+        self.assertEqual(self.receiver.seen,{})
+        self.assertEqual(self.sent,[])
+        self.assertEqual(self.events[-1]["kind"],"invalid")
+
     def test_clear_reconnect_and_boot_cancel_delayed_ack(self):
         self.receiver.delay=1;self.receiver.receive(REPORT)
-        clear=REPORT.replace(b"ID=0001,A=1",b"ID=0002,A=0")
+        clear=rescue_line(BODY.replace(b"ID=0001,A=1",b"ID=0002,A=0"))
         self.receiver.receive(clear);self.now=2;self.receiver.poll();self.assertEqual(self.sent,[])
         self.receiver.receive(REPORT);old=self.receiver.session
         self.receiver.new_session("reconnect");self.assertNotEqual(old,self.receiver.session)
-        self.now=5;self.receiver.poll();self.assertEqual(self.sent,[])
+        self.now=5;self.receiver.poll();self.assertEqual(len([x for x in self.sent if b":ACK=" in x]),0)
         self.receiver.receive(REPORT);self.receiver.receive(module.BOOT.encode())
-        self.now=8;self.receiver.poll();self.assertEqual(self.sent,[])
-        self.receiver.receive(REPORT);self.now=10;self.receiver.poll();self.assertEqual(len(self.sent),1)
+        self.now=8;self.receiver.poll();self.assertEqual(len([x for x in self.sent if b":ACK=" in x]),0)
+        self.receiver.receive(REPORT);self.now=10;self.receiver.poll();self.assertEqual(len([x for x in self.sent if b":ACK=" in x]),1)
 
     def test_disk_failure_prevents_ack(self):
         self.log.fail=True
@@ -76,13 +93,12 @@ class ReceiverTests(unittest.TestCase):
         self.receiver.poll();self.assertEqual(self.sent,[])
 
     def test_state_query_and_utf8_csv(self):
-        self.receiver.receive(b"RESCUE,ID=0001,A=1,C=ACKED\r\n")
+        self.receiver.receive(rescue_line(b"RESCUE,ID=0001,A=1,C=ACKED"))
         self.assertEqual(self.events[-1]["state"],"ACKED")
-        with tempfile.TemporaryDirectory() as directory:
-            source=Path(directory)/"log.jsonl";target=Path(directory)/"log.csv"
-            journal=module.Journal(source);journal.write(dict(kind="session",session="中文会话"));journal.close()
-            module.export_log(source,target)
-            self.assertIn("中文会话",target.read_text(encoding="utf-8-sig"))
+        source=UNIT_OUT/f"{uuid.uuid4().hex}.jsonl";target=source.with_suffix(".csv")
+        journal=module.Journal(source);journal.write(dict(kind="session",session="中文会话"));journal.close()
+        module.export_log(source,target)
+        self.assertIn("中文会话",target.read_text(encoding="utf-8-sig"))
 
     def test_serial_worker_partial_reads_and_reconnect(self):
         import queue
@@ -97,8 +113,8 @@ class ReceiverTests(unittest.TestCase):
                 worker.stop_event.set();return b""
             def write(self,data):captures.append(data);return len(data)
             def flush(self):pass
-        with tempfile.TemporaryDirectory() as directory,patch("serial.Serial",FakeSerial):
-            events=queue.Queue();commands=queue.Queue();path=Path(directory)/"serial.jsonl"
+        with patch("serial.Serial",FakeSerial):
+            events=queue.Queue();commands=queue.Queue();path=UNIT_OUT/f"{uuid.uuid4().hex}.jsonl"
             sessions=[]
             for _ in range(2):
                 worker=module.SerialWorker("FAKE",events,commands,path);worker.run()
@@ -106,7 +122,8 @@ class ReceiverTests(unittest.TestCase):
                     event=events.get_nowait()
                     self.assertNotEqual(event["kind"],"error")
                     if event["kind"]=="session":sessions.append(event["session"])
-            self.assertEqual(captures,[b"ACK=0001\r\n"]*4)
+            self.assertEqual(len([item for item in captures if b":ACK=0001*" in item]),4)
+            self.assertEqual(len([item for item in captures if b":HELLO*" in item]),2)
             self.assertEqual(len(set(sessions)),2)
 
 if __name__=="__main__":unittest.main(verbosity=2)

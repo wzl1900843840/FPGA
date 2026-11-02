@@ -1,0 +1,86 @@
+{
+  "scope": "fake transport only; no serial port or FPGA actions",
+  "results": [
+    {
+      "case": "active_alarm_reconnect",
+      "alarm_object": false,
+      "device_alert": true,
+      "floor_allowed": true,
+      "sent": [
+        "ELEV=F04,D=U,DO=C,A=0"
+      ]
+    },
+    {
+      "case": "alarm_does_not_cancel_queued_floor",
+      "current_alarm": true,
+      "sent": [
+        "ELEV=F04,D=U,DO=C,A=0"
+      ]
+    },
+    {
+      "case": "ready_does_not_invalidate_old_commands",
+      "new_session": true,
+      "old_alarm_remains": true,
+      "retained_caps": 7,
+      "sent": [
+        "ACK=0001",
+        "ELEV=F04,D=U,DO=C,A=0"
+      ]
+    },
+    {
+      "case": "system_error_consumes_command_transaction",
+      "matched": "floor:04U",
+      "active": false
+    },
+    {
+      "case": "core_replay_flag_does_not_block_tx",
+      "sent": [
+        "ACK=0001"
+      ]
+    },
+    {
+      "case": "disable_auto_ack_leaves_timer",
+      "auto_ack": false,
+      "sent": [
+        "ACK=0001",
+        "RESCUE?"
+      ]
+    },
+    {
+      "case": "stat_recovery_not_applied_to_alarm_manager",
+      "device_alert": false,
+      "alarm_active": true
+    },
+    {
+      "case": "stale_link_does_not_block_control",
+      "link": "fault",
+      "field_age": 19.0,
+      "allowed": true,
+      "sent": [
+        "ELEV=F04,D=U,DO=C,A=0"
+      ]
+    },
+    {
+      "case": "human_ack_not_structured_in_journal",
+      "persisted_kinds": [
+        "rescue",
+        "cmd"
+      ],
+      "click_recorded": false
+    },
+    {
+      "case": "simulator_read_drops_remaining_bytes",
+      "first_bytes": 256,
+      "second_bytes": 0,
+      "lost_bytes": 44
+    },
+    {
+      "case": "normal_manual_ack_and_clear_control",
+      "ack": "acked",
+      "resolved": true,
+      "sent": [
+        "ACK=0001"
+      ]
+    }
+  ]
+}

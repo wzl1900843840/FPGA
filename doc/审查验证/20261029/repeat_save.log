@@ -1,0 +1,2 @@
+REPRODUCED repeat-save failure: two full chord presses, save_count=1 locked=1
+doc/�����֤/20261029/tb_audit_repeat_save.v:16: $finish called at 4040000 (1ps)

@@ -1,0 +1,2 @@
+PASS reader reset: destination release, read/write isolation, five media banks plus thumbnail bank, stale-pixel flush, manual reset
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_reader_reset.v:66: $finish called at 100080000 (1ps)

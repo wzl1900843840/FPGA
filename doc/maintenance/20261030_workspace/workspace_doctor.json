@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "project": "src/td_project/lab_ex5_i2s_v1.0.al",
+  "td_references": 90,
+  "python_files_parsed": 65,
+  "navigation_links_checked": 101,
+  "protected_files_checked": 1016,
+  "current_media": [
+    {
+      "file": "PIC1.BMP",
+      "size": [
+        640,
+        480
+      ],
+      "sha256": "3f5d8a46b391fac227c7fd67f649a844eb4a0d1cf73f751b5d0f9437e56e6387"
+    },
+    {
+      "file": "PIC2.BMP",
+      "size": [
+        640,
+        480
+      ],
+      "sha256": "29c12cc1bbef3a2275d00d6e5cbae5435f9137062e8f54b7fbaae51dfeda05a5"
+    },
+    {
+      "file": "PIC3.BMP",
+      "size": [
+        640,
+        480
+      ],
+      "sha256": "c3b42d897b55367cffda2ecb85af13528ed14245b625bcb91cdd4a29f6ac5abc"
+    },
+    {
+      "file": "PIC4.BMP",
+      "size": [
+        1280,
+        960
+      ],
+      "sha256": "9550200760ed55cad0a2669b6288cbb76689eb97e5701ee1cbb5302bc6669b3a"
+    },
+    {
+      "file": "PIC5.BMP",
+      "size": [
+        640,
+        480
+      ],
+      "sha256": "e11b27a674577740b974f37a406fb50ff84ea4f0d6cbe76033eab3474e6cc4b0"
+    }
+  ],
+  "tools": {
+    "python": "C:\\Users\\wzl123\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "iverilog": "D:\\iverilog\\bin\\iverilog.EXE",
+    "vvp": "D:\\iverilog\\bin\\vvp.EXE"
+  },
+  "errors": [],
+  "notes": [
+    "Retained accepted BIT predates current OSD; rebuild after source edits",
+    "Structure checks do not prove timing closure or hardware acceptance"
+  ]
+}

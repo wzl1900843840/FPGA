@@ -58,7 +58,7 @@ def run_dir(dst_project, stage):
     return path
 
 
-def apply_phy_strategy(dst_project):
+def apply_phy_strategy(dst_project, route_effort=None):
     """Reinject the physical strategy the current verified bit was built with.
 
     Those set_param calls were configured in the TD GUI and are not stored in the copied
@@ -74,11 +74,15 @@ def apply_phy_strategy(dst_project):
             params[key] = value
     if not params:
         params = {'place effort': 'high', 'place opt_timing': 'high', 'route effort': 'high'}
+    if route_effort is not None:
+        params['route effort'] = route_effort
     wild = ' '.join(f'{key} {value}' for key, value in params.items())
     line = f'set phyWildParams {{{wild}}}'
     cfg = run_dir(dst_project, 'phy_1') / 'settings.cfg'
     text = cfg.read_text(encoding='utf-8')
-    if 'phyWildParams' not in text:
+    if route_effort is not None and 'phyWildParams' in text:
+        cfg.write_text(re.sub(r'^set phyWildParams .*$', line, text, flags=re.M), encoding='utf-8')
+    elif 'phyWildParams' not in text:
         cfg.write_text(text.rstrip('\n') + '\n' + line + '\n', encoding='utf-8')
     return line
 
@@ -152,6 +156,8 @@ def main():
     parser.add_argument('--out', type=Path, default=DEFAULT_OUT, help='isolated build root (default build_out)')
     parser.add_argument('--link-mode', choices=('auto', 'junction', 'copy'), default='auto',
                         help='how src/user_source is shared into the isolated tree')
+    parser.add_argument('--route-effort', choices=('high', 'routability'),
+                        help='override TD routing effort in this isolated build')
     args = parser.parse_args()
     out = args.out.resolve()
     if ROOT not in out.parents and out != ROOT:
@@ -161,13 +167,13 @@ def main():
     copy_project(dst_project)
     mode = link_user_source(out / 'user_source', args.link_mode)
     changed = rewrite_paths(dst_project)
-    strategy = apply_phy_strategy(dst_project)
+    strategy = apply_phy_strategy(dst_project, args.route_effort)
     # The synchronous OSD font ROM must retain its configuration bits.
     # DefaultFlow forwards these documented stage/key/value triples.
     syn_cfg=run_dir(dst_project, 'syn_1')/'settings.cfg'
     cfg=syn_cfg.read_text(encoding='utf-8')
     cfg=re.sub(r'^set synWildParams .*\n?', '', cfg, flags=re.M)
-    syn_cfg.write_text(cfg.rstrip('\n')+'\nset synWildParams {gate eram_init on}\n',encoding='utf-8')
+    syn_cfg.write_text(cfg.rstrip('\n')+'\nset synWildParams {gate eram_init on gate pack_effort high}\n',encoding='utf-8')
     refs = verify(dst_project)
     print(f'isolated tree : {out}')
     print(f'project copy  : {dst_project}')

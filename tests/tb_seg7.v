@@ -37,13 +37,13 @@ initial begin
  expect_digit(0,8'h3e);expect_digit(1,8'h3f);expect_digit(2,8'h38);expect_digit(3,0);
  expect_digit(4,0);expect_digit(5,8'h3f);expect_digit(6,8'h3f);expect_digit(7,8'h3f);
  prd=1;@(negedge clk);prd=0;capture;
- expect_digit(0,8'h73);expect_digit(1,8'h50);expect_digit(2,8'h5e);expect_digit(3,0);
- expect_digit(4,0);expect_digit(5,8'h4f);expect_digit(6,8'h3f);expect_digit(7,8'h6d);
+ expect_digit(0,8'h6d);expect_digit(1,8'h79);expect_digit(2,8'h39);expect_digit(3,0);
+ expect_digit(4,0);expect_digit(5,0);expect_digit(6,8'h4f);expect_digit(7,8'h3f);
  period=55;capture;
- expect_digit(0,8'h73);expect_digit(1,8'h50);expect_digit(2,8'h5e);expect_digit(3,0);
- expect_digit(4,0);expect_digit(5,8'h6d);expect_digit(6,8'h6d);expect_digit(7,8'h6d);
+ expect_digit(0,8'h6d);expect_digit(1,8'h79);expect_digit(2,8'h39);expect_digit(3,0);
+ expect_digit(4,0);expect_digit(5,0);expect_digit(6,8'h6d);expect_digit(7,8'h6d);
  enable=0;@(negedge clk);if(dig!=255 || seg!=255)$fatal(1,"disabled panel");
- $display("PASS seg7: corrected left/right blocks, PIC1..PIC4, VOL 000/255, PRd 30S/55S, disabled panel");
+ $display("PASS seg7: physical left/right blocks, PIC1..PIC4, VOL 000/255, SEC 30/55, disabled panel");
  $finish;
 end
 endmodule

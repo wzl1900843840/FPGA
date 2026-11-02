@@ -1,0 +1,2 @@
+PASS emergency: busy, late PIC5, fault/alarm order, fade abort, saved page/auto, invalid page fallback, cancellation, <=2/3 frames
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_emergency.v:54: $finish called at 20780000 (1ps)

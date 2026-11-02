@@ -28,21 +28,21 @@ initial begin
  floor_valid=1;tens=9;ones=9;dir=2;door=2;
  edge_alert(0);edge_alert(1);edge_alert(0);
  wait_count(4);
- if(lines[0]!="RESCUE,ID=0001,A=1,F=--,D=S,DO=M,S=L,E=00\015\012")$fatal(1,"snapshot [%s]",lines[0]);
- if(lines[1]!="RESCUE,ID=0002,A=0,F=99,D=D,DO=C,S=L,E=00\015\012")$fatal(1,"queued clear [%s]",lines[1]);
- if(lines[2]!="RESCUE,ID=0003,A=1,F=99,D=D,DO=C,S=L,E=00\015\012" ||
-    lines[3]!="RESCUE,ID=0004,A=0,F=99,D=D,DO=C,S=L,E=00\015\012")$fatal(1,"FIFO order");
+ if(lines[0]!="RESCUE,ID=0001,A=1,F=--,D=S,DO=M,S=L,E=00*5E2B\015\012")$fatal(1,"snapshot [%s]",lines[0]);
+ if(lines[1]!="RESCUE,ID=0002,A=0,F=99,D=D,DO=C,S=L,E=00*CEA0\015\012")$fatal(1,"queued clear [%s]",lines[1]);
+ if(lines[2]!="RESCUE,ID=0003,A=1,F=99,D=D,DO=C,S=L,E=00*DD37\015\012" ||
+    lines[3]!="RESCUE,ID=0004,A=0,F=99,D=D,DO=C,S=L,E=00*15D8\015\012")$fatal(1,"FIFO order");
  if(overflow)$fatal(1,"false overflow");
  edge_alert(1);for(n=0;n<6;n=n+1)edge_alert(!alert);
  if(!overflow)$fatal(1,"missing overflow flag");
  wait_count(9);repeat(6000)@(negedge clk);
  if(count!=9)$fatal(1,"full FIFO count %0d",count);
- if(lines[8]!="RESCUE,ID=0009,A=1,F=99,D=D,DO=C,S=L,E=00\015\012")$fatal(1,"overflow damaged events [%s]",lines[8]);
+ if(lines[8]!="RESCUE,ID=0009,A=1,F=99,D=D,DO=C,S=L,E=00*A09E\015\012")$fatal(1,"overflow damaged events [%s]",lines[8]);
  if(!overflow)$fatal(1,"overflow not sticky");
  @(negedge clk);rst=0;alert=0;repeat(5)@(negedge clk);rst=1;
  repeat(10)@(negedge clk);if(overflow)$fatal(1,"overflow reset");
  edge_alert(1);wait_count(10);
- if(lines[9]!="RESCUE,ID=0001,A=1,F=99,D=D,DO=C,S=L,E=00\015\012")$fatal(1,"reset/rearm");
+ if(lines[9]!="RESCUE,ID=0001,A=1,F=99,D=D,DO=C,S=L,E=00*941F\015\012")$fatal(1,"reset/rearm");
  $display("PASS rescue queue: unknown floor, snapshots, short pulses, ordered FIFO, sticky overflow, reset");$finish;
 end
 initial begin #10000000;$fatal(1,"watchdog");end

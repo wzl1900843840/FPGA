@@ -1,0 +1,22 @@
+const {chromium}=require('C:/Users/wzl123/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {pathToFileURL}=require('url');
+const path=require('path');
+const fs=require('fs');
+(async()=>{
+  const browser=await chromium.launch({channel:'msedge',headless:true});
+  const page=await browser.newPage({viewport:{width:1400,height:1000},deviceScaleFactor:1});
+  const sop=path.resolve(__dirname,'../../演示视频/20261030/梯间守望_拍摄SOP.html');
+  await page.goto(pathToFileURL(sop).href);
+  await page.screenshot({path:path.join(__dirname,'sop_desktop.png')});
+  const report=await page.evaluate(()=>({title:document.title,images:[...document.images].map(x=>({loaded:x.complete&&x.naturalWidth>0,src:x.getAttribute('src')})),checkboxes:document.querySelectorAll('input').length,desktopOverflow:document.documentElement.scrollWidth>innerWidth,sections:document.querySelectorAll('h2').length}));
+  await page.locator('#story').scrollIntoViewIfNeeded();
+  await page.screenshot({path:path.join(__dirname,'sop_story.png')});
+  await page.setViewportSize({width:390,height:844});await page.goto(page.url());
+  await page.screenshot({path:path.join(__dirname,'sop_mobile.png')});
+  report.mobileOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
+  await page.emulateMedia({media:'print'});
+  report.printMedia=await page.evaluate(()=>matchMedia('print').matches);
+  fs.writeFileSync(path.join(__dirname,'sop_render.json'),JSON.stringify(report,null,2));
+  console.log(JSON.stringify(report));
+  await browser.close();
+})().catch(error=>{console.error(error);process.exitCode=1});

@@ -22,7 +22,8 @@
 module promax_audio_waveform #(
     parameter integer WAVE_X=64, WAVE_Y=400, WAVE_WIDTH=512, WAVE_HEIGHT=64,
     parameter integer DECIMATE=8,
-    parameter integer PIPELINE_OUTPUT=0
+    parameter integer PIPELINE_OUTPUT=0,
+    parameter integer EXTRA_GEOM_PIPELINE=0
 )(
     input wire clk,rst_n,vsync,de,
     input wire [23:0] rgb_in,
@@ -160,17 +161,17 @@ module promax_audio_waveform #(
         input quarter;
         reg [10:0] r,g,b;
         begin
-            if(quarter) begin
-                r=({3'd0,photo[23:16]}<<2)-{3'd0,photo[23:16]}+{3'd0,effect[23:16]};
-                g=({3'd0,photo[15:8]}<<2)-{3'd0,photo[15:8]}+{3'd0,effect[15:8]};
-                b=({3'd0,photo[7:0]}<<2)-{3'd0,photo[7:0]}+{3'd0,effect[7:0]};
-                blend={r[9:2],g[9:2],b[9:2]};
-            end else begin
-                r=({3'd0,photo[23:16]}<<3)-{3'd0,photo[23:16]}+{3'd0,effect[23:16]};
-                g=({3'd0,photo[15:8]}<<3)-{3'd0,photo[15:8]}+{3'd0,effect[15:8]};
-                b=({3'd0,photo[7:0]}<<3)-{3'd0,photo[7:0]}+{3'd0,effect[7:0]};
-                blend={r[10:3],g[10:3],b[10:3]};
+            // Share each channel's 3*photo + effect sum. The 7/8 path
+            // adds 4*photo to that same sum; the pixel value is unchanged.
+            r=({3'd0,photo[23:16]}<<2)-{3'd0,photo[23:16]}+{3'd0,effect[23:16]};
+            g=({3'd0,photo[15:8]}<<2)-{3'd0,photo[15:8]}+{3'd0,effect[15:8]};
+            b=({3'd0,photo[7:0]}<<2)-{3'd0,photo[7:0]}+{3'd0,effect[7:0]};
+            if(!quarter) begin
+                r=r+({3'd0,photo[23:16]}<<2);
+                g=g+({3'd0,photo[15:8]}<<2);
+                b=b+({3'd0,photo[7:0]}<<2);
             end
+            blend=quarter ? {r[9:2],g[9:2],b[9:2]} : {r[10:3],g[10:3],b[10:3]};
         end
     endfunction
     // ===== 逐像素决定面板内容（纯组合，流水线可选） =====
@@ -282,8 +283,62 @@ module promax_audio_waveform #(
         // Preserve existing debug observation names used by pixel scoreboards.
         wire [23:0] effect_q=effect_color;
         wire quarter_q=quarter_mix,solid_q=solid,panel_q=panel;
-        assign waveform_active=panel;
-        assign rgb_out=panel ? color : photo_q;
+        if(EXTRA_GEOM_PIPELINE) begin:g_geometry_stage
+            reg [9:0] gx;
+            reg [6:0] gy,gtrace,gdistance,glevel,gmarker;
+            reg gp;
+            reg [23:0] gphoto;
+            reg [23:0] geffect,gcolor;
+            reg gquarter,gsolid,ggrid,gborder,gfill,gglow,gline,gmeter;
+            // Break the BRAM -> interpolation -> blend path at the geometry
+            // boundary. All pixel data and coordinates advance together.
+            always @(posedge clk or negedge rst_n)
+                if(!rst_n) begin
+                    gx<=0;gy<=0;gtrace<=CENTER;gdistance<=0;glevel<=0;gmarker<=0;
+                    gp<=0;gphoto<=0;
+                end else begin
+                    gx<=local_x;gy<=local_y;gtrace<=trace_y;gdistance<=distance;
+                    glevel<=level;gmarker<=marker;gp<=panel;gphoto<=photo_q;
+                end
+            always @* begin
+                ggrid=0;gborder=0;gfill=0;gglow=0;gline=0;gmeter=0;
+                geffect=24'h142c4c;gquarter=0;gsolid=0;
+                if(gp) begin
+                    gborder=gy==0 || gy==WAVE_HEIGHT-1 || gx==0 || gx==WAVE_WIDTH+23;
+                    ggrid=gx<WAVE_WIDTH && (gx[5:0]==0 || gy[3:0]==0);
+                    if(gx<WAVE_WIDTH) begin
+                        gfill=gdistance<=(gtrace<CENTER ? CENTER-gtrace : gtrace-CENTER) && gx[2:0]!=7;
+                        gline=gy>=gtrace-1 && gy<=gtrace+1;
+                        gglow=gy>=gtrace-3 && gy<=gtrace+3;
+                    end
+                    gmeter=gx>=WAVE_WIDTH+8 && gx<WAVE_WIDTH+18 && gy>=4 && gy<WAVE_HEIGHT-4;
+                    if(ggrid) geffect=24'h233747;
+                    if(gx<WAVE_WIDTH && gy==CENTER && gx[2:0]<4) geffect=24'h3c6675;
+                    if(gfill) begin
+                        geffect=gdistance>16 ? 24'h197b86 : gdistance>8 ? 24'h145361 : 24'h103b4d;
+                        gquarter=1;
+                    end
+                    if(gglow) begin geffect=24'h237f8a;gquarter=1;end
+                    if(gline) begin geffect=gy<CENTER ? 24'h70efff : 24'h42e6b5;gsolid=1;end
+                    if(gmeter) begin
+                        geffect=24'h1b3442;
+                        if(gy>=WAVE_HEIGHT-4-glevel && gy[2:0]!=0) begin
+                            geffect=gy<12 ? 24'hff7868 : gy<24 ? 24'hffc669 : 24'h42e6b5;
+                            gquarter=1;
+                        end
+                        if(gmarker!=0 && gy==WAVE_HEIGHT-4-gmarker) begin geffect=24'hfff1bf;gsolid=1;end
+                    end
+                    if(gborder) begin geffect=24'h365468;gquarter=0;end
+                    if(gy==0 && gx>=8 && gx<96) begin geffect=24'h42e6b5;gsolid=1;end
+                end
+                gcolor=gsolid ? geffect : blend(gphoto,geffect,gquarter);
+            end
+            assign waveform_active=gp;
+            assign rgb_out=gp ? gcolor : gphoto;
+        end else begin:g_legacy_output
+            assign waveform_active=panel;
+            assign rgb_out=panel ? color : photo_q;
+        end
     end else begin:g_combinational
         reg signed [7:0] sample_bank0[0:SAMPLE_COUNT-1];
         reg signed [7:0] sample_bank1[0:SAMPLE_COUNT-1];

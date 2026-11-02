@@ -5,7 +5,7 @@
 |类别|入口|说明|
 |---|---|---|
 |结构检查|workspace_doctor.py|只读检查工程引用、Python 语法、导航、素材和可选保护散列|
-|机器入口|workspace_layout.json|正式工程、当前素材、历史已验收 BIT；不自动等同最新源码|
+|机器入口|workspace_layout.json|正式工程、素材、当前显示更新候选、拍摄SOP和历史BIT；不自动等同已烧录|
 |完整构建|build_gui.py / 根 build_verified.cmd|冻结源码、综合/布局布线/hold 修复/验收，输出新的 build_out|
 |分步构建|setup_isolated_build.py、build_isolated.py|明确 --out；物理阶段复用须核对源一致|
 |旧兼容构建|build.py|被 build_isolated.py 导入，不能随意删除|
@@ -18,3 +18,5 @@
 |历史修复证据|create_repair_baseline.py、collect_repair_stage.py、archive_repair_checkpoint.py|保留复现入口，不默认重复执行|
 
 更完整的执行与版本边界见 [开发指南](../doc/开发指南.md)。
+
+完整隔离构建默认使用 `gate pack_effort high` 和 `route effort routability`，提高寄存器/LUT 配对率并消解拥塞。命令为 `D:/Anaconda/python.exe tools/build_gui.py --out build_out/<新目录>`；可显式指定 `--route-effort high` 作对照，所有候选仍须通过最终 setup/hold 验收。

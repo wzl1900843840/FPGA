@@ -33,6 +33,10 @@ cases['demo_switches']=['demo_switch_filter']
 cases['demo_menu']=['promax_text_overlay']
 cases['font_pipeline']=['promax_text_overlay']
 cases['arbiter_watchdog']=['media_sdram_arbiter']
+cases['secure_ingress']=['uart_secure_ingress_bram']
+cases['secure_uart_link']=['uart_secure_ingress_bram','subtitle_uart_controller']
+cases['arbiter_fair']=['media_sdram_arbiter']
+cases['wave_extra']=['promax_audio_waveform']
 results=[]
 for name,modules in cases.items():
  start=time.time();binary=out/(name+'.vvp')

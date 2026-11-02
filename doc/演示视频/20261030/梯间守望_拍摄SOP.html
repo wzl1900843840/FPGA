@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>梯间守望演示视频拍摄 SOP</title>
+<style>
+:root{--ink:#183834;--muted:#596c67;--line:#d6dfda;--paper:#fff;--wash:#edf4f0;--accent:#a95b32}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#e9eeea;color:var(--ink);font:16px/1.8 "Microsoft YaHei","PingFang SC",sans-serif}main{max-width:1120px;margin:32px auto;background:var(--paper);padding:48px 56px}h1{font-size:34px;line-height:1.35;margin:10px 0 18px}h2{font-size:25px;margin:42px 0 16px;border-top:2px solid var(--ink);padding-top:18px}h3{font-size:19px;margin:24px 0 8px}p{margin:10px 0}a{color:#176960}nav{padding:16px 0;border-block:1px solid var(--line);margin:24px 0}nav a{margin-right:20px;white-space:nowrap}small,.meta{color:var(--muted);font-size:14px}.lead{font-size:19px}.note{background:var(--wash);padding:16px 20px;margin:20px 0;border-left:4px solid #4e8170}.note strong{color:var(--accent)}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.7;margin:16px 0}th,td{border:1px solid var(--line);padding:10px 12px;vertical-align:top;text-align:left}th{background:var(--wash)}td:first-child{min-width:70px}ul,ol{padding-left:24px}li{margin:7px 0}.check{list-style:none;padding-left:0}.check label{display:flex;gap:10px;align-items:flex-start}.check input{margin-top:8px;accent-color:#276b58}.speech{border-left:3px solid #a0b7ad;padding:8px 18px;margin:12px 0;background:#f7f9f6}.shot{break-inside:avoid;border-bottom:1px solid var(--line);padding-bottom:16px}.shot b{color:#276b58}figure{margin:20px 0}figure img{display:block;width:100%;height:auto}figcaption{font-size:13px;color:var(--muted)}code{font-family:Consolas,monospace;font-size:.92em;word-break:break-all}button{border:0;background:#276b58;color:#fff;padding:10px 20px;font-size:15px;cursor:pointer}footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;font-size:13px;color:var(--muted)}.time{color:var(--accent);font-weight:700}.no-break{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f6f2;padding:18px;font:14px/1.8 Consolas,"Microsoft YaHei",monospace}
+@media(max-width:760px){main{margin:0;padding:24px 18px}h1{font-size:28px}table{display:block;overflow-x:auto}th,td{min-width:130px}nav a{display:inline-block;margin-bottom:8px}}
+@media print{@page{size:A4 landscape;margin:14mm}body{background:#fff;font-size:11pt;line-height:1.6}main{max-width:none;margin:0;padding:0}h1{font-size:24pt}h2{font-size:18pt;break-after:avoid}h3{break-after:avoid}nav,.noprint,button{display:none}table{font-size:9pt}thead{display:table-header-group}tr{break-inside:avoid}a{color:inherit;text-decoration:none}.note{background:#f5f7f4}figure{max-width:210mm}footer{font-size:9pt}}
+</style>
+</head>
+<body><main>
+<p class="meta">拍摄执行版 · 2026 年 10 月 30 日 · 作品名已确认为“梯间守望”</p>
+<h1>梯间守望演示视频拍摄 SOP</h1>
+<p class="lead">用 3 分钟讲清楚：电梯轿厢日常发布信息，告警时优先显示安抚提示，向接收端主动上报，经人工确认和触发源解除后恢复日常播放。</p>
+<p>按“开场 → 基础功能 → 扩展功能 → 场景闭环 → 总结”剪辑。先拍功能素材，最后连贯拍场景；配音后录。板卡、HDMI 屏和串口上位机共同出镜，上位机承担演示输入与接收确认，图像和音频由 FPGA 输出。</p>
+<div class="note"><strong>先固定三个口径。</strong>① PPT 正文按 3 分钟、最多 3 分 15 秒安排，备注仍有 4～5 分钟旧文字，本 SOP 采用正文；正式提交限制以你的赛事通知为准。② 当前 HDMI 是 640×480，1080p 是成片导出尺寸。③ 本文件给出拍摄操作，实际出镜功能先在当前板载版本排练成功。</div>
+<nav><a href="#prepare">1 开拍准备</a><a href="#control">2 操作速查</a><a href="#timeline">3 镜头时间表</a><a href="#story">4 场景连续拍</a><a href="#voice">5 本人口播</a><a href="#camera">6 机位与收音</a><a href="#edit">7 剪辑与交付</a><a href="#extra">8 备拍与排障</a></nav>
+<p class="noprint"><button onclick="window.print()">打印拍摄 SOP</button>　可直接在浏览器查看；勾选状态保存在本机浏览器。<a href="梯间守望_现场速查单.txt">打开现场速查单</a>　<a href="梯间守望_口播提词稿.txt">打开口播提词稿</a></p>
+
+<h2 id="prepare">1 开拍准备</h2>
+<h3>1.1 先冻结拍摄版本</h3>
+<ul class="check">
+<li><label><input type="checkbox">登记实际使用的 BIT 路径和 SHA256、板卡、TF 卡、显示器、串口端口。连续拍摄期间使用同一套。</label></li>
+<li><label><input type="checkbox">把本 SOP 的按键、菜单、PIC5 告警、人工 ACK 和解除恢复完整排练至少 3 次；任一环节不稳定，先处理后开拍。</label></li>
+<li><label><input type="checkbox">若拍“脱离电脑上电自动运行”，先真实断电验证配置 Flash 自启。仅下载 SRAM 的版本不使用这句解说。</label></li>
+<li><label><input type="checkbox">停止综合、下载、串口助手和日志回放。上位机是本板真实串口连接，界面显示 UART 实机连接，不选择 SIM-01。</label></li>
+<li><label><input type="checkbox">关闭上位机专家测试中的自动确认、故障注入和延迟确认。只留本次要展示的人工确认流程。</label></li>
+</ul>
+<p>当前可查到 10 月 30 日的隔离候选 <code>build_out/final_repair_candidate_20261030_21/best_result</code>，其 140 个 user_source 文件与当前源码逐文件一致；BIT SHA256 为 <code>d329a9bcdc4149515aa835f2c3fd871a0f52231d0c96be14c7eecc693ebd8ecb</code>。该候选报告仍写明待实板验收；原生 TD 的 best_result BIT 是另一散列。先确认板上究竟使用哪一份，再引用对应报告，不因目录名称认定已经烧录。</p>
+
+<h3>1.2 准备本次场景素材</h3>
+<table><thead><tr><th>素材</th><th>当前画面</th><th>拍摄用途</th></tr></thead><tbody>
+<tr><td>PIC1</td><td>白天城市滨水景观，640×480</td><td>开场和日常宣传页</td></tr>
+<tr><td>PIC2</td><td>先出后进、请勿倚门、勿挡梯门，640×480</td><td>说明日常文明乘梯宣传</td></tr>
+<tr><td>PIC3</td><td>楼层导览与物业帮助，640×480</td><td>场景段主要停留页；体现便民信息</td></tr>
+<tr><td>PIC4</td><td>夕照城市景观，1280×960</td><td>展示大图输入经 2×2 平均缩小，输出仍为 640×480</td></tr>
+<tr><td>PIC5</td><td>请保持冷静、按报警按钮、耐心等待，640×480</td><td>仅应急时出现；拍清下方通信状态、安抚文字和事件编号</td></tr>
+</tbody></table>
+<figure><img src="当前素材预览.png" alt="当前 PIC1 至 PIC5 素材预览"><figcaption>此图用于辨认当前素材，来自素材目录预览，不是实板截图。成片中的播放、切换与告警必须拍真实 HDMI 输出。</figcaption></figure>
+<p>当前素材位置：<code>C:/Users/wzl123/.config/micu-image/output/tijian_sunburst_20261029_141512/bmp_fpga</code>。核对 FAT32 卡根目录为 PIC1.BMP～PIC5.BMP。PIC1～4 日常轮播，PIC5 留给应急。不要为了镜头临时换卡或现场处理图片。</p>
+
+<h3>1.3 布景与录制检查</h3>
+<ul class="check">
+<li><label><input type="checkbox">屏幕居中，板卡放在屏幕下方侧边，K2/K3/K4 和 SW4 能看清。线缆顺桌边走，保留必要连接关系。</label></li>
+<li><label><input type="checkbox">可在桌上放一张“梯间守望｜电梯信息与应急提示终端”小牌；楼层输入统一标“演示数据”。桌面即可模拟场景。</label></li>
+<li><label><input type="checkbox">上位机关闭通知和无关窗口；F8 可切换投屏模式。PC 录屏先开始，手机随后开始，用一次拍手同步。</label></li>
+<li><label><input type="checkbox">手机横屏、支架固定、电量和空间充足；先录 10 秒回放，确认无明显反光、条纹、对焦跳动和声音爆音。</label></li>
+</ul>
+
+<h2 id="control">2 操作速查</h2>
+<div class="note">这里采用当前源码和使用指南的固定职责。旧文档里的“SW2=0、SW3=1 才进入电梯演示”已不适用。<strong>0/1 指逻辑关闭/开启，开拍前核对实际拨码方向。</strong></div>
+<table><thead><tr><th>控件</th><th>当前操作</th><th>拍摄注意</th></tr></thead><tbody>
+<tr><td>SW1</td><td>滚动字幕开关</td><td>开/关各停留 2 秒，让文字层变化可辨认</td></tr>
+<tr><td>SW2</td><td>中文参数菜单开关</td><td>每次打开从亮度开始；菜单会临时隐藏波形</td></tr>
+<tr><td>SW3</td><td>音频时域波形层开关</td><td>它控制显示，不负责开声；不要称 FFT 频谱</td></tr>
+<tr><td>SW4</td><td>本地告警触发／解除</td><td>主场景只用本地来源，避免串口告警残留造成不能解除</td></tr>
+<tr><td>K1</td><td>复位</td><td>主场景不按；SW4 保持开启时复位后仍可能告警</td></tr>
+<tr><td>K2 短按</td><td>普通界面下一张；菜单增加；缩略图下一格</td><td>一次按下、释放、等画面稳定，再进行下一步</td></tr>
+<tr><td>K3 短按／长按</td><td>普通界面自动/手动切换／上一张</td><td>长按可按约 1.2 秒排练；短按不要拖成长按</td></tr>
+<tr><td>K4 短按／长按</td><td>普通界面静音/恢复／进入缩略图</td><td>缩略图中短按确认、长按取消</td></tr>
+<tr><td>菜单 K4 短按</td><td>依次选亮度、对比度、音量、周期、诊断、重载</td><td>K2/K3 调整；本次只拍常用数值项，不误触维护操作</td></tr>
+<tr><td>K2+K3 同按 3 秒</td><td>显式保存参数</td><td>独立备拍；先读到真实保存成功反馈再松开，双键都释放</td></tr>
+<tr><td>上位机“收到响应 · ACK”</td><td>确认当前求援事件</td><td>等设备回读为 ACKED；告警仍有效</td></tr>
+</tbody></table>
+<p>拍每项功能前回到约定状态：SW2=0、SW4=0，手动播放；SW1/SW3 按该镜头需要设置。音量及图号以屏幕实际读数为准。拍自动轮播前可在菜单把周期设为 2 秒，字幕也写实测所用周期。</p>
+
+<h2 id="timeline">3 镜头时间表</h2>
+<p>成片目标 <strong>180 秒</strong>。保留 PPT 五段式，把扩展段增加到 50 秒，基础段 25 秒，场景段 75 秒；用于让现有五项拓展和缩略图都看得清。每条原片前后多录 3～5 秒，下面的时长是剪入成片的时长。</p>
+<table><thead><tr><th>段落</th><th>成片区间</th><th>时长</th><th>要让评委看到</th></tr></thead><tbody>
+<tr><td>开场</td><td>00:00～00:10</td><td>10 秒</td><td>名称、场景、板卡与屏幕</td></tr>
+<tr><td>基础</td><td>00:10～00:35</td><td>25 秒</td><td>TF 读图、HDMI、手动、自动、音频</td></tr>
+<tr><td>扩展</td><td>00:35～01:25</td><td>50 秒</td><td>转场、字幕、波形、参数、缩小、缩略图</td></tr>
+<tr><td>场景</td><td>01:25～02:40</td><td>75 秒</td><td>日常→告警→超时/确认→解除→恢复</td></tr>
+<tr><td>总结</td><td>02:40～03:00</td><td>20 秒</td><td>三项亮点与同版数据</td></tr>
+</tbody></table>
+
+<div class="shot"><h3>01 开场 <span class="time">00:00～00:10</span></h3>
+<p><b>画面：</b>固定全景：板卡、HDMI 线和正在播放 PIC1 的显示器。标题叠加 3～5 秒；末尾用一个屏幕近景接入功能段。</p>
+<p><b>字幕：</b>梯间守望｜基于安路 EG4S20 的电梯信息与应急提示终端。</p>
+<p><b>口播：</b>“各位评委老师好，我们的作品是《梯间守望》，一款电梯信息发布与应急提示终端。”</p></div>
+
+<div class="shot"><h3>02 TF 读图与 HDMI <span class="time">00:10～00:17</span></h3>
+<p><b>动作：</b>先拍未上电时已插好的 TF 卡近景，再拍同一板卡启动后首图。保留完整启动原片；若加载超过剪辑预算，选取出图过程，并标“启动过程节选”，不配启动耗时。</p>
+<p><b>字幕：</b>基础功能 1/2｜FAT32 TF 卡读取 BMP｜HDMI 640×480。</p>
+<p><b>完成标志：</b>PIC1 内容稳定完整。不要在带电运行中插卡来替代冷启动镜头，也不把电脑图片窗口当成 HDMI。</p></div>
+
+<div class="shot"><h3>03 手动切换 <span class="time">00:17～00:23</span></h3>
+<p><b>动作：</b>手动状态 K2 短按下一张，稳定后 K3 长按回上一张。手部与屏幕尽量同框；可用小画面补手部特写。</p>
+<p><b>字幕：</b>基础功能 3｜K2 下一张 / K3 长按上一张。</p></div>
+
+<div class="shot"><h3>04 自动轮播 <span class="time">00:23～00:30</span></h3>
+<p><b>动作：</b>已设 2 秒周期，K3 短按进入自动，拍至少两次真实切换。结束后再短按回手动。</p>
+<p><b>字幕：</b>基础功能 4｜自动轮播，周期 2 秒（以本次实际设置为准）。</p></div>
+
+<div class="shot"><h3>05 音频输出 <span class="time">00:30～00:35</span></h3>
+<p><b>动作：</b>K4 短按恢复声音，保留 2～3 秒实际测试音；此时 SW3 关闭，证明波形开关不负责开声。</p>
+<p><b>字幕：</b>基础功能 5｜48 kHz HDMI 音频｜FPGA 合成音调。</p>
+<p><b>收音：</b>优先用采集卡的真实 HDMI 音频；没有采集卡时单独录屏幕扬声器的声音。此处配音停顿，音乐关闭。</p></div>
+
+<div class="shot"><h3>06 转场 <span class="time">00:35～00:43</span></h3>
+<p><b>动作：</b>K2 触发一次切图，从按下前录到目标图稳定，给完整转场过程。展示当前实板实际出现的淡出/揭示效果。</p>
+<p><b>字幕：</b>扩展功能 1｜硬件图像转场。不要把后期剪辑转场或单图淡出宣传为双图实时混合。</p></div>
+
+<div class="shot"><h3>07 OSD 与滚动字幕 <span class="time">00:43～00:51</span></h3>
+<p><b>动作：</b>在同一画面中 SW1 关闭约 2 秒，再打开约 4 秒；拍清中文字幕和顶部楼层/方向/门状态。</p>
+<p><b>字幕：</b>扩展功能 2｜OSD 状态与滚动字幕。楼层标“串口演示输入”。</p></div>
+
+<div class="shot"><h3>08 真实 PCM 时域波形 <span class="time">00:51～00:59</span></h3>
+<p><b>动作：</b>有声时 SW3 开启，等波形出现；K4 静音，等波形归零；再次 K4 恢复。若实测显示滞后，适当延长并从其他镜头挪时间。</p>
+<p><b>字幕：</b>扩展功能 3｜输出 PCM 时域波形｜静音归零。保留对应的真实声音。</p></div>
+
+<div class="shot"><h3>09 中文参数菜单 <span class="time">00:59～01:11</span></h3>
+<p><b>动作：</b>SW2 打开；亮度选中，K3 减少 2～3 档，停 2 秒，再 K2 恢复；K4 选下一项让焦点变化可见；SW2 关闭。</p>
+<p><b>字幕：</b>扩展功能 4｜中文参数菜单｜亮度/对比度/音量/周期。只解说本镜头真实演示的调节结果。</p>
+<p><b>完成标志：</b>高亮行、数值和画面变化同时看清。不要一路按到“重载”而打断演示。</p></div>
+
+<div class="shot"><h3>10 两种输入尺寸 <span class="time">01:11～01:19</span></h3>
+<p><b>动作：</b>预先到 PIC3，K2 切至 PIC4；用屏幕实录展示夕照城市图。可叠加素材属性小图，表明该 BMP 为 1280×960。</p>
+<p><b>字幕：</b>扩展功能 5｜640×480 直接显示；1280×960 经 2×2 平均缩小到 640×480。</p>
+<p>当前 PIC1 与 PIC4 内容不同，本镜头证明两种尺寸均可播放；若要比较缩小画质，另拍同内容双尺寸对照。不要写“HDMI 输出 1280×960”或“任意分辨率适配”。</p></div>
+
+<div class="shot"><h3>11 缩略图选择 <span class="time">01:19～01:25</span></h3>
+<p><b>动作：</b>K4 长按进入缩略图，K2 移动一格，K4 短按确认。原片可录 12 秒，从中保留焦点移动和返回全屏的完整动作。</p>
+<p><b>字幕：</b>附加交互｜缩略图选图。若 6 秒内看不清，优先放入备拍，不挤掉五项核心扩展。</p></div>
+
+<h2 id="story">4 场景连续拍</h2>
+<p><strong>这一段是全片重点。</strong>手机拍摄板卡和 HDMI 屏，PC 同时录真实串口上位机，连续录制约 90～120 秒原片，再取其中 75 秒。电脑与板卡画面通过拍手对齐；保留本地触发、同一事件编号、确认、解除这一条因果链。</p>
+<h3>4.1 场景开始前复位到约定状态</h3>
+<ol>
+<li>SW2=0、SW4=0；需要字幕时 SW1=1；建议 SW3=0，让主要画面简洁。确认没有残留串口告警。</li>
+<li>双击根目录 <code>start_console.cmd</code>，选本板真实 COM 端口，115200、8N1；关闭其他占用该端口的程序。COM18 是既往记录，现场以实际枚举和设备回读为准。当前程序自动完成会话与 CRC 封装，等待连接握手成功，不使用旧裸 ELEV/ACK 命令。</li>
+<li>上位机自动确认关闭；确认设备状态新鲜、无有效告警。上电若显示“已解析·待初始化 / F00”，点击“初始化演示”，等待有效楼层回读。</li>
+<li>选择 1～5 层往返，点击“开始演示”；当前程序按约 2 秒计划更新楼层。PC 录屏保留“演示输入 / UART 实机连接”来源标识。</li>
+<li>FPGA 进入日常自动轮播；最好从 PIC3 楼层导览开始。让日常轮播、楼层模拟和告警接收分别先跑通。</li>
+</ol>
+
+<table><thead><tr><th>成片时间</th><th>操作者动作</th><th>屏幕与上位机应出现</th><th>字幕/配音重点</th></tr></thead><tbody>
+<tr><td>01:25～01:40<br>日常 15 秒</td><td>保持日常轮播；上位机楼层往返运行。用屏幕为主，PC 画面为辅。</td><td>PIC1～4 中的日常页；楼层和方向随演示输入变化；无有效告警。</td><td>“日常播放乘梯提示、楼层导览与社区宣传。楼层由串口演示输入提供。”</td></tr>
+<tr><td>01:40～01:53<br>触发 13 秒</td><td>将 SW4 开启；手离开，保持开关不变。先给 2 秒手部，再拍应急页和 PC 事件。</td><td>FPGA 优先显示 PIC5、必要告警文字和提示音；上位机新增活动事件、暂停楼层演示。人工不确认时约 3 秒后可出现 TIMEOUT。</td><td>“本地触发后，应急提示优先显示，并主动上报求援事件。未收到确认时有限重发，并提示确认超时。”</td></tr>
+<tr><td>01:53～02:13<br>人工确认 20 秒</td><td>先对准事件编号，再点击“收到响应 · ACK”；等待设备回读，保持 SW4 开启，给板端与 PC 各 3～5 秒清晰画面。</td><td>同一活动事件由 WAIT 或 TIMEOUT 转为 ACKED；上位机显示已确认但告警仍有效；PIC5 仍在。</td><td>“人员收到信息后进行确认。设备接受确认，但告警仍然保留。”</td></tr>
+<tr><td>02:13～02:28<br>解除 15 秒</td><td>SW4 关闭，不按 ACK 替代解除。观察恢复；上位机仍暂停时再点“继续”。</td><td>本地来源解除，A=0 恢复事件出现；屏幕回到日常图和原播放状态。恢复事件可使用新 ID。</td><td>“解除触发源后，终端恢复日常播放。楼层演示由人员确认后继续。”</td></tr>
+<tr><td>02:28～02:40<br>恢复 12 秒</td><td>保持日常轮播；拍 PIC2/PIC3 或完整全景，不增加新操作。</td><td>日常画面、楼层演示和上位机无活动告警状态一致。</td><td>字幕依次收束：日常发布 → 应急提示 → 人工确认 → 解除恢复。</td></tr>
+</tbody></table>
+<div class="note"><strong>为什么主方案允许出现 TIMEOUT：</strong>当前协议首次发送后约等 1 秒，最多再发两次，第三次等待结束后进入 TIMEOUT；人工阅读界面常会超过这个时间。TIMEOUT 表示未获确认，不表示设备死机。当前实现支持匹配的迟到 ACK 把有效事件更新为 ACKED。按这一路径提前排练，保留真实过程即可。若想只拍 WAIT→ACKED，需要助手提前就位，在触发后约 3 秒以内确认；不要在后期把 TIMEOUT 改成 WAIT。</div>
+<p><strong>连续性检查：</strong>求援与确认的 ID 必须一致；A=0 恢复消息是独立事件，编号变化正常。主场景不用 ALERT=ON，避免本地和串口双来源叠加。若出现双来源，必须两种来源都解除才恢复；ACK 不解除告警，也不代表救援已到场。</p>
+<p>重拍时，从 SW4=0、无远端告警、已恢复日常状态重新开始。不得拿另一轮事件的“已确认”画面拼接当前求援，或用 SIM 页面补作实板接收画面。</p>
+
+<h2 id="voice">5 本人口播与提词</h2>
+<p><strong>建议开场和结尾本人出镜，中间使用实物画面配你的声音。</strong>以下按原3分钟镜头表逐句安排。先介绍作品用途，再展示功能，最后讲清应急流程。操作前说要展示什么，操作后等真实状态出现，再说结果。</p>
+<p>下方“口播”可以照念；“画面”和“提示/停顿”不读。每段单独录，句子之间自然停顿。型号、分辨率和资源数字主要放字幕，不必全部念出来。<a href="梯间守望_口播提词稿.txt">打开独立口播提词稿</a>，其中另附约30秒作品介绍。</p>
+<div class="shot"><h3>01 开场介绍 <span class="time">00:00～00:10</span></h3>
+<p class="small">画面：本人出镜，身旁能看到作品；也可直接使用板卡与屏幕全景。</p>
+<div class="speech"><strong>口播：</strong>各位评委老师好，我们的作品是《梯间守望》，一款电梯信息发布与应急提示终端。</div>
+<p>提示：说到作品名称略停一下，视线看镜头。完整型号“安路EG4S20”放标题字幕。</p></div>
+<div class="shot"><h3>02 TF读图与HDMI输出 <span class="time">00:10～00:17</span></h3>
+<p class="small">画面：TF卡近景、真实屏幕首图。</p>
+<div class="speech"><strong>口播：</strong>系统从TF卡读取图片，经FPGA处理后，通过HDMI输出。</div>
+<p>提示：指向板卡和屏幕即可，不在这里展开存储器、时钟和接口细节。</p></div>
+<div class="shot"><h3>03 手动切图 <span class="time">00:17～00:23</span></h3>
+<p class="small">画面：K2下一张、K3长按上一张。</p>
+<div class="speech"><strong>口播：</strong>通过板载按键，可以手动切换上一张和下一张。</div>
+<p>停顿：讲完留约1秒，拍清按键后的画面变化。</p></div>
+<div class="shot"><h3>04 自动轮播 <span class="time">00:23～00:30</span></h3>
+<p class="small">画面：开启自动模式，拍两次实际切换。</p>
+<div class="speech"><strong>口播：</strong>切换到自动模式后，图片按照设定周期轮播。</div>
+<p>停顿：保留切图过程；本次若设2秒，字幕写“轮播周期2秒”。</p></div>
+<div class="shot"><h3>05 音频 <span class="time">00:30～00:35</span></h3>
+<p class="small">画面：K4恢复声音。</p>
+<div class="speech"><strong>口播：</strong>同时，终端支持音频输出。</div>
+<p>停顿：剩余时间保留真实设备音，配音和背景音乐让开；字幕写“48kHz HDMI合成音频”。</p></div>
+<div class="shot"><h3>06 硬件转场 <span class="time">00:35～00:43</span></h3>
+<p class="small">画面：一次完整切图转场。</p>
+<div class="speech"><strong>口播：</strong>切换图片时，硬件转场让画面变化更加自然。</div>
+<p>停顿：等目标图稳定后，再进入下一句。转场必须来自FPGA实际输出。</p></div>
+<div class="shot"><h3>07 字幕与状态叠加 <span class="time">00:43～00:51</span></h3>
+<p class="small">画面：SW1开关字幕、顶部楼层与方向状态。</p>
+<div class="speech"><strong>口播：</strong>屏幕还可叠加楼层、方向与滚动字幕，展示运行信息。</div>
+<p>提示：字幕注明楼层为演示输入；后面的场景段会口头解释来源。</p></div>
+<div class="shot"><h3>08 输出波形 <span class="time">00:51～00:59</span></h3>
+<p class="small">画面：SW3开启波形、K4静音归零、再恢复。</p>
+<div class="speech"><strong>口播：</strong>波形取自实际输出音频；静音后，波形归零。</div>
+<p>停顿：说“静音后”时配合K4操作，给归零和恢复各留出清晰画面与设备原声。</p></div>
+<div class="shot"><h3>09 中文参数菜单 <span class="time">00:59～01:11</span></h3>
+<p class="small">画面：SW2进入菜单，调整亮度并恢复、切换焦点。</p>
+<div class="speech"><strong>口播：</strong>菜单可调节亮度、对比度、音量和轮播周期。以亮度为例，调节结果直接反映在画面上。</div>
+<p>停顿：降低亮度后停约2秒，再恢复，别一口气按完。</p></div>
+<div class="shot"><h3>10 大图缩小 <span class="time">01:11～01:19</span></h3>
+<p class="small">画面：播放1280×960的PIC4，叠加输入与输出尺寸字幕。</p>
+<div class="speech"><strong>口播：</strong>较大尺寸的图片经硬件缩小后显示，输出分辨率保持不变。</div>
+<p>提示：用字幕说明“1280×960→640×480，2×2平均缩小”，不用赶着念完整数字。</p></div>
+<div class="shot"><h3>11 缩略图选择 <span class="time">01:19～01:25</span></h3>
+<p class="small">画面：进入缩略图、移动焦点、确认。</p>
+<div class="speech"><strong>口播：</strong>还可以通过缩略图选择图片，方便查找和切换。</div>
+<p>提示：若主片删去此备选镜头，这句也一起删去。</p></div>
+<div class="shot"><h3>12 引入应用场景 <span class="time">01:25～01:40</span></h3>
+<p class="small">画面：日常轮播，上位机楼层演示运行。</p>
+<div class="speech"><strong>口播：</strong>这是电梯轿厢的日常场景：播放乘梯提示、楼层导览和社区宣传。楼层由上位机通过串口模拟输入。</div>
+<p>提示：不把模拟楼层说成真实电梯传感器采集；画面保留真实串口连接标识。</p></div>
+<div class="shot"><h3>13 告警与超时 <span class="time">01:40～01:53</span></h3>
+<p class="small">画面：SW4触发应急页、提示音；上位机收到事件。</p>
+<div class="speech"><strong>口播：</strong>现在触发告警。终端切换到应急页，并上报求援事件；未获确认时，会提示超时。</div>
+<p>停顿：第一句后操作SW4；应急提示音响起时暂停口播。若实拍未进入超时，删去最后一句，不为配合稿件伪造状态。</p></div>
+<div class="shot"><h3>14 人工确认 <span class="time">01:53～02:13</span></h3>
+<p class="small">画面：对准事件编号，点击“收到响应·ACK”，等设备回读ACKED。</p>
+<div class="speech"><strong>口播：</strong>接收端显示事件编号和楼层信息。人员点击“收到响应”，等设备回读为已确认。注意，这只表示信息已收到，告警仍然保留。</div>
+<p>停顿：点击后等回读再说“已确认”；保持SW4开启，让评委看清应急页没有被ACK关闭。</p></div>
+<div class="shot"><h3>15 解除与恢复 <span class="time">02:13～02:28</span></h3>
+<p class="small">画面：SW4关闭、恢复消息、日常页面；上位机点击继续。</p>
+<div class="speech"><strong>口播：</strong>解除告警触发源后，终端恢复日常播放。上位机的楼层演示保持暂停，由人员点击继续，再恢复运行。</div>
+<p>停顿：先操作并看到真实恢复，再念对应结果，保留A=0恢复事件画面。</p></div>
+<div class="shot"><h3>16 收束场景 <span class="time">02:28～02:40</span></h3>
+<p class="small">画面：恢复后的日常轮播和上位机状态。</p>
+<div class="speech"><strong>口播：</strong>这样，就形成了日常发布、应急提示、人工确认和解除恢复的完整流程。</div>
+<p>停顿：说完留几秒稳定画面，不加新的功能操作。</p></div>
+<div class="shot"><h3>17 结尾总结 <span class="time">02:40～03:00</span></h3>
+<p class="small">画面：本人出镜或完整作品全景；资源数据放侧边字幕。</p>
+<div class="speech"><strong>口播：</strong>《梯间守望》以安路FPGA完成音视频处理，结合中文交互和应急接收确认，让日常信息更清楚，应急时的提示与接收状态更明确。以上就是我们的作品，谢谢各位老师。</div>
+<p>提示：不用口头罗列所有资源数字；只展示实际录像BIT对应的工具报告数据。</p></div>
+<p>整段围绕“日常发布 → 应急提示 → 人工确认 → 解除恢复”。“已确认”和“已恢复”都等设备真实变化后再说；不把模拟楼层说成真实传感器数据，不把接收确认说成救援到场。</p>
+<h3>同版资源数据如何放在结尾</h3>
+<p>若实际录像用的正是 candidate_21 BIT，可在 20 秒总结画面中用侧栏展示下表，并配一句“本次隔离候选已完成布局布线，资源和时序见屏幕”。如果板上使用的是原生 TD 的不同 BIT，则改用它自身报告。连续运行时长、启动耗时只写本次实际测量记录，未测就省略。</p>
+<table><thead><tr><th>candidate_21 报告项目</th><th>原始值</th><th>画面可用写法</th></tr></thead><tbody>
+<tr><td>LUT</td><td>18425 / 19600</td><td>94.01%</td></tr>
+<tr><td>REG</td><td>9524 / 19600</td><td>48.59%</td></tr>
+<tr><td>Slice（route.qor 口径）</td><td>9785 / 9800</td><td>99.85%</td></tr>
+<tr><td>ERAM9K</td><td>27 / 64</td><td>42.19%</td></tr>
+<tr><td>DSP</td><td>17 / 29</td><td>58.62%</td></tr>
+<tr><td>布线后时序</td><td>SWNS +0.409 ns；HWNS +0.023 ns</td><td>STNS / HTNS 均为 0</td></tr>
+</tbody></table>
+<p>数据取自该候选的 <code>lab_ex5_i2s_v1.0_phy.area</code>、<code>route.qor</code> 与 <code>final_timing.rpt</code>。同目录 BOARD_ACCEPTANCE.md 的手写 LUT/MSlice 汇总与工具报告不一致，拍摄采用上表工具原始数据；不要混用不同资源单位，也不要把资源用满描述为低资源。该候选的 <code>hardware_tested=false</code>，不能直接据此写“连续稳定运行两小时”或“十次冷启动通过”。</p>
+
+<h2 id="camera">6 机位与收音</h2>
+<h3>6.1 最少设备方案</h3>
+<p><strong>一部手机＋固定支架＋PC 录屏：</strong>手机固定拍板卡和屏幕；PC 录上位机。先拍一个能看清硬件连接的全景，再把手机移到正对屏幕的近景位置。功能段以屏幕为主，按键/拨码用同框或补拍手部；场景段连续录手机和 PC，不需要第二部相机。</p>
+<p><strong>有 HDMI 采集卡：</strong>用采集到的真实 FPGA 视频和音频作为细节镜头。若有环出/分配器，可同时接显示器；若没有，先验证采集链支持当前 640×480，再决定单独补录。保留手机全景证明板卡连接，避免成片全部像软件录屏。</p>
+<h3>6.2 屏幕如何拍清楚</h3>
+<ul>
+<li>屏幕保持 4:3 比例，成片画布 16:9。单屏镜头左右留边，可放功能名；双画面可让 HDMI 占约三分之二，PC 占其余区域。若编号太小，就顺序切近景，不强行双画面。</li>
+<li>对着屏幕锁定曝光、焦点和白平衡，避免白底页面忽明忽暗。先调显示器位置和灯光，减少反射，再调整手机曝光。</li>
+<li>先测试常用的 25/30 fps；有条纹时，在专业模式尝试 1/50、1/60、1/100 或 1/120 秒快门，逐项试录并选条纹最少的组合。屏幕刷新、灯光和滚动快门都会影响结果，没有统一必然正确的一档。</li>
+<li>有摩尔纹时稍微改变拍摄距离或焦距，使用主摄，尽量少用数字放大；保持字幕可读。每次调整后立即回放。</li>
+<li>真实 HDMI 内容只有 640×480；导出 1080p 后不能新增细节，画面模糊时先解决拍摄和比例，不靠锐化滤镜补救。</li>
+</ul>
+<h3>6.3 声音安排</h3>
+<p>配音在安静房间分段录制，手机离嘴约 20～30 厘米，避开正对气流；用耳机回听。测试音、波形静音/恢复和应急提示这三处，保留对应设备原声。背景音乐可不加；若使用，压低到不影响解说，展示设备音效时关闭。不要用后期音效替代设备真正输出的声音。</p>
+
+<h2 id="edit">7 剪辑与交付</h2>
+<h3>7.1 按这个顺序拍，返工最少</h3>
+<ol>
+<li>先做 10 秒画质和声音小样，解决条纹、反光和声音问题。</li>
+<li>固定全景机位，录开场全景、TF 卡近景和本地开关动作。</li>
+<li>固定屏幕机位，按镜头 02～11 逐项拍。每条至少两次；每拍完一条就回放核对预期结果。</li>
+<li>手机和 PC 同步录场景段。完整拍两遍，选一遍同一事件的闭环素材剪辑。</li>
+<li>补结尾全景和同版资源报告画面，再录配音。</li>
+<li>按 180 秒时间表组装，先剪动作和结果，再加配音、功能字幕与少量必要转场。</li>
+</ol>
+<h3>7.2 字幕统一写法</h3>
+<p>功能名用左上角或上方留白，步骤说明放画布下方，避开 FPGA 顶部楼层条、底部滚动字幕、PIC5 下方通信状态与事件编号。1080p 画布可先试 36～44 px 字号、一次最多两行，再用手机全屏回放检查可读性。关键编号和 ACKED/TIMEOUT 状态出现时至少留 2～3 秒。</p>
+<h3>7.3 提交前逐项打勾</h3>
+<ul class="check">
+<li><label><input type="checkbox">作品名称统一为“梯间守望”；开场、字幕、结尾无旧名称混用。若上位机仍有历史窗口标题，取景避开该标题或在画布中说明接收端名称。</label></li>
+<li><label><input type="checkbox">基础五项和五项核心扩展都有可独立辨认的实际镜头；缩略图可作附加。</label></li>
+<li><label><input type="checkbox">场景包含日常、触发、确认、解除、恢复；ACK 前后是同一求援 ID，人工确认时应急页仍在。</label></li>
+<li><label><input type="checkbox">正文明确演示楼层来源；没有把系统写成电梯运动控制、安全回路、联网救援平台或已通过工业认证。</label></li>
+<li><label><input type="checkbox">没有“TF 音乐播放、FFT 频谱、1080p HDMI、任意图片缩放、ACK 代表救援到场”等越过实际功能的说法。</label></li>
+<li><label><input type="checkbox">启动耗时、持续运行、资源和时序均对应实际使用版本；没有填写未实测的可靠性数字。</label></li>
+<li><label><input type="checkbox">原片中调试、误按和失败的功能片段已重拍；场景关键因果过程真实，未通过剪辑改变状态或响应时间。</label></li>
+<li><label><input type="checkbox">MP4，1920×1080，横屏 16:9，帧率与主素材一致。编码可选常见 H.264＋AAC，先以 12～20 Mbps 视频码率试导出，再检查文件大小是否满足提交要求。</label></li>
+<li><label><input type="checkbox">目标 03:00；需要增加读数停留时最多用到 PPT 正文的 03:15，正式上限另按赛事通知。无多余片尾和冗长展望。</label></li>
+<li><label><input type="checkbox">导出后在电脑和手机各完整播放一次：无花屏、声音正常、字幕不遮挡、开头结尾完整。保留最终文件及同版原片、串口日志。</label></li>
+</ul>
+<p>建议素材文件夹：<code>01_全景 / 02_基础 / 03_扩展 / 04_场景连续 / 05_上位机录屏 / 06_配音 / 07_成片</code>。文件命名如 <code>04_本地告警_ACK_解除_take02.mp4</code>，同一轮手机和 PC 片名使用同一 take 编号。</p>
+
+<h2 id="extra">8 备拍与排障</h2>
+<h3>8.1 这些镜头单独拍，主片有余量再用</h3>
+<table><thead><tr><th>备拍</th><th>完整动作</th><th>采用条件</th></tr></thead><tbody>
+<tr><td>参数保存</td><td>调参数 → K2+K3 同按 3 秒 → 真正保存成功 → 两键释放 → 冷启动 → 回菜单核对参数</td><td>全部真实跑通才说掉电保留；配置 Flash 自启与参数 Flash 保存分开说明</td></tr>
+<tr><td>媒体异常</td><td>另备故障素材卡，展示无有效图/缺 PIC5 时备用提示与人工重载恢复</td><td>放在主场景拍完后，使用已演练的独立片段，先备份正常卡</td></tr>
+<tr><td>启动计时</td><td>供电动作到完整首图连续录制；另存 BOOT? 内部里程碑</td><td>两个计时起点与终点不同，分别标注；有时间证据才填数字</td></tr>
+<tr><td>运行记录</td><td>同一 BIT 保留运行起止时间、全程日志和操作记录</td><td>长时结果必须真实完成，不能用短片循环或加速画面证明时长</td></tr>
+</tbody></table>
+<h3>8.2 现场遇到问题时</h3>
+<table><thead><tr><th>现象</th><th>先检查</th></tr></thead><tbody>
+<tr><td>没有声音</td><td>复位后通常静音；K4 恢复、菜单音量、显示器音频支持、系统录音设备。SW3 只是波形开关。</td></tr>
+<tr><td>关闭 SW4 还在告警</td><td>是否残留远端 ALERT 来源；先停拍，核对来源和真实状态，必要时用上位机正常解除串口来源，再重拍整轮。</td></tr>
+<tr><td>点击 ACK 没有恢复日常</td><td>这是预期行为。先确认回读 ACKED；解除触发源才恢复。若 ACKED 未出现，核对活动 ID、日志和连接。</td></tr>
+<tr><td>出现 TIMEOUT</td><td>人工确认超过约 3 秒可正常进入超时。按预演的迟到 ACK 流程拍；若无法确认，停拍排障。</td></tr>
+<tr><td>上位机楼层显示 F00</td><td>待初始化状态不等于真实 0 层。使用初始化演示并等回读，不连续发送旧 ELEV 命令强行覆盖告警。</td></tr>
+<tr><td>解除后楼层不继续动</td><td>上位机告警后暂停，需人工点击“继续”；FPGA 的图片轮播和 PC 的楼层演示是两套状态。</td></tr>
+<tr><td>菜单出现后波形消失</td><td>菜单临时隐藏波形是预期；关闭 SW2 后按 SW3 请求恢复。</td></tr>
+<tr><td>PIC4 图片比例不对</td><td>确认文件为 1280×960，接收端保持 4:3，剪辑画布没有横向拉伸。</td></tr>
+</tbody></table>
+<h3>8.3 拍摄登记表</h3>
+<pre>拍摄日期 / 操作者：
+实际 BIT 绝对路径 / SHA256：
+烧录或配置 Flash 记录：
+TF 卡 / PIC1～PIC5 清单：
+显示器 / HDMI 采集设备：
+真实串口端口 / 上位机版本：
+原片 take 编号 / 求援 ID：
+本次实测启动 / 运行记录（无则留空）：
+最终成片文件 / 时长 / 导出参数：</pre>
+<footer>
+<p>编排依据：用户提供《FPGA竞赛作品视频拍摄SOP.pptx》正文第 3～14 页及备注；当前 README、使用指南、验收矩阵；生产顶层与音频桥、串口状态上报模块、上位机 ui/core/protocol；当前五图素材；candidate_21 的 validation.json、物理资源和最终时序报告。</p>
+<p>本 SOP 采用用户确认的作品名“梯间守望”。图像、音频、通信、界面效果以实际板载版本为准；素材预览仅用于认图。拍摄版不自动修改 RTL、烧录或发送串口指令。</p>
+</footer>
+<script>
+const boxes=[...document.querySelectorAll('input[type="checkbox"]')];const key='stairwell-filming-sop-20261030';try{const saved=JSON.parse(localStorage.getItem(key)||'[]');boxes.forEach((b,i)=>{b.checked=!!saved[i];b.addEventListener('change',()=>{try{localStorage.setItem(key,JSON.stringify(boxes.map(x=>x.checked)))}catch{}})})}catch{}
+</script>
+</main></body></html>

@@ -1,44 +1,64 @@
-# 梯安·灵眸 — 安路 EG4S20 FPGA 音视频终端
+# 梯间守望 — 安路 EG4S20 电梯信息与应急提示终端
 
-纯硬件、无 OS 的 TF/FAT32 图片播放、SDRAM 缓存、HDMI 音视频、中文字幕、波形与 UART 应急交互工程。电梯是应用场景；验收按安路赛题一的基础/拓展要求组织。
+面向电梯轿厢的信息发布与应急提示场景。FPGA独立完成TF/FAT32 BMP读取、SDRAM缓存、HDMI音视频、中文OSD、图像转场和输出PCM时域波形；串口上位机提供楼层演示输入、事件接收与人工确认。作品名称按用户2026-10-30确认为“梯间守望”，历史资料中的“梯安·灵眸”是旧称。
 
-## 先找到入口
+## 直接使用
 
 |要做什么|入口|
 |---|---|
-|打开 FPGA 工程|[lab_ex5_i2s_v1.0.al](src/td_project/lab_ex5_i2s_v1.0.al)，顶层 top；不要打开旁边历史工程|
-|完整编译与时序验收|双击 [build_verified.cmd](build_verified.cmd)，成功后使用它打印的 best_result 路径|
-|打开上位机|双击 [start_console.cmd](start_console.cmd)；支持模拟设备与真实串口|
-|操作按键/拨码、准备 TF 卡|[当前使用指南](doc/当前使用指南.md)|
-|改代码、跑回归、定位模块|[开发指南](doc/开发指南.md) / [工具索引](tools/README.md)|
-|Agent 接手|[AGENTS.md](AGENTS.md) / [机器可读入口](tools/workspace_layout.json)|
+|录制最终演示视频|[完整拍摄SOP](doc/演示视频/20261030/梯间守望_拍摄SOP.html) / [现场速查单](doc/演示视频/20261030/梯间守望_现场速查单.txt)|
+|打开正式FPGA工程|[lab_ex5_i2s_v1.0.al](src/td_project/lab_ex5_i2s_v1.0.al)，EG4S20BG256，顶层top|
+|打开上位机|双击[start_console.cmd](start_console.cmd)，实机录像选择真实串口|
+|按键、拨码、TF卡准备|[当前使用指南](doc/当前使用指南.md)|
+|理解系统与模块分工|[工程框架](doc/工程框架.md)|
+|完整编译与时序验收|[build_verified.cmd](build_verified.cmd)，输出新的build_out子目录|
+|开发或Agent接手|[开发指南](doc/开发指南.md) / [AGENTS.md](AGENTS.md) / [机器入口](tools/workspace_layout.json)|
 
-## 当前状态与证据边界
+## 当前功能
 
-- 最新源码包括中文参数菜单、资源优化及告警文字移入新 PIC5 下方留白（提交 79930d3）；本轮整理没有改 RTL、约束、IP、已有固件或上位机逻辑。
-- OSD 修改后 37 项模块回归通过，包含 WAIT/ACKED/TIMEOUT/解除、两种输入倍率及 BRAM 字库流水线检查；记录保留在 build_out/alert_layout_20261029/regression。
-- 最近一次已验收的完整隔离构建是 build_out/gui_verified_20261029/best_result：SWNS +1.185 ns、HWNS +0.021 ns、TNS 为 0。它早于告警文字位置修改，不能代表最新源码已重新物理实现。证据见 [GUI 构建验收记录](doc/优化验证/20261029/GUI重编译验收修复/处理说明.md)。
-- 用户反馈已有上板版本功能正常；TD 原生 GUI 的一次重编译报告 HWNS −0.061 ns。原生按钮尚未自动接入仓库的额外 hold 修复流程，不能混用两套结论。
-- 当前素材为用户指定的五张新图，均已加安路图标：[素材入口与格式](media/README.md)。PIC4 为 1280×960，其余 640×480，输出画布为 640×480。
-- 本轮不新增上板或性能结论。连续运行、热拔插等实板验收仍以 [验收矩阵](docs/工作区/任务/进行中/安路赛题一验收矩阵与演示操作_20261029.md) 的实际记录为准。
+- PIC1～PIC4日常手动/自动播放；PIC5专用于告警。输入支持640×480与1280×960 RGB24 BMP，后者2×2平均缩小；HDMI输出固定640×480。
+- SW1滚动字幕，SW2中文参数菜单，SW3音频波形，SW4本地告警。详细按键统一看使用指南，不再采用旧版“SW3进入电梯模式”的操作。
+- 48kHz HDMI合成音调与应急提示；波形来自最终输出PCM，不称TF音乐或FFT频谱。
+- 告警优先显示、主动事件上报、有限重发、人工ACK、解除后恢复。ACK表示接收确认，不解除告警；本地与串口来源都解除才结束应急状态。
+- 当前UART控制采用会话/序号/CRC封装，RESCUE带CRC，旧裸ELEV写入已禁用；见[当前串口协议](doc/当前串口协议.md)。
+- 上位机支持真实串口和离线模拟。楼层变化是演示输入；PC不参与FPGA图像渲染，也不控制电梯运动或安全回路。
 
-## 目录怎么用
+## 当前构建证据
 
-|目录|职责|
+2026-10-30显示更新的隔离候选为[display_update_candidate_20261030_i/best_result](build_out/display_update_candidate_20261030_i/best_result)。140个user_source文件与正式源逐文件相同，TD源清单90条。日常页常显 PIC/模式/就绪状态、源分辨率和分秒计时，数码管周期页显示 SEC；见[本轮记录](doc/maintenance/20261030_display_update/README.md)。
+
+|项目|工具原始报告值|
 |---|---|
-|src/|正式 RTL、厂商 IP、约束和 TD 工程；保持原路径|
-|tools/、tests/|开发工具、测试源与模型；原有入口不搬动|
-|doc/|技术说明、操作指南与验证证据，见 [文档索引](doc/README.md)|
-|docs/|需求、实现前设计与任务，见 [任务索引](docs/README.md)|
-|media/|参考素材及当前素材索引|
-|build_out/、tests/results/|本地生成物；当前候选与实板快照须先归档再清理|
-|archive/、release/|历史资料与旧流程输出，不能当最新固件|
-|config/、logs/|上位机本地偏好与运行日志；不清空用户配置|
+|BIT SHA256|def8f6753bbb2055079ed52deec28089943f70463435fbe7d7c49709999fb590|
+|布线后时序|SWNS +1.717 ns，HWNS +0.044 ns，STNS/HTNS均为0|
+|LUT / REG|18310/19600（93.42%） / 9519/19600（48.57%）|
+|ERAM9K / DSP|27/64（42.19%） / 17/29（58.62%）|
+|Slice（route.qor）|9329/9800（95.19%）|
+|实板验收|validation.json标为hardware_tested=false，不能据此签收冷启或长时运行|
+
+41项RTL回归、照片叠加回归和4096字库映射初始化审计通过。采用高强度门级打包与routability布线，时钟和约束保持50/40/25/125 MHz。旧候选21保留，不能用于展示本次新增文字。
+
+TD原生best_result是另一份BIT（SHA256 3a699337436f7a059fb0adf0b0c255333ac286d56f8b89d348b0e0f6dbd1045b）；其.ts显示HWNS −0.054 ns、HTNS −0.157 ns。原生GUI与额外hold修复的隔离流程仍是两条路径，不混用结论。拍摄前登记实际烧录文件；本轮已编译，未下载、未连接设备。
+
+## 工程目录
+
+|目录|用途|
+|---|---|
+|src/|正式TD工程、RTL、约束和厂商IP，路径不变|
+|tools/、tests/|构建、素材、上位机与测试；[工具](tools/README.md) / [测试](tests/README.md)|
+|doc/|当前操作、框架、拍摄SOP和技术证据；[文档索引](doc/README.md)|
+|docs/|需求、设计、任务状态；[任务索引](docs/README.md)|
+|media/|当前素材位置及历史fixture；[素材说明](media/README.md)|
+|build_out/|当前候选、基线、回归证据和可再生生成物|
+|config/、logs/|上位机个人设置与运行日志|
+|archive/、release/|历史资料与旧流程输出，不能凭final文件名选择烧录版本|
 
 ## 整理与恢复
 
-本次清理明细、完整备份及校验结果见 [目录整理记录](doc/maintenance/20261029_workspace/README.md)。README 原文与此前未提交改动已原样保存在该目录和外部 ZIP 中。
+本轮先对10,681个文件建立完整ZIP并逐项核验，另存Git bundle，再按清单移除试验候选1～20、旧演示视频、历史固件副本和可再生输出。当前候选21、修复前基线、原生GUI复现目录、源码/工具/测试、两处源码目录联接和当前素材保留。
 
-只读检查（不编译、不下载、不访问串口）：
+备份位于D:/FPGA/anlu/example_code111/backups/workspace_cleanup_20261030/。清理明细与按文件恢复方法见[2026-10-30整理记录](doc/maintenance/20261030_workspace/README.md)；上轮恢复点见[2026-10-29整理记录](doc/maintenance/20261029_workspace/README.md)。用户原有未提交差异继续保留，本轮不自动提交。
+
+只读结构检查：
 
     D:/Anaconda/python.exe tools/workspace_doctor.py

@@ -9,10 +9,12 @@ initial begin
  if(!display || !reset_n || !busy)$fatal(1,"reset before fallback ack");
  ack=1;ms(1);if(reset_n)$fatal(1,"reset missing");boot=0;ms(3);if(!reset_n || retries!=1)$fatal(1,"reset duration");
  boot=1;ms(2);ack=0;ms(2);if(display || busy)$fatal(1,"recovery completion");
- fault=1;ms(1);fault=0;ack=1;ms(3);if(!failed || reset_n || retries!=1)$fatal(1,"automatic retry bound");
+ fault=1;ms(1);fault=0;ack=1;ms(3);if(!failed || !reset_n || retries!=1)$fatal(1,"automatic retry bound");
  manual=1;ms(1);manual=0;boot=0;ms(4);if(retries!=2)$fatal(1,"manual retry");
  boot=1;ms(2);ack=0;ms(2);if(busy || failed)$fatal(1,"manual completion");
- $display("PASS recovery: fallback ack before reset, bounded retry, STOP and manual rearm");$finish;
+ fault=1;ms(1);fault=0;ms(102);
+ if(!failed || !reset_n || busy || !display)$fatal(1,"missing display ACK caused reset or unbounded wait");
+ $display("PASS recovery: fallback ack before reset, bounded retry, STOP/manual rearm, missing-ACK 100ms stop");$finish;
 end
 initial begin #10000;$fatal(1,"recovery timeout");end
 endmodule

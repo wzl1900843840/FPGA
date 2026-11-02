@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "scope": "D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf",
+  "backup_members": 10681,
+  "unchanged_original_files": 5271,
+  "protected_files_checked": 1016,
+  "changed_navigation_files": [
+    "AGENTS.md",
+    "README.md",
+    "archive/README.md",
+    "build_out/README.md",
+    "doc/README.md",
+    "doc/工程结构与维护.md",
+    "doc/当前使用指南.md",
+    "doc/救援串口协议与接收端.md",
+    "doc/隔离构建区.md",
+    "docs/README.md",
+    "tests/README.md",
+    "tools/README.md",
+    "tools/workspace_layout.json"
+  ],
+  "deleted_files": 5397,
+  "deleted_bytes": 797597793,
+  "deletion_categories": {
+    "trial_candidates_1_to_20": 5384,
+    "historical_bits": 5,
+    "regenerable_root_outputs": 6,
+    "old_reference_video": 1,
+    "legacy_root_guide": 1
+  },
+  "junctions": [
+    {
+      "path": "build_out/seg7_block_swap/user_source",
+      "target": "\\\\?\\D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\src\\user_source",
+      "passed": true
+    },
+    {
+      "path": "build_out/thumbnail_center/user_source",
+      "target": "\\\\?\\D:\\FPGA\\anlu\\example_code111\\lab_ex4_tf\\src\\user_source",
+      "passed": true
+    }
+  ],
+  "current_candidate": {
+    "source_files_compared": 140,
+    "source_mismatches": [],
+    "active_td_entries": 90,
+    "candidate_td_entries": 90,
+    "source_reference_order_identical": false,
+    "source_reference_multiset_identical": true,
+    "bit_sha256": "d329a9bcdc4149515aa835f2c3fd871a0f52231d0c96be14c7eecc693ebd8ecb",
+    "validation_bit_matches": true,
+    "timing_ns": {
+      "SWNS": 0.409,
+      "STNS": 0.0,
+      "HWNS": 0.023,
+      "HTNS": 0.0
+    },
+    "hardware_tested": false
+  },
+  "doctor_passed": true,
+  "extra_links_checked": 23,
+  "sop_render": {
+    "title": "梯间守望演示视频拍摄 SOP",
+    "images": [
+      {
+        "loaded": true,
+        "src": "当前素材预览.png"
+      }
+    ],
+    "checkboxes": 19,
+    "desktopOverflow": false,
+    "sections": 8,
+    "mobileOverflow": false,
+    "printMedia": true
+  },
+  "unexpected_changes": [],
+  "not_performed": [
+    "RTL or app behavior edits",
+    "synthesis",
+    "place/route",
+    "flashing",
+    "UART commands",
+    "hardware testing",
+    "git commit"
+  ]
+}

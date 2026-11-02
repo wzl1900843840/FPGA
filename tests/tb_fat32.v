@@ -30,6 +30,16 @@ part_base=2048;requests=0;
 if(err || valid!=15 || part!=2048 ||fat!=2049||data!=2050||requests!=6)
 $fatal(1,"MBR slot%d err%h valid%h part%d requests%d",scenario,err,valid,part,requests);
 end
+part_base=0;requests=0;
+disk[17]=1;
+@(negedge clk);start=1;@(negedge clk);start=0;wait(done);#1;
+if(err!=8'h21 || valid!=0)$fatal(1,"invalid root-entry BPB accepted");
+disk[17]=0;disk[22]=1;
+@(negedge clk);start=1;@(negedge clk);start=0;wait(done);#1;
+if(err!=8'h21 || valid!=0)$fatal(1,"FAT16 BPB accepted");
+disk[22]=0;disk[510]=0;
+@(negedge clk);start=1;@(negedge clk);start=0;wait(done);#1;
+if(err!=8'h20 || valid!=0)$fatal(1,"bad boot signature accepted");
 $display("PASS FAT32: raw BPB, MBR with EB jump and FAT32 in each of four slots, fragmented root chain");$finish;
 end
 initial forever begin

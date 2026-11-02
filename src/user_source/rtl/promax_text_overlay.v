@@ -15,8 +15,8 @@
 //
 // 三个关键设计：
 //   1) 十进制转换只在"数值变化时"启动（numeric_inputs != numeric_seen），
-//      用 double-dabble（每拍移一位、逐位加 3 修正）在 16 拍内算出 BCD，
-//      所以像素路径上完全没有除法器，也不需要 DSP。
+//      用 double-dabble（每拍移一位、逐位加 3 修正）算出 BCD，
+//      两组 8bit 字段共用转换器，16 拍后整组提交；像素路径没有除法器或 DSP。
 //   2) 所有要显示的数值/状态先存进 *_pending，等到 vsync 下降沿（帧边界）
 //      才整体搬到 *_frame，一帧之内显示内容恒定，不会看到数字跳动到一半。
 //   3) 字形是 5×7 点阵的硬编码查表（glyph_row），中文短句是 16×16 位图
@@ -25,7 +25,7 @@
 module promax_text_overlay #(
     parameter integer MENU_ENABLE=0, FONT_BRAM=0,
     parameter integer PARAM_X=96, PARAM_Y=40, STATUS_X=96, STATUS_Y=24,
-    parameter integer SUBTITLE_Y=72, H_ACTIVE=640, TIMER_X=564
+    parameter integer SUBTITLE_Y=72, H_ACTIVE=640, TIMER_X=552
 )(
     input wire clk,rst_n,vsync,de,
     input wire [23:0] rgb_in,
@@ -55,7 +55,7 @@ module promax_text_overlay #(
     // vs_q 用于检测 vsync 下降沿；所有 *_frame 寄存器都在这个边沿更新，
     // 保证"一帧内看到的参数是同一个快照"。scroll_pos 是字幕横向滚动位置，
     // 每 3 帧才推进一步（scroll_div 计数），所以滚动速度与帧率无关地保持匀速。
-    localparam integer CELL_W=12, CELL_H=16, PARAM_CHARS=32, FLOOR_X=96;
+    localparam integer CELL_W=16, CELL_H=16, PARAM_CHARS=32, FLOOR_X=96;
     localparam integer SUBTITLE_CELL_W=18, SCROLL_CYCLE=H_ACTIVE+128;
     // 告警背景左侧面板底部留白，坐标基于解码后的 640x480 画布。
     // 两种输入图片分辨率共用该位置，不随 source_scale_2x 移动。
@@ -72,6 +72,8 @@ module promax_text_overlay #(
     reg [5:0] subtitle_length_frame;
     reg subtitle_on_frame;
     reg alert_frame;
+    // Reuse the existing menu-visible path for the permanent daily header.
+    wire header_frame=show_info_frame || !alert_frame;
     reg [1:0] comm_frame;
     reg [15:0] event_frame;
     reg [6:0] clear_frames;
@@ -85,22 +87,21 @@ module promax_text_overlay #(
             else if(clear_frames!=0) clear_frames<=clear_frames-1'b1;
         end
 
-    // 需要显示的四个数值打包成 41bit 比较：只要其中任何一项变了就重新转换。
+    // 五个数值打包成 48bit 比较：只要其中任何一项变了就重新转换。
     // 转换结果先放 numbers_pending，帧边界再进 numbers_frame。
     wire [7:0] numeric_memory=MENU_ENABLE?memory_volume:8'd128;
-    wire [48:0] numeric_inputs={numeric_memory,source_scale_2x,contrast,brightness,volume,period_ms[15:0]};
-    reg [48:0] numeric_seen;
-    reg [15:0] bin_m;
-    reg [11:0] bcd_m,memory_pending,memory_frame;
-    reg convert_busy,numeric_scale_pending;
+    wire [47:0] numeric_inputs={numeric_memory,contrast,brightness,volume,period_ms[15:0]};
+    reg [47:0] numeric_seen;
+    reg [11:0] memory_pending,memory_frame;
+    reg convert_busy;
     reg [3:0] convert_step;
-    reg [15:0] bin_c,bin_b,bin_v,bin_p;
-    reg [11:0] bcd_c,bcd_b,bcd_v;
+    reg [15:0] bin_cb,bin_vm,bin_p;
+    reg [11:0] bcd_cb,bcd_vm,contrast_work,volume_work;
     reg [19:0] bcd_p;
     reg [55:0] numbers_pending,numbers_frame;
     // Double dabble: one bit per clock, constant-sized nibble adders.
     // 二进制转 BCD：每拍把二进制数左移一位，同时在每个十进制半字节里
-    // "满 5 加 3"，16 拍后各半字节就是十进制位。只用 4bit 加法器，
+    // "满 5 加 3"，16 拍后得到十进制位。只用 4bit 加法器，
     // 没有除法也没有乘法，所以适合放在像素时钟上做。
     function [19:0] bcd_shift;
         input [19:0] digits;
@@ -115,10 +116,9 @@ module promax_text_overlay #(
         end
     endfunction
     wire [19:0] next_p=bcd_shift(bcd_p,bin_p[15]);
-    wire [19:0] next_c=bcd_shift({8'd0,bcd_c},bin_c[15]);
-    wire [19:0] next_b=bcd_shift({8'd0,bcd_b},bin_b[15]);
-    wire [19:0] next_v=bcd_shift({8'd0,bcd_v},bin_v[15]);
-    wire [19:0] next_m=bcd_shift({8'd0,bcd_m},bin_m[15]);
+    // Each lane handles two 8-bit fields, with an accumulator restart at bit 7.
+    wire [19:0] next_cb=bcd_shift({8'd0,bcd_cb},bin_cb[15]);
+    wire [19:0] next_vm=bcd_shift({8'd0,bcd_vm},bin_vm[15]);
     reg [24:0] timer_cycles;
     reg [3:0] mm_tens,mm_ones,ss_tens,ss_ones;
     // ===== 数值转换 + 帧边界提交 + 计时 =====
@@ -129,10 +129,10 @@ module promax_text_overlay #(
             vs_q<=1;scroll_pos<=0;scroll_div<=0;index_frame<=0;show_info_frame<=0;
             auto_frame<=0;loading_frame<=1;scale_frame<=0;error_frame<=0;detail_frame<=0;
             subtitle_frame<=0;subtitle_length_frame<=0;subtitle_on_frame<=0;
-            numeric_seen<=49'h1ffffffffffff;convert_busy<=0;convert_step<=0;
-            bin_m<=0;bcd_m<=0;memory_pending<=12'h128;memory_frame<=12'h128;
-            numeric_scale_pending<=0;bin_c<=0;bin_b<=0;bin_v<=0;bin_p<=0;
-            bcd_c<=0;bcd_b<=0;bcd_v<=0;bcd_p<=0;
+            numeric_seen<=48'hffffffffffff;convert_busy<=0;convert_step<=0;
+            memory_pending<=12'h128;memory_frame<=12'h128;
+            bin_cb<=0;bin_vm<=0;bin_p<=0;
+            bcd_cb<=0;bcd_vm<=0;bcd_p<=0;contrast_work<=0;volume_work<=0;
             numbers_pending<={12'h128,12'h255,12'h000,20'h05000};
             numbers_frame<={12'h128,12'h255,12'h000,20'h05000};
             timer_cycles<=0;mm_tens<=0;mm_ones<=0;ss_tens<=0;ss_ones<=0;
@@ -140,21 +140,22 @@ module promax_text_overlay #(
             vs_q<=vsync;
             if(!convert_busy && numeric_inputs!=numeric_seen) begin
                 numeric_seen<=numeric_inputs;convert_busy<=1;convert_step<=0;
-                bin_c<={8'd0,contrast};bin_b<={8'd0,brightness};bin_v<={8'd0,volume};bin_p<=period_ms[15:0];
-                bcd_c<=0;bcd_b<=0;bcd_v<=0;bcd_p<=0;
-                bin_m<={8'd0,numeric_memory};bcd_m<=0;
+                bin_cb<={contrast,brightness};bin_vm<={volume,numeric_memory};bin_p<=period_ms[15:0];
+                bcd_cb<=0;bcd_vm<=0;bcd_p<=0;
             end else if(convert_busy) begin
-                bin_c<=bin_c<<1;bin_b<=bin_b<<1;bin_v<=bin_v<<1;bin_p<=bin_p<<1;
-                bcd_c<=next_c[11:0];bcd_b<=next_b[11:0];bcd_v<=next_v[11:0];bcd_p<=next_p;
-                bin_m<=bin_m<<1;bcd_m<=next_m[11:0];
+                bin_cb<=bin_cb<<1;bin_vm<=bin_vm<<1;bin_p<=bin_p<<1;
+                bcd_p<=next_p;
+                if(convert_step==7) begin
+                    contrast_work<=next_cb[11:0];volume_work<=next_vm[11:0];
+                    bcd_cb<=0;bcd_vm<=0;
+                end else begin bcd_cb<=next_cb[11:0];bcd_vm<=next_vm[11:0];end
                 if(convert_step==15) begin
-                    numbers_pending<={next_c[11:0],next_b[11:0],next_v[11:0],next_p};
-                    memory_pending<=next_m[11:0];
-                    numeric_scale_pending<=numeric_seen[40];convert_busy<=0;
+                    numbers_pending<={contrast_work,next_cb[11:0],volume_work,next_p};
+                    memory_pending<=next_vm[11:0];convert_busy<=0;
                 end else convert_step<=convert_step+1'b1;
             end
             if(frame_start) begin
-                numbers_frame<=numbers_pending;scale_frame<=numeric_scale_pending;
+                numbers_frame<=numbers_pending;scale_frame<=source_scale_2x;
                 memory_frame<=memory_pending;
                 index_frame<=active_index;show_info_frame<=show_info;
                 auto_frame<=auto_enabled;loading_frame<=loading;
@@ -188,7 +189,7 @@ module promax_text_overlay #(
         input [3:0] n;
         begin hex_char=n<10 ? "0"+n : "A"+(n-10);end
     endfunction
-    // 状态行：前半是 "PIC1 MANUAL/AUTO"，后半是 "LOAD/READY"；
+    // 状态行："PIC1 MANUAL/AUTO LOAD/READY 640X480/1280X960"；
     // 一旦有错误码，后半段改显示 "ERR xx Dxx"（xx=错误码，Dxx=细分码）。
     function [7:0] status_char;
         input [5:0] n;
@@ -217,6 +218,14 @@ module promax_text_overlay #(
                     14:status_char="A";
                     15:status_char="D";
                     16:status_char=loading_frame ? " " : "Y";
+                    18:status_char=scale_frame ? "1" : "6";
+                    19:status_char=scale_frame ? "2" : "4";
+                    20:status_char=scale_frame ? "8" : "0";
+                    21:status_char=scale_frame ? "0" : "X";
+                    22:status_char=scale_frame ? "X" : "4";
+                    23:status_char=scale_frame ? "9" : "8";
+                    24:status_char=scale_frame ? "6" : "0";
+                    25:status_char=scale_frame ? "0" : " ";
                     default:begin end
                 endcase
             end
@@ -1472,6 +1481,17 @@ module promax_text_overlay #(
             end
         end
     endfunction
+    // Chinese/subtitle cells retain an exact divide by 18 using shifts/adds.
+    // ASCII cells use a 16-pixel stride and direct coordinate bit slices.
+    function [5:0] div18_pixel;
+        input [9:0] x;
+        reg [15:0] n,p;
+        begin
+            n={7'd0,x[9:1]};
+            p=(n<<6)-(n<<3)+n;
+            div18_pixel=p[14:9];
+        end
+    endfunction
     function [16:0] text_lookup;
         input [9:0] px,py;
         reg [9:0] lx,ly,sx;
@@ -1487,6 +1507,8 @@ module promax_text_overlay #(
             if(sx>=SCROLL_CYCLE) sx=sx-SCROLL_CYCLE;
             // 四个区块的坐标判定：lx/ly 是区块内局部坐标，cell_idx 是第几个字符格，
             // col 是字符格内的横向像素（右移 1 位即 2 倍横向放大）。
+            // Fixed-width regions bound lx before each index calculation;
+            // zero the unused upper bits so synthesis can prune the adders.
             if(MENU_ENABLE && show_info_frame && !alert_frame && px>=56 && px<584 && py>=88 && py<450)begin
                 // One title, six 32-pixel rows, and a separate help area.
                 // Power-of-two row spacing avoids a divide-by-24 pixel path.
@@ -1503,13 +1525,13 @@ module promax_text_overlay #(
             end else if(MENU_ENABLE && !show_info_frame && !alert_frame && menu_feedback!=0 && px>=56 && px<584 && py>=360 && py<378)begin
                 lx=px-56;ly=py-360;cell_idx=lx>>4;col=lx[3:0];ch=menu_char(9,cell_idx);found=1;sub=1;
             end else if((alert_frame || clear_frames!=0) && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+144 && py>=ALERT_STATUS_Y && py<ALERT_STATUS_Y+18) begin
-                lx=px-ALERT_TEXT_X;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-ALERT_STATUS_Y;
+                lx=px-ALERT_TEXT_X;cell_idx=div18_pixel({2'd0,lx[7:0]}) & 6'd7;col=lx-cell_idx*18;ly=py-ALERT_STATUS_Y;
                 ch=rescue_status_char(cell_idx);found=1;sub=1;
             end else if(alert_frame && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+72 && py>=ALERT_HINT_Y && py<ALERT_HINT_Y+18) begin
-                lx=px-ALERT_TEXT_X;cell_idx=lx/18;col=lx-cell_idx*18;ly=py-ALERT_HINT_Y;
+                lx=px-ALERT_TEXT_X;cell_idx=div18_pixel({3'd0,lx[6:0]}) & 6'd3;col=lx-cell_idx*18;ly=py-ALERT_HINT_Y;
                 ch=8'h80+5'd27+cell_idx;found=1;sub=1;
-            end else if((alert_frame || clear_frames!=0) && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+84 && py>=ALERT_ID_Y && py<ALERT_ID_Y+16) begin
-                lx=px-ALERT_TEXT_X;cell_idx=lx/CELL_W;col=(lx-cell_idx*CELL_W)>>1;ly=py-ALERT_ID_Y;
+            end else if((alert_frame || clear_frames!=0) && px>=ALERT_TEXT_X && px<ALERT_TEXT_X+7*CELL_W && py>=ALERT_ID_Y && py<ALERT_ID_Y+16) begin
+                lx=px-ALERT_TEXT_X;cell_idx=lx>>4;col=lx[3:1];ly=py-ALERT_ID_Y;
                 case(cell_idx)
                     0:ch="I";1:ch="D";2:ch=":";
                     3:ch=hex_char(event_frame[15:12]);4:ch=hex_char(event_frame[11:8]);
@@ -1517,23 +1539,26 @@ module promax_text_overlay #(
                 endcase
                 found=1;
             end else if(py>=4 && py<4+CELL_H && px>=FLOOR_X && px<FLOOR_X+9*CELL_W) begin
-                lx=px-FLOOR_X;ly=py-4;cell_idx=lx/CELL_W;
-                col=(lx-cell_idx*CELL_W)>>1;ch=elevator_char(cell_idx);found=1;
-            end else if((show_info_frame || error_frame!=0) && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+22*CELL_W) begin
-                lx=px-STATUS_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
-                col=(lx-cell_idx*CELL_W)>>1;ch=status_char(cell_idx);found=1;
+                lx=px-FLOOR_X;ly=py-4;cell_idx=lx>>4;
+                col=lx[3:1];ch=elevator_char(cell_idx);found=1;
+            // Keep the compact page/mode/readiness line visible over daily photos.
+            // The emergency page retains its own priority layout; only errors
+            // remain visible there as before.
+            end else if((header_frame || error_frame!=0) && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=STATUS_X && px<STATUS_X+26*CELL_W) begin
+                lx=px-STATUS_X;ly=py-STATUS_Y;cell_idx=lx>>4;
+                col=lx[3:1];ch=status_char(cell_idx);found=1;
             end else if(show_info_frame && !MENU_ENABLE && py>=PARAM_Y && py<PARAM_Y+CELL_H && px>=PARAM_X && px<PARAM_X+PARAM_CHARS*CELL_W) begin
-                lx=px-PARAM_X;ly=py-PARAM_Y;cell_idx=lx/CELL_W;
-                col=(lx-cell_idx*CELL_W)>>1;ch=param_char(cell_idx);found=1;
-            end else if(show_info_frame && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=TIMER_X && px<TIMER_X+5*CELL_W) begin
-                lx=px-TIMER_X;ly=py-STATUS_Y;cell_idx=lx/CELL_W;
-                col=(lx-cell_idx*CELL_W)>>1;found=1;
+                lx=px-PARAM_X;ly=py-PARAM_Y;cell_idx=lx>>4;
+                col=lx[3:1];ch=param_char(cell_idx);found=1;
+            end else if(header_frame && py>=STATUS_Y && py<STATUS_Y+CELL_H && px>=TIMER_X && px<TIMER_X+5*CELL_W) begin
+                lx=px-TIMER_X;ly=py-STATUS_Y;cell_idx=lx>>4;
+                col=lx[3:1];found=1;
                 case(cell_idx)
                     0:ch="0"+mm_tens;1:ch="0"+mm_ones;2:ch=":";
                     3:ch="0"+ss_tens;4:ch="0"+ss_ones;default:ch=" ";
                 endcase
             end else if(subtitle_on_frame && py>=SUBTITLE_Y && py<SUBTITLE_Y+18 && px>=8 && px<H_ACTIVE-8 && sx<subtitle_length_frame*SUBTITLE_CELL_W) begin
-                cell_idx=sx/SUBTITLE_CELL_W;col=sx-cell_idx*SUBTITLE_CELL_W;ly=py-SUBTITLE_Y;
+                cell_idx=div18_pixel(sx);col=sx-cell_idx*SUBTITLE_CELL_W;ly=py-SUBTITLE_Y;
                 ch=subtitle_frame[cell_idx*8 +: 8];found=1;sub=1;
             end
             if(found) begin

@@ -170,6 +170,14 @@ def main():
         checked=(out/'user_source'/Path(name).relative_to('src/user_source')) if args.frozen_source else ROOT/name
         if digest(checked) != value:
             raise SystemExit('source changed during the build: ' + name)
+    timing_report = (runs / 'phy_1' / (NAME + '_pr.timing')).read_text(errors='replace')
+    if not re.search(r'Confidence\s*:\s*Routed\b', timing_report):
+        raise SystemExit('timing report is not routed')
+    if not re.search(r'Check Corner\s*:\s*Both \(Slow and Fast\)', timing_report):
+        raise SystemExit('timing report does not cover both Slow and Fast corners')
+    for corner in ('Slow', 'Fast'):
+        if not re.search(r'^' + corner + r'\s*\|\s*yes\s+yes\s*$', timing_report, re.M):
+            raise SystemExit('missing setup/hold check in ' + corner + ' corner')
     values = timing_values(runs / 'phy_1' / (NAME + '_pr.timing'))
     if min(values.values()) < 0:
         raise SystemExit('routed timing failed: ' + str(values))

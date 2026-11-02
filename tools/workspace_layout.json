@@ -6,5 +6,20 @@
   "current_media": "C:/Users/wzl123/.config/micu-image/output/tijian_sunburst_20261029_141512/bmp_fpga",
   "previous_verified_build": "build_out/gui_verified_20261029/best_result",
   "previous_verified_bit_sha256": "0c4667910053e867772bbf67ae24856400924f64f697248445798d6e9e3bbca9",
-  "note": "Previous accepted BIT predates emergency OSD commit 79930d3. Source changes require a fresh accepted build. Native TD GUI and build_verified.cmd are separate flows."
+  "display_name": "梯间守望",
+  "framework": "doc/工程框架.md",
+  "filming_sop": "doc/演示视频/20261030/梯间守望_拍摄SOP.html",
+  "filming_quick_sheet": "doc/演示视频/20261030/梯间守望_现场速查单.txt",
+  "current_candidate": {
+    "directory": "build_out/display_update_candidate_20261030_i/best_result",
+    "bit_sha256": "def8f6753bbb2055079ed52deec28089943f70463435fbe7d7c49709999fb590",
+    "timing_ns": {"SWNS": 1.717, "HWNS": 0.044, "STNS": 0.0, "HTNS": 0.0},
+    "hardware_tested": false,
+    "source_files_compared": 140,
+    "td_source_entries": 90,
+    "resource_source": "lab_ex5_i2s_v1.0_phy.area and route.qor"
+  },
+  "latest_maintenance": "doc/maintenance/20261030_workspace/README.md",
+  "latest_display_update": "doc/maintenance/20261030_display_update/README.md",
+  "note": "Current candidate includes daily header, source resolution, uptime and SEC panel label. Not hardware tested. Candidate 21 and 20261029 BIT are historical. Native TD GUI and build_verified.cmd remain separate flows."
 }

@@ -1,0 +1,2 @@
+REPRODUCED single valid image: manual NEXT leaves fade in HOLD, alpha=0 busy=1 active=0 commits=0
+doc/�����֤/20261029/tb_audit_single_image.v:27: $finish called at 88520000 (1ps)

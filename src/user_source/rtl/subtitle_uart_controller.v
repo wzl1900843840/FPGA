@@ -21,12 +21,16 @@
 //   2) CRLF 会被当作一个结束符：收到 CR 后丢弃紧随的一个 LF。
 //   3) 回包用"当前回包 + 一个待发回包"的两级结构，避免上一条还没发完时丢回执。
 //   4) 字幕只在这里改寄存器，真正上屏要等顶层帧边界提交，所以不会撕裂画面。
-module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
+module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0,
+                                  parameter integer MAX_LINE=40,
+                                  parameter integer ENABLE_LEGACY_ELEV=1) (
     input  wire         clk,
     input  wire         rst_n,
     input  wire [7:0]   rx_data,
     input  wire         rx_valid,
     input  wire         rx_framing_error,
+    input  wire         secure_status_valid,
+    input  wire         secure_status_ok,
     input  wire         service_ready,
     input  wire         save_done,
     input  wire         save_failed,
@@ -43,6 +47,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     // line parser with SUB= commands so a command is consumed only once.
     output reg          elev_update_valid,
     output reg  [7:0]   elev_floor_value,
+    output reg  [3:0]   elev_floor_tens,elev_floor_ones,
     output reg          elev_floor_basement,
     output reg  [1:0]   elev_direction,
     output reg  [1:0]   elev_door,
@@ -67,7 +72,6 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     // ===== 常量与回包种类 =====
     // MAX_LINE 是整行缓冲上限（含 "SUB=" 前缀），MAX_TEXT 是字幕正文上限。
     // R_* 是回包种类，决定 reply_char 生成哪一串固定文本。
-    localparam integer MAX_LINE = 40;
     localparam integer MAX_TEXT = 12;
     // Optional neutral phrase "照片音乐". No workshop signature is built in.
     localparam [95:0] CN_SUBTITLE_TEXT = {64'd0,8'h83,8'h82,8'h81,8'h80};
@@ -88,6 +92,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
     localparam [3:0] R_RESCUE_QUERY = 4'd14;
     localparam [3:0] R_BOOT_QUERY = 4'd15;
     reg [15:0] query_event_id;
+    reg [15:0] rescue_reply_crc;
     reg [1:0] query_comm_state;
     reg query_alert,query_basement;
     reg [3:0] query_tens,query_ones;
@@ -106,6 +111,17 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
         input [3:0] n;
         begin hex_char=n<10 ? "0"+n : "A"+n-10;end
     endfunction
+    function [15:0] crc_byte;
+        input [15:0] old_crc;
+        input [7:0] c;
+        reg [15:0] v;
+        integer j;
+        begin
+            v=old_crc^{c,8'h00};
+            for(j=0;j<8;j=j+1) v=v[15] ? (v<<1)^16'h1021 : (v<<1);
+            crc_byte=v;
+        end
+    endfunction
     function [7:0] comm_char;
         input [1:0] code;input integer pos;reg[55:0] word;
         begin
@@ -116,7 +132,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
         end
     endfunction
 
-    reg [8*MAX_LINE-1:0] line_buffer;
+    localparam integer LINE_STORAGE = MAX_LINE < 21 ? 21 : MAX_LINE;
+    reg [8*LINE_STORAGE-1:0] line_buffer;
     reg [5:0] line_length;
     reg line_overflow;
     reg discard_lf;
@@ -250,7 +267,12 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                         14:reply_char=",";15:reply_char="A";16:reply_char="=";17:reply_char=query_alert?"1":"0";
                         18:reply_char=",";19:reply_char="C";20:reply_char="=";
                         default:begin
-                            if(index==reply_length-2) reply_char=8'h0d;
+                            if(index==reply_length-7) reply_char="*";
+                            else if(index==reply_length-6) reply_char=hex_char(rescue_reply_crc[15:12]);
+                            else if(index==reply_length-5) reply_char=hex_char(rescue_reply_crc[11:8]);
+                            else if(index==reply_length-4) reply_char=hex_char(rescue_reply_crc[7:4]);
+                            else if(index==reply_length-3) reply_char=hex_char(rescue_reply_crc[3:0]);
+                            else if(index==reply_length-2) reply_char=8'h0d;
                             else if(index==reply_length-1) reply_char=8'h0a;
                             else reply_char=comm_char(query_comm_state,index-21);
                         end
@@ -336,6 +358,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
             save_request <= 0;
             elev_update_valid <= 1'b0;
             elev_floor_value <= 8'd0;
+            elev_floor_tens <= 4'd0; elev_floor_ones <= 4'd0;
             elev_floor_basement <= 1'b0;
             elev_direction <= 2'd0;
             elev_door <= 2'd0;
@@ -343,7 +366,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
             elev_alert_update_valid <= 1'b0;
             alert_command_valid <= 1'b0;
             alert_command_value <= 1'b0;
-            rescue_ack_valid<=0;rescue_ack_id<=0;query_event_id<=0;query_comm_state<=0;
+            rescue_ack_valid<=0;rescue_ack_id<=0;query_event_id<=0;query_comm_state<=0;rescue_reply_crc<=16'hffff;
             query_alert<=0;query_basement<=0;query_tens<=0;query_ones<=0;query_direction<=0;query_door<=0;
         end else begin
             cfg_update_valid <= 1'b0;
@@ -355,6 +378,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
             rescue_ack_valid<=0;
 
             if (reply_active && reply_ready) begin
+                if(reply_kind==R_RESCUE_QUERY && reply_index<reply_length-7)
+                    rescue_reply_crc<=crc_byte(rescue_reply_crc,reply_data);
                 // Serial nibble shift avoids five wide variable-select trees.
                 // Shift only accepted hex bytes; stalled replies stay stable.
                 if(reply_kind==R_BOOT_QUERY && reply_index>=8 && reply_index<=43 && reply_index[2:0]<4)
@@ -385,6 +410,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                     start_reply(R_SAVEERR,10);
             end
 
+            if (secure_status_valid === 1'b1)
+                start_reply(secure_status_ok ? R_OK_ELEV : R_SYNTAX,5);
             if (rx_framing_error)
                 start_reply(R_FRAME,11);
 
@@ -416,7 +443,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                                     line_char(5)=="E" && line_char(6)=="?") begin
                             query_event_id<=rescue_event_id;query_comm_state<=rescue_comm_state;
                             query_alert<=applied_alert;
-                            start_reply(R_RESCUE_QUERY,23+comm_word_length);
+                            rescue_reply_crc<=16'hffff;
+                            start_reply(R_RESCUE_QUERY,28+comm_word_length);
                         end else if (line_length == 5 &&
                                      line_char(0)=="E" && line_char(1)=="L" &&
                                      line_char(2)=="E" && line_char(3)=="V" &&
@@ -428,6 +456,30 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                             query_direction<=APPLIED_STATUS_INPUTS ? applied_direction : elev_direction;
                             query_door<=APPLIED_STATUS_INPUTS ? applied_door : elev_door;
                             start_reply(R_ELEV_QUERY,23);
+                        end else if (line_length == 18 &&
+                                     line_char(0)=="F" && line_char(1)=="L" &&
+                                     line_char(2)=="O" && line_char(3)=="O" &&
+                                     line_char(4)=="R" && line_char(5)=="=" &&
+                                     line_char(6)=="F" && line_char(9)=="," &&
+                                     line_char(10)=="D" && line_char(11)=="=" &&
+                                     line_char(13)=="," && line_char(14)=="D" &&
+                                     line_char(15)=="O" && line_char(16)=="=" &&
+                                     (((line_char(7)>="0" && line_char(7)<="9") &&
+                                       (line_char(8)>="0" && line_char(8)<="9")) ||
+                                      (line_char(7)=="B" && line_char(8)>="1" && line_char(8)<="9")) &&
+                                     (line_char(12)=="U" || line_char(12)=="D" || line_char(12)=="S") &&
+                                     (line_char(17)=="O" || line_char(17)=="C" || line_char(17)=="M")) begin
+                            elev_floor_basement<=line_char(7)=="B";
+                            elev_floor_value<=line_char(7)=="B" ? line_char(8)-8'h30 :
+                                ((line_char(7)-8'h30)*8'd10 + (line_char(8)-8'h30));
+                            elev_floor_tens<=line_char(7)=="B" ? 4'd0 : line_char(7)-8'h30;
+                            elev_floor_ones<=line_char(8)-8'h30;
+                            elev_direction<=line_char(12)=="U" ? 2'd1 :
+                                (line_char(12)=="D" ? 2'd2 : 2'd0);
+                            elev_door<=line_char(17)=="O" ? 2'd1 :
+                                (line_char(17)=="C" ? 2'd2 : 2'd0);
+                            elev_update_valid<=1;
+                            start_reply(R_OK_ELEV,8);
                         end else if (line_length == 8 &&
                                      line_char(0)=="A" && line_char(1)=="L" &&
                                      line_char(2)=="E" && line_char(3)=="R" &&
@@ -445,7 +497,7 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                             alert_command_valid <= 1'b1;
                             alert_command_value <= 1'b0;
                             start_reply(R_OK_ELEV,8);
-                        end else if (line_length >= 5 &&
+                        end else if (ENABLE_LEGACY_ELEV && line_length >= 5 &&
                                      line_char(0)=="E" && line_char(1)=="L" &&
                                      line_char(2)=="E" && line_char(3)=="V" &&
                                      line_char(4)=="=") begin
@@ -466,6 +518,8 @@ module subtitle_uart_controller #(parameter integer APPLIED_STATUS_INPUTS=0) (
                                     elev_floor_value <= line_char(6)=="B" ?
                                         (line_char(7)-8'h30) :
                                         ((line_char(6)-8'h30)*8'd10 + (line_char(7)-8'h30));
+                                    elev_floor_tens <= line_char(6)=="B" ? 4'd0 : line_char(6)-8'h30;
+                                    elev_floor_ones <= line_char(7)-8'h30;
                                     elev_direction <= line_char(11)=="U" ? 2'd1 :
                                                       (line_char(11)=="D" ? 2'd2 : 2'd0);
                                     elev_door <= line_char(16)=="O" ? 2'd1 :

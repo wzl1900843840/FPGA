@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import queue
 import re
+import secrets
 import threading
 import time
 import uuid
@@ -17,8 +18,32 @@ STATUS = re.compile(r"RESCUE,ID=([0-9A-F]{4}),A=([01]),C=(IDLE|WAIT|ACKED|TIMEOU
 BOOT_METRICS = re.compile(r"BOOT,SD=([0-9A-F]{4}),SC=([0-9A-F]{4}),P1=([0-9A-F]{4}),TF=([0-9A-F]{4}),P5=([0-9A-F]{4}),V=([0-9A-F]{2})\r\n\Z")
 BOOT = "MEDIA PLAYER READY\r\n"
 
+def crc16_ccitt_false(data: bytes) -> int:
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ (0x1021 if crc & 0x8000 else 0)) & 0xFFFF
+    return crc
+
+def checked_rescue(raw: bytes) -> bytes:
+    if not raw.endswith(b"\r\n"):
+        raise ValueError("缺少行尾")
+    body, separator, supplied = raw[:-2].rpartition(b"*")
+    if separator != b"*" or len(supplied) != 4 or not re.fullmatch(rb"[0-9A-Fa-f]{4}", supplied):
+        raise ValueError("缺少 CRC")
+    if crc16_ccitt_false(body) != int(supplied, 16):
+        raise ValueError("CRC 错误")
+    return body+b"\r\n"
+
+def secure_frame(session: str, sequence: int, payload: str) -> bytes:
+    body = f"@{session}:{sequence:04X}:{payload}".encode("ascii")
+    if len(body)+5 > 40:
+        raise ValueError("受保护帧超过 40 字节")
+    return body+f"*{crc16_ccitt_false(body):04X}\r\n".encode("ascii")
+
 def parse_rescue(raw: bytes) -> dict:
-    text = raw.decode("ascii", errors="strict")
+    text = checked_rescue(raw).decode("ascii", errors="strict")
     match = RESCUE.fullmatch(text)
     if not match:
         raise ValueError("报文格式或字段无效")
@@ -50,12 +75,15 @@ class Receiver:
         self.seen = {}
         self.pending = []
         self.order = 0
+        self.sequence = 0
 
     def new_session(self, reason):
-        self.session = uuid.uuid4().hex[:12]
+        self.session = f"{secrets.randbits(32):08X}"
+        self.sequence = 0
         self.seen.clear()
         self.pending.clear()
         self.journal.write(dict(kind="session", session=self.session, reason=reason))
+        self.send(secure_frame(self.session, 0, "HELLO"))
         self.notify(dict(kind="session", session=self.session, reason=reason))
 
     def receive(self, raw: bytes):
@@ -72,7 +100,11 @@ class Receiver:
             self.notify(event)
             return
         if text.startswith("RESCUE,") and ",C=" in text:
-            match = STATUS.fullmatch(text)
+            try:
+                validated = checked_rescue(raw).decode("ascii")
+            except (UnicodeError, ValueError):
+                validated = ""
+            match = STATUS.fullmatch(validated)
             if match:
                 event_id, active, state = match.groups()
                 event = dict(kind="status", session=self.session, event_id=event_id,
@@ -117,7 +149,11 @@ class Receiver:
             _, _, session, event_id = heapq.heappop(self.pending)
             if session != self.session or not self.auto_ack:
                 continue
-            self.send(f"ACK={event_id}\r\n".encode("ascii"))
+            if self.sequence >= 0xFFFF:
+                self.new_session("序号回绕前重建会话")
+                continue
+            self.sequence += 1
+            self.send(secure_frame(session, self.sequence, f"ACK={event_id}"))
             event = dict(kind="ack_sent", session=session, event_id=event_id)
             self.journal.write(event)
             self.notify(event)

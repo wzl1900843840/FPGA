@@ -1,0 +1,2 @@
+PASS player: normal rotation is PIC1..PIC4; alert selects and recovers PIC5
+D:\FPGA\anlu\example_code111\lab_ex4_tf\tests\tb_player.v:105: $finish called at 1911000 (1ps)

@@ -75,40 +75,42 @@ module fat32_volume_scanner (
     localparam ST_BOOT_ROOT  = 4'd11;
 
     localparam ST_ROOT_FAT_REQ=4'd12, ST_ROOT_FAT_WAIT=4'd13, ST_ROOT_FAT_PARSE=4'd14;
-    reg [7:0] root_sector_offset;
-    reg [10:0] root_cluster_count;
+    localparam ST_LBA_SHIFT=4'd15;
+    reg [6:0] root_sector_offset;
+    reg [9:0] root_cluster_count;
     reg root_end;
     reg [31:0] root_cluster;
-    reg [31:0] root_fat_entry;
+    reg [27:0] root_fat_entry;
     wire [8:0] root_fat_offset={root_cluster[6:0],2'b00};
-    wire [31:0] next_root_cluster=root_fat_entry & 32'h0fffffff;
+    wire [31:0] next_root_cluster={4'd0,root_fat_entry};
     reg [3:0] state;
-    reg [7:0] boot_jump, bpb_spc, bpb_fats, signature_low, signature_high;
-    reg [15:0] bpb_bytes, bpb_reserved, bpb_root_entries, bpb_fat16;
+    reg [7:0] bpb_spc;
+    reg bpb_fats_one,bpb_fats_two;
+    reg boot_jump_valid,signature_low_ok,signature_high_ok;
+    reg bpb_bytes_low_ok,bpb_bytes_high_ok,bpb_root_entries_zero,bpb_fat16_zero;
+    reg [15:0] bpb_reserved;
     reg [31:0] bpb_total, bpb_fat_size, bpb_root_cluster;
     reg partition_found, partition_type_valid, partition_size_nonzero;
     reg [31:0] first_fat32_lba, partition_candidate_lba;
     wire [8:0] partition_offset = sector_byte_index - 9'd446;
     reg [4:0] directory_entry_index;
-    reg [31:0] total_sectors;
-    reg [31:0] fat_sectors;
-    reg [7:0] fat_count;
-    reg [15:0] reserved_sectors;
+    // BPB bytes remain stable throughout layout and directory traversal.
+    // Reuse their capture registers instead of clocking duplicate copies.
+    wire [31:0] total_sectors=bpb_total;
+    wire [31:0] fat_sectors=bpb_fat_size;
+    wire [15:0] reserved_sectors=bpb_reserved;
     reg [31:0] root_lba;
     reg [31:0] data_sector_count;
     reg [31:0] fat_span;
     reg [2:0] sectors_per_cluster_shift;
-    reg [7:0] dir_name0;
-    reg [7:0] dir_name1;
-    reg [7:0] dir_name2;
-    reg [7:0] dir_name3;
-    reg [7:0] dir_name4;
-    reg [7:0] dir_name5;
-    reg [7:0] dir_name6;
-    reg [7:0] dir_name7;
-    reg [7:0] dir_name8;
-    reg [7:0] dir_name9;
-    reg [7:0] dir_name10;
+    // FAT geometry is calculated only on startup or a root-cluster change.
+    // Shifting one bit per cycle avoids two 32-bit variable barrel shifters.
+    wire [31:0] layout_header_sectors={16'd0,reserved_sectors}+fat_span;
+    reg [31:0] layout_offset;
+    reg [2:0] layout_shift_remaining;
+    reg initial_layout;
+    wire [31:0] layout_root_lba=data_start_lba+layout_offset;
+    reg dir_name_match;
     reg       dir_entry_match;
     reg [2:0] dir_resource_index;
     reg [15:0] dir_cluster_high;
@@ -141,9 +143,9 @@ module fat32_volume_scanner (
     endfunction
 
     // MBR也可能以EB/E9跳转开头，不能只用第一个字节区分裸BPB。
-    wire valid_bpb = bpb_bytes==16'd512 && valid_spc(bpb_spc) &&
-                     bpb_reserved!=0 && (bpb_fats==1 || bpb_fats==2) &&
-                     bpb_root_entries==0 && bpb_fat16==0 && bpb_total!=0 &&
+    wire valid_bpb = bpb_bytes_low_ok && bpb_bytes_high_ok && valid_spc(bpb_spc) &&
+                     bpb_reserved!=0 && (bpb_fats_one || bpb_fats_two) &&
+                     bpb_root_entries_zero && bpb_fat16_zero && bpb_total!=0 &&
                      bpb_fat_size!=0 && bpb_root_cluster>=2;
 
     task finish_with_error;
@@ -158,8 +160,10 @@ module fat32_volume_scanner (
         if (!rst_n) begin
             state <= ST_IDLE;
             root_fat_entry<=0;
-            boot_jump<=0; bpb_spc<=0; bpb_fats<=0; signature_low<=0; signature_high<=0;
-            bpb_bytes<=0; bpb_reserved<=0; bpb_root_entries<=0; bpb_fat16<=0;
+            boot_jump_valid<=0;bpb_spc<=0;bpb_fats_one<=0;bpb_fats_two<=0;
+            signature_low_ok<=0;signature_high_ok<=0;
+            bpb_bytes_low_ok<=0;bpb_bytes_high_ok<=0;
+            bpb_root_entries_zero<=0;bpb_fat16_zero<=0;bpb_reserved<=0;
             bpb_total<=0; bpb_fat_size<=0; bpb_root_cluster<=0;
             partition_found<=0; partition_type_valid<=0; partition_size_nonzero<=0;
             first_fat32_lba<=0; partition_candidate_lba<=0;
@@ -185,25 +189,12 @@ module fat32_volume_scanner (
             sector_lba <= 32'd0;
             directory_entry_index <= 5'd0;
             root_cluster <= 32'd0; root_sector_offset<=0;root_cluster_count<=0;root_end<=0;
-            total_sectors <= 32'd0;
-            fat_sectors <= 32'd0;
-            fat_count <= 8'd0;
-            reserved_sectors <= 16'd0;
             root_lba <= 32'd0;
             data_sector_count <= 32'd0;
             fat_span <= 32'd0;
             sectors_per_cluster_shift <= 3'd0;
-            dir_name0 <= 8'd0;
-            dir_name1 <= 8'd0;
-            dir_name2 <= 8'd0;
-            dir_name3 <= 8'd0;
-            dir_name4 <= 8'd0;
-            dir_name5 <= 8'd0;
-            dir_name6 <= 8'd0;
-            dir_name7 <= 8'd0;
-            dir_name8 <= 8'd0;
-            dir_name9 <= 8'd0;
-            dir_name10 <= 8'd0;
+            layout_offset<=0;layout_shift_remaining<=0;initial_layout<=0;
+            dir_name_match <= 1'b0;
             dir_entry_match <= 1'b0;
             dir_resource_index <= 3'd7;
             dir_cluster_high <= 16'd0;
@@ -216,17 +207,17 @@ module fat32_volume_scanner (
             // sector_done follows the final valid byte, per sector service contract.
             if (sector_valid && (state==ST_READ0_WAIT || state==ST_BOOT_WAIT)) begin
                 case (sector_byte_index)
-                    9'd0: boot_jump <= sector_byte;
-                    9'd11: bpb_bytes[7:0] <= sector_byte;
-                    9'd12: bpb_bytes[15:8] <= sector_byte;
+                    9'd0: boot_jump_valid <= sector_byte==8'heb || sector_byte==8'he9;
+                    9'd11: bpb_bytes_low_ok <= sector_byte==0;
+                    9'd12: bpb_bytes_high_ok <= sector_byte==8'd2;
                     9'd13: bpb_spc <= sector_byte;
                     9'd14: bpb_reserved[7:0] <= sector_byte;
                     9'd15: bpb_reserved[15:8] <= sector_byte;
-                    9'd16: bpb_fats <= sector_byte;
-                    9'd17: bpb_root_entries[7:0] <= sector_byte;
-                    9'd18: bpb_root_entries[15:8] <= sector_byte;
-                    9'd22: bpb_fat16[7:0] <= sector_byte;
-                    9'd23: bpb_fat16[15:8] <= sector_byte;
+                    9'd16: begin bpb_fats_one<=sector_byte==1;bpb_fats_two<=sector_byte==2;end
+                    9'd17: bpb_root_entries_zero <= sector_byte==0;
+                    9'd18: bpb_root_entries_zero <= bpb_root_entries_zero && sector_byte==0;
+                    9'd22: bpb_fat16_zero <= sector_byte==0;
+                    9'd23: bpb_fat16_zero <= bpb_fat16_zero && sector_byte==0;
                     9'd32: bpb_total[7:0] <= sector_byte;
                     9'd33: bpb_total[15:8] <= sector_byte;
                     9'd34: bpb_total[23:16] <= sector_byte;
@@ -239,8 +230,8 @@ module fat32_volume_scanner (
                     9'd45: bpb_root_cluster[15:8] <= sector_byte;
                     9'd46: bpb_root_cluster[23:16] <= sector_byte;
                     9'd47: bpb_root_cluster[31:24] <= sector_byte;
-                    9'd510: signature_low <= sector_byte;
-                    9'd511: signature_high <= sector_byte;
+                    9'd510: signature_low_ok <= sector_byte==8'h55;
+                    9'd511: signature_high_ok <= sector_byte==8'haa;
                     default: ;
                 endcase
                 if (state==ST_READ0_WAIT && sector_byte_index>=9'd446 && sector_byte_index<9'd510) begin
@@ -264,36 +255,30 @@ module fat32_volume_scanner (
                 if(sector_byte_index==root_fat_offset) root_fat_entry[7:0]<=sector_byte;
                 if(sector_byte_index==root_fat_offset+9'd1) root_fat_entry[15:8]<=sector_byte;
                 if(sector_byte_index==root_fat_offset+9'd2) root_fat_entry[23:16]<=sector_byte;
-                if(sector_byte_index==root_fat_offset+9'd3) root_fat_entry[31:24]<=sector_byte;
+                if(sector_byte_index==root_fat_offset+9'd3) root_fat_entry[27:24]<=sector_byte[3:0];
             end
 
             if (sector_valid && state == ST_ROOT_WAIT) begin
                 case (sector_byte_index[4:0])
                     5'd0: begin
-                        dir_name0 <= sector_byte;
+                        dir_name_match <= sector_byte=="P";
                         if(sector_byte==0) root_end<=1;
                         dir_entry_match <= 1'b0;
                     end
-                    5'd1:  dir_name1 <= sector_byte;
-                    5'd2:  dir_name2 <= sector_byte;
-                    5'd3:  dir_name3 <= sector_byte;
-                    5'd4:  dir_name4 <= sector_byte;
-                    5'd5:  dir_name5 <= sector_byte;
-                    5'd6:  dir_name6 <= sector_byte;
-                    5'd7:  dir_name7 <= sector_byte;
-                    5'd8:  dir_name8 <= sector_byte;
-                    5'd9:  dir_name9 <= sector_byte;
-                    5'd10: dir_name10 <= sector_byte;
+                    5'd1:  dir_name_match <= dir_name_match && sector_byte=="I";
+                    5'd2:  dir_name_match <= dir_name_match && sector_byte=="C";
+                    5'd3: begin
+                        dir_name_match <= dir_name_match && sector_byte>="1" && sector_byte<="5";
+                        dir_resource_index <= sector_byte-"1";
+                    end
+                    5'd4,5'd5,5'd6,5'd7: dir_name_match <= dir_name_match && sector_byte==" ";
+                    5'd8:  dir_name_match <= dir_name_match && sector_byte=="B";
+                    5'd9:  dir_name_match <= dir_name_match && sector_byte=="M";
+                    5'd10: dir_name_match <= dir_name_match && sector_byte=="P";
                     5'd11: begin
                         if (!root_end && (sector_byte & 8'h18)==0 &&
-                            dir_name0 == "P" && dir_name1 == "I" &&
-                            dir_name2 == "C" && dir_name3 >= "1" &&
-                            dir_name3 <= "5" && dir_name4 == " " &&
-                            dir_name5 == " " && dir_name6 == " " &&
-                            dir_name7 == " " && dir_name8 == "B" &&
-                            dir_name9 == "M" && dir_name10 == "P") begin
+                            dir_name_match) begin
                             dir_entry_match <= 1'b1;
-                            dir_resource_index <= dir_name3 - "1";
                         end
                     end
                     5'd20: dir_cluster_high[7:0] <= sector_byte;
@@ -357,9 +342,9 @@ module fat32_volume_scanner (
                 ST_READ0_WAIT: if (sector_done) begin
                     if (sector_error != 0)
                         finish_with_error(ERR_SECTOR);
-                    else if (signature_low != 8'h55 || signature_high != 8'haa)
+                    else if (!signature_low_ok || !signature_high_ok)
                         finish_with_error(ERR_BOOT_SIGNATURE);
-                    else if (valid_bpb && (boot_jump == 8'heb || boot_jump == 8'he9)) begin
+                    else if (valid_bpb && boot_jump_valid) begin
                         partition_lba <= 32'd0;
                         state <= ST_BOOT_PARSE;
                     end else if (partition_found) begin
@@ -377,7 +362,7 @@ module fat32_volume_scanner (
                 ST_BOOT_WAIT: if (sector_done) begin
                     if (sector_error != 0)
                         finish_with_error(ERR_SECTOR);
-                    else if (signature_low != 8'h55 || signature_high != 8'haa)
+                    else if (!signature_low_ok || !signature_high_ok)
                         finish_with_error(ERR_BOOT_SIGNATURE);
                     else
                         state <= ST_BOOT_PARSE;
@@ -387,32 +372,39 @@ module fat32_volume_scanner (
                         finish_with_error(ERR_UNSUPPORTED_BPB);
                     end else begin
                         sectors_per_cluster <= bpb_spc;
-                        reserved_sectors <= bpb_reserved;
-                        fat_count <= bpb_fats;
-                        total_sectors <= bpb_total;
-                        fat_sectors <= bpb_fat_size;
                         root_cluster <= bpb_root_cluster;
                         sectors_per_cluster_shift <= spc_shift(bpb_spc);
-                        fat_span <= bpb_fats == 2 ? (bpb_fat_size << 1) : bpb_fat_size;
+                        fat_span <= bpb_fats_two ? (bpb_fat_size << 1) : bpb_fat_size;
                         fat_start_lba <= partition_lba + bpb_reserved;
                         state <= ST_BOOT_LAYOUT;
                     end
                 end
                 ST_BOOT_LAYOUT: begin
-                    if(total_sectors<=reserved_sectors+fat_span) finish_with_error(ERR_UNSUPPORTED_BPB);
+                    if(total_sectors<=layout_header_sectors) finish_with_error(ERR_UNSUPPORTED_BPB);
                     else begin
-                        data_start_lba <= partition_lba + reserved_sectors + fat_span;
-                        data_sector_count <= total_sectors - reserved_sectors - fat_span;
+                        data_start_lba <= partition_lba + layout_header_sectors;
+                        data_sector_count <= total_sectors - layout_header_sectors;
                         state <= ST_BOOT_ROOT;
                     end
                 end
                 ST_BOOT_ROOT: begin
-                    max_cluster <= (data_sector_count >> sectors_per_cluster_shift) + 1'b1;
-                    root_lba <= data_start_lba
-                                + ((root_cluster - 2) << sectors_per_cluster_shift);
-                    sector_lba <= data_start_lba
-                                  + ((root_cluster - 2) << sectors_per_cluster_shift);
-                    state <= ST_ROOT_REQ;
+                    max_cluster <= data_sector_count;
+                    layout_offset<=root_cluster-32'd2;
+                    layout_shift_remaining<=sectors_per_cluster_shift;
+                    initial_layout<=1;
+                    state<=ST_LBA_SHIFT;
+                end
+                ST_LBA_SHIFT: begin
+                    if(layout_shift_remaining!=0) begin
+                        layout_offset<=layout_offset<<1;
+                        layout_shift_remaining<=layout_shift_remaining-1'b1;
+                        if(initial_layout) max_cluster<=max_cluster>>1;
+                    end else begin
+                        root_lba<=layout_root_lba;
+                        sector_lba<=layout_root_lba;
+                        if(initial_layout) max_cluster<=max_cluster+1'b1;
+                        state<=ST_ROOT_REQ;
+                    end
                 end
                 ST_ROOT_REQ: if (!sector_busy) begin
                     dir_entry_match <= 1'b0;
@@ -459,9 +451,10 @@ module fat32_volume_scanner (
                     else begin
                         root_cluster<=next_root_cluster;
                         root_cluster_count<=root_cluster_count+1'b1;root_sector_offset<=0;
-                        root_lba<=data_start_lba+((next_root_cluster-2)<<sectors_per_cluster_shift);
-                        sector_lba<=data_start_lba+((next_root_cluster-2)<<sectors_per_cluster_shift);
-                        state<=ST_ROOT_REQ;
+                        layout_offset<=next_root_cluster-32'd2;
+                        layout_shift_remaining<=sectors_per_cluster_shift;
+                        initial_layout<=0;
+                        state<=ST_LBA_SHIFT;
                     end
                 end
                 ST_FINISH: begin

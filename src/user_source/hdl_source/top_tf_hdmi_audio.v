@@ -68,6 +68,7 @@ module top #(
     wire [7:0] recovery_retries;
     wire arbiter_fault,arbiter_fault_sys;
     wire [21:0] diagnostic_max_wait;
+    wire [21:0] diagnostic_write_wait,diagnostic_cache_wait;
     wire [8:0] diagnostic_fifo_min;
     wire [15:0] diagnostic_underflows;
     reset_sync u_media_sys_reset(.clk(clk),.ext_rst_n(ext_reset_n && recovery_reset_n),.rst_n_sync(media_sys_reset_n));
@@ -137,6 +138,10 @@ module top #(
     reg ingest_start,player_enable;
     reg [2:0] boot_state;
     reg [7:0] drain_count;
+    reg [14:0] boot_stage_ms;
+    reg boot_fault;
+    reg [7:0] boot_fault_code;
+    wire tick_ms;
     wire cache_done_sys,cache_start_mem,cache_failed_sys;
     reg cache_start;
     reg cache_ready;
@@ -193,23 +198,40 @@ module top #(
     //    且写入CDC没有溢出。首图校验并排空后即可显示，其余图片继续后台装载。
     //--------------------------------------------------------------------------
     always @(posedge clk or negedge media_sys_reset_n) begin
-        if(!media_sys_reset_n) begin ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;cache_start<=0;cache_ready<=0;end
+        if(!media_sys_reset_n) begin
+            ingest_start<=0;player_enable<=0;boot_state<=0;drain_count<=0;
+            cache_start<=0;cache_ready<=0;boot_stage_ms<=0;
+            boot_fault<=0;boot_fault_code<=0;
+        end
         else begin
             ingest_start<=0;cache_start<=0;
             // Verified images are published only after file/FAT checking and
             // write draining. The first can display while later files load.
             if(image_complete!=0 && !cdc_overflow) player_enable<=1;
             case(boot_state)
-                0: if(init_sys && diag_boot_count==63 && !diag_local_sys) begin ingest_start<=1;boot_state<=1;end
-                1: if(ingest_done) begin boot_state<=2;drain_count<=0;end
+                0: if(init_sys && diag_boot_count==63 && !diag_local_sys) begin
+                    ingest_start<=1;boot_state<=1;boot_stage_ms<=0;
+                end else if(!diag_local_sys && boot_stage_ms>=3000) begin
+                    boot_fault<=1;boot_fault_code<=8'h8a;
+                end else if(tick_ms && !diag_local_sys) boot_stage_ms<=boot_stage_ms+1'b1;
+                1: if(ingest_done) begin boot_state<=2;drain_count<=0;boot_stage_ms<=0;end
+                   else if(boot_stage_ms>=30000) begin boot_fault<=1;boot_fault_code<=8'h8b;end
+                   else if(tick_ms) boot_stage_ms<=boot_stage_ms+1'b1;
                 // 连续256拍确认CDC空闲且源域无写请求，才认为写入真正排空
                 2: if(cdc_idle_sys && write_drained_sys && !source_wr) begin
-                    if(drain_count==255) begin cache_start<=1;boot_state<=3;end
+                    if(drain_count==255) begin cache_start<=1;boot_state<=3;boot_stage_ms<=0;end
                     else drain_count<=drain_count+1'b1;
                 end else drain_count<=0;
-                3: if(cache_done_sys) begin cache_ready<=!cache_failed_sys;boot_state<=4;end
-                default: ;
+                3: if(cache_done_sys) begin cache_ready<=!cache_failed_sys;boot_state<=4;boot_stage_ms<=0;end
+                   else if(boot_stage_ms>=5000) begin boot_fault<=1;boot_fault_code<=8'h8d;end
+                   else if(tick_ms) boot_stage_ms<=boot_stage_ms+1'b1;
+                4: boot_stage_ms<=0; // Normal playback is a deliberate terminal boot state.
+                default: begin boot_fault<=1;boot_fault_code<=8'h8e;end
             endcase
+            if(boot_state==2 && !(cdc_idle_sys && write_drained_sys && !source_wr && drain_count==255)) begin
+                if(boot_stage_ms>=100) begin boot_fault<=1;boot_fault_code<=8'h8c;end
+                else if(tick_ms) boot_stage_ms<=boot_stage_ms+1'b1;
+            end
         end
     end
 
@@ -256,7 +278,8 @@ module top #(
         .write_request(write_request),.cache_request(cache_request),.cache_write(cache_write_request),
         .app_read(mem_app_read),.app_write(mem_app_write),.rd_valid(rd_valid),
         .video_grant(video_grant),.write_grant(write_grant),.cache_grant(cache_grant),
-        .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained),.fault(arbiter_fault),.diagnostic_max_wait(diagnostic_max_wait));
+        .owner(memory_owner),.video_return(video_return),.cache_return(cache_return),.write_drained(write_drained),.fault(arbiter_fault),
+        .diagnostic_max_wait(diagnostic_max_wait),.diagnostic_write_wait(diagnostic_write_wait),.diagnostic_cache_wait(diagnostic_cache_wait));
     // 诊断本地图案时切断应用侧读写，让SDRAM只做初始化和刷新
     assign mem_app_write=!diag_local_mem && ((memory_owner==3 && cache_wr) || (memory_owner==2 && cdc_wr));
     assign mem_app_read=!diag_local_mem && ((memory_owner==3 && cache_rd) || (memory_owner==1 && video_rd));
@@ -296,7 +319,7 @@ module top #(
     wire next_sys=ui_command_valid && ui_command==1;
     wire auto_sys=1'b0,previous_sys=ui_command_valid && ui_command==3;
     wire [3:0] sw_sync2;
-    wire tick_ms,params_busy;
+    wire params_busy;
     wire local_alert_latched=sw_sync2[3];
     wire elev_alert_request_sys;
     wire elevator_demo_active_sys=1'b1;
@@ -336,7 +359,7 @@ module top #(
     sync_2ff u_recovery_fault(.clk(clk),.rst_n(sys_reset_n),.async_in(arbiter_fault),.sync_out(arbiter_fault_sys));
     media_recovery_manager u_recovery(.clk(clk),.rst_n(sys_reset_n),.tick_ms(tick_ms),
         .manual_request(reload_request),
-        .transaction_fault(arbiter_fault_sys || cdc_overflow || cache_failed_sys || (ingest_done && image_complete==0)),
+        .transaction_fault(boot_fault || arbiter_fault_sys || cdc_overflow || cache_failed_sys || (ingest_done && image_complete==0)),
         .boot_ready(diag_local_sys || (boot_state==4 && image_complete!=0 && cache_ready)),
         .display_ack(recovery_ack),.media_reset_n(recovery_reset_n),
         .display_fallback(recovery_fallback),.busy(reload_busy),.failed(recovery_failed),.retries(recovery_retries));
@@ -500,7 +523,11 @@ module top #(
     wire [23:0] text_rgb,final_rgb;
     wire rescue_queue_overflow;
     wire rescue_ack_valid;wire[15:0]rescue_ack_id,rescue_event_id;wire[1:0]rescue_comm_state;
-    wire [7:0] system_error=recovery_failed?8'h89:arbiter_fault_sys?8'h88:rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
+    reg [7:0] first_boot_fault_code;
+    always @(posedge clk or negedge sys_reset_n)
+        if(!sys_reset_n) first_boot_fault_code<=0;
+        else if(first_boot_fault_code==0 && boot_fault) first_boot_fault_code<=boot_fault_code;
+    wire [7:0] system_error=first_boot_fault_code!=0?first_boot_fault_code:recovery_failed?8'h89:arbiter_fault_sys?8'h88:rescue_queue_overflow?8'h87:cdc_overflow?8'h86:cache_failed_sys?8'h85:
         ingest_error!=0?ingest_error:audio_error!=0?{4'h9,audio_error[3:0]}:cfg_error;
     wire [15:0] error_snapshot;
     wire [7:0] system_detail=(system_error==ingest_error && ingest_error!=0)?ingest_detail:8'd0;
@@ -525,6 +552,7 @@ module top #(
     wire [7:0] reply_data;
     wire elev_update_valid,elev_alert_update_valid,alert_command_valid,alert_command_value,elev_alert_value;
     wire [7:0] elev_floor_value;
+    wire [3:0] elev_floor_tens,elev_floor_ones;
     wire elev_floor_basement;
     wire [1:0] elev_direction,elev_door;
     reg elev_alert_sys,elev_status_valid_sys,elev_floor_basement_sys;
@@ -553,6 +581,13 @@ module top #(
     wire elevator_status_valid_pix=elev_status_pix[0];
     wire elevator_alert_page_available=complete_pix[4];
     uart_rx_byte u_rx(.clk(clk),.rst_n(sys_reset_n),.rx(uart_rx),.data(rx_data),.valid(rx_valid),.framing_error(rx_error));
+    wire [7:0] secure_rx_data;
+    wire secure_rx_valid,secure_status_valid,secure_status_ok;
+    wire [31:0] uart_session_id;
+    uart_secure_ingress_bram u_secure_ingress(.clk(clk),.rst_n(sys_reset_n),.tick_ms(tick_ms),
+        .rx_data(rx_data),.rx_valid(rx_valid),.rx_framing_error(rx_error),
+        .parser_data(secure_rx_data),.parser_valid(secure_rx_valid),
+        .status_valid(secure_status_valid),.status_ok(secure_status_ok),.session_id(uart_session_id));
     reg [95:0] live_text;
     reg [5:0] live_length;
     reg live_subtitle;
@@ -573,12 +608,11 @@ module top #(
             end
             if (elev_update_valid) begin
                 floor_age_ms<=0;
-                elev_alert_sys<=elev_alert_value;
                 elev_status_valid_sys<=1'b1;
                 elev_floor_basement_sys<=elev_floor_basement;
                 elev_floor_sys<=elev_floor_value;
-                elev_floor_tens_sys<=elev_floor_value/10;
-                elev_floor_ones_sys<=elev_floor_value%10;
+                elev_floor_tens_sys<=elev_floor_tens;
+                elev_floor_ones_sys<=elev_floor_ones;
                 elev_direction_sys<=elev_direction;
                 elev_door_sys<=elev_door;
                 // A valid UART frame latches the last known floor.  It is
@@ -592,11 +626,12 @@ module top #(
         end
     end
     wire [84:0] boot_metrics;
-    subtitle_uart_controller #(.APPLIED_STATUS_INPUTS(1)) u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(rx_data),.rx_valid(rx_valid),
-        .rx_framing_error(rx_error),.service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
+    subtitle_uart_controller #(.APPLIED_STATUS_INPUTS(1),.MAX_LINE(18),.ENABLE_LEGACY_ELEV(0)) u_subtitle_uart(.clk(clk),.rst_n(sys_reset_n),.rx_data(secure_rx_data),.rx_valid(secure_rx_valid),
+        .rx_framing_error(1'b0),.secure_status_valid(secure_status_valid),.secure_status_ok(secure_status_ok),
+        .service_ready(1'b1),.save_done(1'b0),.save_failed(subtitle_save),
         .request_dropped(1'b0),.live_text(live_text),.live_length(live_length),.live_enable(live_subtitle),
         .cfg_update_valid(subtitle_commit),.cfg_text(subtitle_text),.cfg_length(subtitle_length),.cfg_enable(subtitle_enable),
-        .elev_update_valid(elev_update_valid),.elev_floor_value(elev_floor_value),.elev_floor_basement(elev_floor_basement),
+        .elev_update_valid(elev_update_valid),.elev_floor_value(elev_floor_value),.elev_floor_tens(elev_floor_tens),.elev_floor_ones(elev_floor_ones),.elev_floor_basement(elev_floor_basement),
         .elev_direction(elev_direction),.elev_door(elev_door),.elev_alert_value(elev_alert_value),
         .elev_alert_update_valid(elev_alert_update_valid),.alert_command_valid(alert_command_valid),.alert_command_value(alert_command_value),
         .save_request(subtitle_save),.reply_valid(reply_valid),.reply_data(reply_data),.reply_last(reply_last),.reply_ready(reply_ready),
@@ -644,14 +679,14 @@ module top #(
     frame_config_cdc #(.WIDTH(18)) u_rescue_status_commit(
         .src_clk(clk),.src_rst_n(sys_reset_n),.src_data({rescue_event_id,rescue_comm_state}),
         .dst_clk(pixel_clk),.dst_rst_n(pix_reset_n),.frame_start(frame_start),.dst_data(rescue_status_pix));
-    wire [46:0] diagnostics_sys;
+    wire [90:0] diagnostics_sys;
     wire [63:0] diagnostics_pix;
-    wire [63:0] diagnostics_page=menu_diag==0 ? {23'd0,diagnostics_sys[46:38],16'd0,diagnostics_sys[37:22]} :
-        menu_diag==1 ? {10'd0,diagnostics_sys[21:0],24'd0,recovery_retries} :
+    wire [63:0] diagnostics_page=menu_diag==0 ? {1'b0,diagnostics_sys[43:22],diagnostics_sys[90:82],16'd0,diagnostics_sys[81:66]} :
+        menu_diag==1 ? {10'd0,diagnostics_sys[65:44],2'd0,diagnostics_sys[21:0],recovery_retries} :
         menu_diag==2 ? {boot_sd_ms,boot_scan_ms,boot_tf_ms,boot_pic5_ms} :
         {16'h0201,16'd0,16'd0,4'd0,recovery_failed,boot_state,3'd0,card_ready,scan_complete,cache_ready,cdc_overflow,cfg_fatal};
-    frame_config_cdc #(.WIDTH(47)) u_diagnostics_sys(.src_clk(mem_clk),.src_rst_n(media_mem_reset_n),
-        .src_data({diagnostic_fifo_min,diagnostic_underflows,diagnostic_max_wait}),
+    frame_config_cdc #(.WIDTH(91)) u_diagnostics_sys(.src_clk(mem_clk),.src_rst_n(media_mem_reset_n),
+        .src_data({diagnostic_fifo_min,diagnostic_underflows,diagnostic_max_wait,diagnostic_write_wait,diagnostic_cache_wait}),
         .dst_clk(clk),.dst_rst_n(media_sys_reset_n),.frame_start(1'b1),.dst_data(diagnostics_sys));
     frame_config_cdc #(.WIDTH(64)) u_diagnostics_pix(.src_clk(clk),.src_rst_n(sys_reset_n),
         .src_data(diagnostics_page),
@@ -707,7 +742,7 @@ module top #(
     // 21. 叠加层第三级：底部音轨面板（波形、包络、音量柱）
     //     PIPELINE_OUTPUT=1 表示内部再寄存一拍输出，所以下面还有一级流水线。
     //--------------------------------------------------------------------------
-    promax_audio_waveform #(.PIPELINE_OUTPUT(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
+    promax_audio_waveform #(.PIPELINE_OUTPUT(1),.EXTRA_GEOM_PIPELINE(1)) u_wave(.clk(pixel_clk),.rst_n(pix_reset_n),.vsync(text_stage_vs),.de(text_stage_de),
         .rgb_in(text_stage_rgb),.pixel_x(text_stage_x),.enable(switches_pix[2] && !show_info_pix && !elevator_alert_pix_state),.pcm_tap_valid(pcm_tap_valid),
         .pcm_tap_left(pcm_tap_left),.rgb_out(final_rgb),.waveform_active());
 
@@ -773,15 +808,21 @@ module top #(
     reg [9:0] wave_stage_x,wave_stage_y;
     reg wave_stage_hs,wave_stage_vs,wave_stage_de;
     reg [23:0] wave_diag_rgb;
+    reg [9:0] wave_stage2_x;
+    reg wave_stage2_hs,wave_stage2_vs,wave_stage2_de;
+    reg [23:0] wave_diag_rgb2;
     always @(posedge pixel_clk or negedge pix_reset_n)
         if(!pix_reset_n) begin
             wave_stage_x<=0;wave_stage_y<=0;wave_stage_hs<=1;wave_stage_vs<=1;wave_stage_de<=0;wave_diag_rgb<=0;
+            wave_stage2_x<=0;wave_stage2_hs<=1;wave_stage2_vs<=1;wave_stage2_de<=0;wave_diag_rgb2<=0;
         end else begin
             wave_stage_x<=text_stage_x;wave_stage_y<=text_stage_y;
             wave_stage_hs<=text_stage_hs;wave_stage_vs<=text_stage_vs;wave_stage_de<=text_stage_de;wave_diag_rgb<=diag_stage_rgb;
+            wave_stage2_x<=wave_stage_x;wave_stage2_hs<=wave_stage_hs;wave_stage2_vs<=wave_stage_vs;
+            wave_stage2_de<=wave_stage_de;wave_diag_rgb2<=wave_diag_rgb;
         end
     // 诊断模式下用本地图案替换真实像素，其余情况用波形/文字叠加后的画面
-    wire [23:0] hdmi_input_rgb=diag_local_pix?wave_diag_rgb:final_rgb;
+    wire [23:0] hdmi_input_rgb=diag_local_pix?wave_diag_rgb2:final_rgb;
 
     //--------------------------------------------------------------------------
     // 26. HDMI音频桥 + 物理层
@@ -791,7 +832,7 @@ module top #(
     //--------------------------------------------------------------------------
     wire [9:0] ch0,ch1,ch2;
     media_hdmi_audio_bridge #(.ALARM_SOUND_ENABLE(ALARM_SOUND_ENABLE)) u_audio(.pixel_clk(pixel_clk),.pixel_rst_n(pix_reset_n),
-        .video_hsync(wave_stage_hs),.video_vsync(wave_stage_vs),.video_de(wave_stage_de),.video_x(wave_stage_x),.video_rgb(hdmi_input_rgb),
+        .video_hsync(wave_stage2_hs),.video_vsync(wave_stage2_vs),.video_de(wave_stage2_de),.video_x(wave_stage2_x),.video_rgb(hdmi_input_rgb),
         .media_id(active_index[1:0]),.volume(volume_pix),.wav_valid(wav_valid),.wav_active(wav_active),
         .force_test(1'b0),.wav_sample(wav_sample),.fade_gain(fade_gain),.wav_ready(wav_ready),
         .sample_tick(sample_tick),.channel0_symbol(ch0),.channel1_symbol(ch1),.channel2_symbol(ch2),

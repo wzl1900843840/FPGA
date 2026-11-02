@@ -76,27 +76,27 @@ end endtask
 initial begin
  #21;rst=1;repeat(10)@(negedge clk);
  command("ELEV=F05,D=U,DO=C,A=0");expect_one("OK\015\012");
- command("ALERT=ON");expect_alarm_reply("RESCUE,ID=0001,A=1,F=05,D=U,DO=C,S=U,E=00\015\012");
+ command("ALERT=ON");expect_alarm_reply("RESCUE,ID=0001,A=1,F=05,D=U,DO=C,S=U,E=00*7624\015\012");
  command("ALERT=ON");expect_one("OK\015\012");
  repeat(6000)@(negedge clk);if(line_count!=checked)$fatal(1,"held alert repeated report");
  local_alert=1;repeat(5)@(negedge clk);
  command("ALERT=OFF");expect_one("OK\015\012");
  repeat(5000)@(negedge clk);if(line_count!=checked)$fatal(1,"OR-source handover false clear");
- local_alert=0;expect_one("RESCUE,ID=0002,A=0,F=05,D=U,DO=C,S=L,E=00\015\012");
+ local_alert=0;expect_one("RESCUE,ID=0002,A=0,F=05,D=U,DO=C,S=L,E=00*7EFD\015\012");
  command("ELEV=FB1,D=S,DO=M,A=1");
- expect_alarm_reply("RESCUE,ID=0003,A=1,F=B1,D=S,DO=M,S=U,E=00\015\012");
+ expect_alarm_reply("RESCUE,ID=0003,A=1,F=B1,D=S,DO=M,S=U,E=00*F372\015\012");
  command("ELEV=FB1,D=S,DO=O,A=0");
- expect_alarm_reply("RESCUE,ID=0004,A=0,F=B1,D=S,DO=O,S=U,E=00\015\012");
+ expect_alarm_reply("RESCUE,ID=0004,A=0,F=B1,D=S,DO=O,S=U,E=00*E517\015\012");
  command("ELEV=BAD,D=X,DO=Z,A=2");expect_one("ERR ELEV\015\012");
  // A local alarm arriving inside the longest ELEV? reply must wait for its LF.
  command("ELEV?");
  wait(report.state==2);repeat(140)@(negedge clk);local_alert=1;
  expect_one("ELEV=FB1,D=S,DO=O,A=0\015\012");
- expect_one("RESCUE,ID=0005,A=1,F=B1,D=S,DO=O,S=L,E=00\015\012");
- local_alert=0;expect_one("RESCUE,ID=0006,A=0,F=B1,D=S,DO=O,S=L,E=00\015\012");
+ expect_one("RESCUE,ID=0005,A=1,F=B1,D=S,DO=O,S=L,E=00*A4E6\015\012");
+ local_alert=0;expect_one("RESCUE,ID=0006,A=0,F=B1,D=S,DO=O,S=L,E=00*FE59\015\012");
  error_code=8'h86;expect_one("ERR 86\015\012");
- local_alert=1;expect_one("RESCUE,ID=0007,A=1,F=B1,D=S,DO=O,S=L,E=86\015\012");
- local_alert=0;expect_one("RESCUE,ID=0008,A=0,F=B1,D=S,DO=O,S=L,E=86\015\012");
+ local_alert=1;expect_one("RESCUE,ID=0007,A=1,F=B1,D=S,DO=O,S=L,E=86*04A1\015\012");
+ local_alert=0;expect_one("RESCUE,ID=0008,A=0,F=B1,D=S,DO=O,S=L,E=86*F8CF\015\012");
  if(overflow)$fatal(1,"unexpected overflow");
  $display("PASS rescue: commands/local alarm, OR arbitration, floor context, fault independence, recovery, atomic replies");$finish;
 end

@@ -1,0 +1,8 @@
+Print Route Property
+----------------------------------------------------------
+  Parameters  |   Settings    |  Default Values  |  Note  
+----------------------------------------------------------
+    effort    |  routability  |      normal      |   *    
+   fix_hold   |      on       |        on        |        
+    timing    |      on       |        on        |        
+----------------------------------------------------------

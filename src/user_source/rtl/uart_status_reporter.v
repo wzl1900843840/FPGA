@@ -68,6 +68,7 @@ module uart_status_reporter #(
     localparam [1:0] ST_SEND = 2'd1;
     localparam [1:0] ST_REPLY = 2'd2;
     reg [7:0] tx_data_r;
+    reg [15:0] rescue_crc;
     reg reply_last_q;
     reg reply_wait;
 
@@ -195,6 +196,17 @@ module uart_status_reporter #(
                                         : (8'h37 + {4'b0, nibble});
         end
     endfunction
+    function [15:0] crc_byte;
+        input [15:0] old_crc;
+        input [7:0] c;
+        reg [15:0] v;
+        integer j;
+        begin
+            v=old_crc^{c,8'h00};
+            for(j=0;j<8;j=j+1) v=v[15] ? (v<<1)^16'h1021 : (v<<1);
+            crc_byte=v;
+        end
+    endfunction
 
     // Select the numeric nibble first, then use one shared ASCII converter.
     // UART pacing leaves ample time; all report bytes and event semantics stay identical.
@@ -302,7 +314,12 @@ module uart_status_reporter #(
                 36:msg_char=","; 37:msg_char="E"; 38:msg_char="=";
                 39:msg_char=numeric_ascii;
                 40:msg_char=numeric_ascii;
-                41:msg_char=CR; 42:msg_char=LF;
+                41:msg_char="*";
+                42:msg_char=hex_digit(rescue_crc[15:12]);
+                43:msg_char=hex_digit(rescue_crc[11:8]);
+                44:msg_char=hex_digit(rescue_crc[7:4]);
+                45:msg_char=hex_digit(rescue_crc[3:0]);
+                46:msg_char=CR; 47:msg_char=LF;
                 default:msg_char=8'h00;
             endcase
             default: msg_char = 8'h00;
@@ -331,6 +348,7 @@ module uart_status_reporter #(
             bright_pending <= 1'b0;
             bright_val_q <= 8'd0;
             tx_data_r <= 8'd0;
+            rescue_crc <= 16'hffff;
             reply_last_q <= 1'b0;
             reply_wait <= 1'b0;
             reply_ready <= 1'b0;
@@ -356,10 +374,11 @@ module uart_status_reporter #(
                 // 上一字节的 ready 为寄存脉冲，给解析器一拍撤销 last。
                 if (rescue_pop) begin
                     kind_q <= K_RESCUE;
-                    msg_len <= 6'd43;
+                    rescue_crc <= 16'hffff;
+                    msg_len <= 6'd48;
                     state <= ST_SEND;
                 end else if (retry_pop) begin
-                    kind_q<=K_RESCUE;msg_len<=6'd43;state<=ST_SEND;
+                    kind_q<=K_RESCUE;rescue_crc<=16'hffff;msg_len<=6'd48;state<=ST_SEND;
                 end else if (reply_valid && !reply_ready) begin
                     tx_data_r <= reply_data;
                     reply_last_q <= reply_last;
@@ -405,8 +424,11 @@ module uart_status_reporter #(
                 end
             end
             ST_SEND: begin
-                if (tx_done)
+                if (tx_done) begin
                     send_index <= send_index + 1'b1;
+                    if(kind_q==K_RESCUE && send_index<41)
+                        rescue_crc<=crc_byte(rescue_crc,tx_data_r);
+                end
                 if (send_index >= msg_len) begin
                     tx_start_r <= 1'b0;
                     send_index <= 5'd0;

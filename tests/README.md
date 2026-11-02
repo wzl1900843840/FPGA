@@ -4,7 +4,9 @@
 
     D:/Anaconda/python.exe tools/run_tests.py
 
-当前套件 37 项模块测试；结果写 tests/results。tests/tb_*.v、模型和工具脚本保留原路径。OSD/菜单测试还会写 build_out 下预览，因此两处输出目录都须保留。
+当前run_tests.py定义41项模块测试，含新增UART安全接入、仲裁公平性和波形检查；结果写tests/results。历史37项记录保留当时口径。测试源与模型原位保留，OSD/菜单还会写build_out预览，两处输出目录均须存在。
+
+tests/tb_wave_blend_equiv.v额外实例化promax_audio_waveform_old，参考模块仍保留在build_out/promax_audio_waveform_old.v；该等价用例不在常规41项中，不仅删除参考文件而留下孤立测试。
 
 ## 按变化选择
 

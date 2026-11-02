@@ -720,6 +720,14 @@
                     <Attr Name="CompileOrder" Val="87"/>
                 </FileInfo>
             </File>
+            <File Path="../user_source/rtl/uart_secure_ingress_bram.v">
+                <FileInfo>
+                    <Attr Name="UsedInSyn" Val="true"/>
+                    <Attr Name="UsedInP&R" Val="true"/>
+                    <Attr Name="BelongTo" Val="design_1"/>
+                    <Attr Name="CompileOrder" Val="88"/>
+                </FileInfo>
+            </File>
         </Verilog>
         <ADC_FILE>
             <File Path="../user_source/constraints_source/pin.adc">
@@ -764,6 +772,7 @@
             <Strategy Name="Default_Synthesis_Strategy">
                 <GateProperty>
                     <eram_init>on</eram_init>
+                    <pack_effort>high</pack_effort>
                 </GateProperty>
             </Strategy>
             <UserParams>
@@ -771,6 +780,13 @@
         </Run>
         <Run Name="phy_1" Type="PhysicalDesign" ConstraintSet="constraint_1" Description="" SynRun="syn_1" Active="true">
             <Strategy Name="Default_PhysicalDesign_Strategy">
+                <PlaceProperty>
+                    <effort>high</effort>
+                    <opt_timing>high</opt_timing>
+                </PlaceProperty>
+                <RouteProperty>
+                    <effort>routability</effort>
+                </RouteProperty>
             </Strategy>
             <UserParams>
             </UserParams>
